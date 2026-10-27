@@ -548,6 +548,7 @@ class Sandbox:
             n = sum(1 for r in rounds[0] for o in r if o)
             st["tour"] = dict(id=int(E.now()), status="running", rounds=rounds, results={}, bets={}, strategies={},
                               prize=300 * n, champion=None, last=None)
+            self._skip_byes(st["tour"], {p.owner_id: p for p in pets})
             await self._save_state(st)
         return f"🏆 Турнір на {n} бійців! Призовий фонд {300 * n} ₴"
 
@@ -593,6 +594,21 @@ class Sandbox:
             await self._save_state(st)
         return f"🎰 Ставка {amount} ₴ на {[fa.name, fb.name][side]} (×{odds})"
 
+    def _skip_byes(self, t: dict, by: dict) -> None:
+        """Resolve byes and walkovers until the next match has two fighters (or the bracket is done),
+        so the arena always has a real match to show."""
+        while (nxt := self._next_match(t)):
+            ri, mi = nxt
+            a, b = t["rounds"][ri][mi]
+            ok_a, ok_b = bool(by.get(a) and B.eligible(by[a])), bool(by.get(b) and B.eligible(by[b]))
+            if ok_a and ok_b:
+                return
+            win = a if ok_a else b if ok_b else 0
+            key = f"{ri}-{mi}"
+            t["results"][key] = dict(winner=win, bye=True)
+            self._promote(t, ri, mi, win)
+            self._refund(t, key, by)
+
     async def tour_next(self) -> dict:
         """Play the next match (byes and walkovers resolve instantly). Returns the battle or a status."""
         async with self.lock:
@@ -626,6 +642,7 @@ class Sandbox:
                 self._promote(t, ri, mi, res["winner"])
                 res["bets"] = self._settle(t, key, 0 if res["winner"] == a else 1, by)
                 t["last"] = key
+                self._skip_byes(t, by)
                 if not self._next_match(t):
                     res["champion"] = self._finish(t, by, st)
                 await self.save(*pets)
