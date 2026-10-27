@@ -14,6 +14,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 - Claude Code skills (`.claude/skills/`) for writing events, sprites, balance, playtesting and releases, and a
   content-review agent; GitHub issue/PR templates; CI checks for generated docs and content.
 - `unequip` and `noedu` are now documented in the DSL reference.
+- Life summary after death: `engine.life_summary()` (title for the life, facts, highlights, family, epitaph) and
+  `engine.obituary()` (caption-sized HTML); the dead pet's `card()` and the sandbox show it. `engine.plural()`.
+- Pet documents gain `seen` (events lived) and `story` (highlights); old documents load with empty defaults.
+
+### Changed
+- Events repeat much less: a pet doesn't get any of its last 40 events (was 12) while something else fits, and
+  every earlier time it lived an event cuts that event's weight ×0.3 for the rest of its life. Social events also
+  skip what the other pet just lived. Simulation: repeats within a life 24 % → 10 %.
+- Sandbox shows the role's name instead of its id.
 
 ## [0.1.1] — 2026-10-27
 

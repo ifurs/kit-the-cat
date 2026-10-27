@@ -88,7 +88,7 @@ class Sandbox:
         out["pet"] = dict(
             name=p.name, state=p.state, stage=E.STAGES.get(p.stage, ""), card=E.card(p, names),
             stats={k: round(getattr(p, k)) for k in E.STATS}, money=int(p.money), level=p.level,
-            age=round(p.age_days, 1), role=p.role, job=JOBS[p.job]["name"] if p.job in JOBS else "",
+            age=round(p.age_days, 1), role=E.ROLES[p.role]["name"] if p.role in E.ROLES else "", job=JOBS[p.job]["name"] if p.job in JOBS else "",
             traits={E.TRAITS[t]: round(p.traits.get(t, 0), 1) for t in p.top_traits()},
             skills={k: round(p.skills.get(k, 0)) for k in E.SKILLS}, jailed=p.jailed, pending=None,
             genes=sprites.describe(p.genome), dna=sprites.dna_code(p.genome), rarity=sprites.rarity(p.genome)[1],
@@ -96,6 +96,7 @@ class Sandbox:
             persona={k: p.persona.get(k, "") for k in ("temper", "dream", "fear")}, emoji=E.SPECIES_EMOJI.get(p.species, "🐾"),
             egg_left=max(0, round((E.EGG_HOURS * E.hour() - (E.now() - p.born)) / 60)) if p.state == "egg" else 0,
             cause=p.cause,
+            summary=E.life_summary(p, {x.pid: x.name for x in pets}) if p.state == "dead" else None,
         )
         e = E.EVENTS.get(p.pending.get("id", "")) if p.pending else None
         if e:
