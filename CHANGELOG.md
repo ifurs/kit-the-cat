@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-10-27
+
 ### Added
 - Developer tooling: `scripts/balance.py` (headless neighbourhood simulation with balance targets),
   `scripts/content_stats.py` (content map, gaps, dead-end chains, hard checks), `scripts/gen_dsl_docs.py`
@@ -37,6 +39,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/ifurs/kit-the-cat/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/ifurs/kit-the-cat/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ifurs/kit-the-cat/releases/tag/v0.1.0
