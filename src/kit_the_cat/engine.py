@@ -76,6 +76,9 @@ EGG_HOURS = 1.0
 DECAY = {"hunger": 2.2, "clean": 1.5, "mood": 2.0}  # per game hour (zero care: fully fed → dead in ~75 h)
 STARVE = 3.0             # health/h lost per stat at zero
 EVENT_ENERGY = 20
+RECENT = 40              # last N events of a pet are not offered again (unless nothing else fits)
+REPEAT_DECAY = 0.3       # weight × this per earlier time the pet lived the event: fresh content first
+STORY_MAX = 10           # highlights kept for the life summary
 TWIST_TAIL = 0.06        # chance of a random mini-twist after any outcome
 TWIST_DAILY = 0.04       # chance per pet per game day to queue a twist event
 RESURRECT = 0.10         # dead → zombie
@@ -379,6 +382,8 @@ class Pet:
     pending: dict = field(default_factory=dict)
     next_ev: float = 0.0
     recent: list = field(default_factory=list)
+    seen: dict = field(default_factory=dict)      # event id -> times lived (this life)
+    story: list = field(default_factory=list)     # [ts, kind, text] highlights for the life summary
     persona: dict = field(default_factory=dict)
     achievements: list = field(default_factory=list)
     jail_until: float = 0.0
@@ -450,6 +455,11 @@ class Pet:
     def note(self, kind: str, text: str) -> None:
         self.log.append([int(now()), kind, text[:500]])
         self.log = self.log[-60:]
+        if IMPORTANCE.get(kind, 0) >= 2 and kind not in ("died", "heir") and all(x[2] != text[:200] for x in self.story):
+            self.story.append([int(now()), kind, text[:200]])
+            if len(self.story) > STORY_MAX:  # keep the first moment; drop the oldest of the least important
+                low = min(IMPORTANCE.get(k, 0) for _, k, _ in self.story[1:])
+                del self.story[next(i for i in range(1, len(self.story)) if IMPORTANCE.get(self.story[i][1], 0) == low)]
 
     def ach(self, name: str) -> str | None:
         if name in self.achievements:
@@ -562,6 +572,8 @@ class Pet:
             self.note("twist", f"🧟 СЮЖЕТНИЙ ПОВОРОТ! {self.name} {cause}… а на третю ніч виліз з могили. Тепер це зомбі.")
             return False
         self.state, self.cause, self.died = "dead", cause, now()
+        if natural:
+            self.counters["natural"] = 1
         self.epitaph = rng.choice(EPITAPHS)
         self.pending = {}
         self.jail_until = self.hospital_until = 0.0
@@ -1100,8 +1112,8 @@ class Pet:
         return True
 
     # --- events ------------------------------------------------------------------------------
-    def eligible(self, e: Event, other: "Pet | None") -> bool:
-        if e.social != bool(other) or e.id in self.recent:
+    def eligible(self, e: Event, other: "Pet | None", fresh: bool = True) -> bool:
+        if e.social != bool(other) or (fresh and e.id in self.recent):
             return False
         if e.once and self.flags.get(f"seen_{e.id}"):
             return False
@@ -1127,9 +1139,9 @@ class Pet:
                 continue
             if kind == "fight" and not (any(h in e.id for h in FIGHT_HINTS) or "toxic" in e.aff):
                 continue
-            if not self.eligible(e, other):
+            if not self.eligible(e, other, fresh=False):
                 continue
-            w = e.w * (1 + sum(self.traits.get(t, 0) for t in e.aff) / 15)
+            w = e.w * (1 + sum(self.traits.get(t, 0) for t in e.aff) / 15) * REPEAT_DECAY ** self.seen.get(e.id, 0)
             if "flag" in e.req:
                 w *= 3.0    # storylines move forward
             elif any(k in e.req for k in ("job", "jail", "role", "season")):
@@ -1138,6 +1150,9 @@ class Pet:
                 w *= 0.4 if not kind else 1
             cands.append(e)
             ws.append(w)
+        fresh = [i for i, e in enumerate(cands) if e.id not in self.recent and not (other and e.id in other.recent)]
+        if fresh:  # a recent event comes back only when nothing else fits
+            cands, ws = [cands[i] for i in fresh], [ws[i] for i in fresh]
         if not cands:
             if kind == "date":
                 e = EVENTS["_date"]
@@ -1235,7 +1250,7 @@ class Pet:
         res.twist = bool(fx.get("twist")) or e.id.startswith("twist_")
         self.xp += 4
         self.events_done += 1
-        self.recent = (self.recent + [e.id])[-12:]
+        self.lived(e.id)
         if e.once:
             self.flags[f"seen_{e.id}"] = 1
         self.pending = {}
@@ -1246,16 +1261,25 @@ class Pet:
             res.tail_notes = self.apply(tfx, None, rng)
             res.twist = res.twist or bool(tfx.get("twist"))
         res.died = not self.alive
+        c = self.counters
+        for key, hit in (("ok", res.ok is True), ("fail", res.ok is False), ("twists", res.twist), ("rare", res.rare)):
+            if hit:
+                c[key] = c.get(key, 0) + 1
+        c["money_max"] = max(c.get("money_max", 0), int(self.money))
         kind = "twist" if res.twist else "social" if other else "event"
         line = f"«{res.label}» → {res.text}"
         if other:
             line = f"з {other.name}: " + line
             other.note("social", f"{self.name} і {other.name}: {res.text}")
-            other.recent = (other.recent + [e.id])[-12:]
+            other.lived(e.id)
         if res.tail:
             line += f" 🌀 {res.tail}"
         self.note(kind, line)
         return res
+
+    def lived(self, eid: str) -> None:
+        self.recent = (self.recent + [eid])[-RECENT:]
+        self.seen[eid] = self.seen.get(eid, 0) + 1
 
     # --- care --------------------------------------------------------------------------------
     def cooldown_left(self, actor: int, action: str, hours: float) -> float:
@@ -1817,6 +1841,93 @@ def bar(v: float) -> str:
     return "▰" * n + "▱" * (5 - n)
 
 
+# life summary titles: (test, title) — first match wins; trait titles are the fallback
+LIFE_TITLES = [
+    (lambda p, c: p.role in ("vampire", "demon") and c.get("natural"), "Безсмертне зло, яке таки здолала старість"),
+    (lambda p, c: c.get("dodged", 0) >= 2, "Кіт Шредінгера: помирав частіше, ніж обідав"),
+    (lambda p, c: p.flags.get("jailed_times", 0) >= 2, "Кримінальний авторитет району"),
+    (lambda p, c: c.get("money_max", 0) >= 10000, "Місцевий олігарх"),
+    (lambda p, c: p.children >= 2, "Засновник династії"),
+    (lambda p, c: len(p.achievements) >= 7, "Легенда чату"),
+    (lambda p, c: sum(s == "ex" for s in p.status.values()) >= 2, "Серцеїд з розбитим серцем"),
+    (lambda p, c: c.get("twists", 0) >= 3, "Магніт для сюжетних поворотів"),
+    (lambda p, c: sum(k.startswith("role_") for k in c) >= 2, "Перепробував усі надприродні професії"),
+    (lambda p, c: p.age_days < 3, "Яскраве, але дуже коротке життя"),
+    (lambda p, c: c.get("fail", 0) > c.get("ok", 0) + 3, "Невдаха з великим серцем"),
+    (lambda p, c: c.get("natural") and p.partner, "Прожив довге життя поруч із коханими"),
+]
+TRAIT_TITLES = {
+    "toxic": "Токсик із принципами", "gambler": "Вічний гравець: ще одна ставка — і точно пощастить",
+    "dark": "Темна конячка під'їзду", "party": "Душа кожної вечірки", "patriot": "Патріот свого району",
+    "glutton": "Гурман від Бога", "love": "Добра душа, яку любили всі", "mystic": "Містик, що бачив більше за нас",
+}
+
+
+def plural(n: int, one: str, few: str, many: str) -> str:
+    """Ukrainian noun form for a count: 1 пригода, 3 пригоди, 5 пригод, 21 пригода, 12 пригод."""
+    n = abs(int(n))
+    if n % 10 == 1 and n % 100 != 11:
+        return one
+    return few if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14 else many
+
+
+def life_summary(p: Pet, names: dict[str, str] | None = None) -> dict:
+    """What a life added up to, for the screen after death (also works for living pets).
+
+    Plain text (hosts escape it): title, facts (short lines), story (highlights in order), family, epitaph.
+    names: pid -> pet name for the partner.
+    """
+    names = names or {}
+    c = p.counters
+    title = next((t for test, t in LIFE_TITLES if test(p, c)), None)
+    if not title:
+        top = p.top_traits(1)
+        title = TRAIT_TITLES[top[0]] if top else "Тихе звичайне життя — і це теж перемога"
+    ok, fail = c.get("ok", 0), c.get("fail", 0)
+    facts = [f"📅 {p.age_days:.1f} дн. · {STAGES[p.stage]} · рівень {p.level}"
+             + (f" · 👑 {p.dynasty}, покоління {p.gen}" if p.gen > 1 and p.dynasty else ""),
+             f"🎲 {p.events_done} {plural(p.events_done, 'пригода', 'пригоди', 'пригод')}" + (f" · 🎯 кубик: {ok}✅ {fail}❌" if ok + fail else "")
+             + (f" · 🌀 поворотів: {c['twists']}" if c.get("twists") else "")]
+    career = [JOBS[p.job]["name"] if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else ""]
+    money = f"💰 найбільше мав {c.get('money_max', int(p.money)):,} ₴".replace(",", " ")
+    facts.append(" · ".join(x for x in career + [money] if x))
+    roles = [ROLES[k[5:]]["name"] for k in c if k.startswith("role_") and k[5:] in ROLES]
+    if roles or p.flags.get("jailed_times"):
+        facts.append(" · ".join(roles + ([f"⛓ відсидок: {p.flags['jailed_times']}"] if p.flags.get("jailed_times") else [])))
+    if p.achievements:
+        facts.append(f"🏆 {len(p.achievements)}: " + ", ".join(p.achievements[-4:]))
+    st = list(p.status.values())
+    family = [f"💍 {names[p.partner]}" if p.partner in names else "",
+              f"🥚 дітей: {p.children}" if p.children else "",
+              f"🤝 друзів: {sum(s in ('friend', 'bestie') for s in st)}" if any(s in ("friend", "bestie") for s in st) else "",
+              f"⚔️ ворогів: {sum(s in ('rival', 'enemy') for s in st)}" if any(s in ("rival", "enemy") for s in st) else "",
+              f"💔 колишніх: {st.count('ex')}" if "ex" in st else ""]
+    return dict(name=p.name, title=title, cause=p.cause, epitaph=p.epitaph, facts=facts,
+                family=" · ".join(x for x in family if x), story=[x for _, _, x in p.story])
+
+
+def obituary(p: Pet, names: dict[str, str] | None = None, limit: int = 1000, footer: str = "") -> str:
+    """life_summary as a Telegram-HTML caption of at most `limit` chars: highlights are dropped (oldest
+    first, the very first kept) until it fits, then facts; nothing is cut through a tag."""
+    s = life_summary(p, names)
+    cause = s["cause"][:1].upper() + s["cause"][1:]
+    head = [f"🪦 <b>{_esc(s['name'])}</b> — <i>{_esc(s['title'])}</i>", f"⚰️ {_esc(cause)}"]
+    tail = ([_esc(s["family"])] if s["family"] else []) + ([f"<i>«{_esc(s['epitaph'])}»</i>"] if s["epitaph"] else [])
+    facts, story = [_esc(x) for x in s["facts"]], [_esc(x) for x in s["story"]]
+
+    def build() -> str:
+        body = head + [""] + facts + ([""] + ["📖 Найяскравіше:"] + [f"• {x}" for x in story] if story else []) + tail
+        return "\n".join(body + ([footer] if footer else []))
+
+    while len(build()) > limit and len(story) > 1:
+        del story[1]
+    while len(build()) > limit and story:
+        story.pop()
+    while len(build()) > limit and len(facts) > 1:
+        facts.pop()
+    return build()[:limit]
+
+
 def card(p: Pet, names: dict[str, str]) -> str:
     """Status caption (<1024 chars). names: pid -> pet name for relations."""
     _, tier = p.rarity
@@ -1827,9 +1938,7 @@ def card(p: Pet, names: dict[str, str]) -> str:
                 f"Вилупиться приблизно через {left:.0f} хв. Рідкість: {tier}"
                 + (f"\n👑 {_esc(p.dynasty)}, покоління {p.gen}" if p.gen > 1 else ""))
     if p.state == "dead":
-        return (f"🪦 <b>{_esc(p.name)}</b> ({p.age_days:.1f} дн., ур. {p.level})\n{_esc(p.cause)}\n<i>«{_esc(p.epitaph)}»</i>\n\n"
-                f"Натисни «🥚 Нове яйце» — почнеться покоління {p.gen + 1}"
-                + (" (є спадкоємець від пари!)" if p.heir else ""))
+        return obituary(p, names, 1020, f"\n🥚 «Нове яйце» — покоління {p.gen + 1}" + (" (є спадкоємець від пари!)" if p.heir else ""))
     lines = [
         f"{emoji} <b>{_esc(p.name)}</b> · {STAGES[p.stage]} · {p.age_days:.1f} дн. · ур. {p.level}",
         f"👤 {_esc(p.owner_name)} · {tier}" + (f" · 👑 {_esc(p.dynasty)} ({p.gen})" if p.gen > 1 else ""),

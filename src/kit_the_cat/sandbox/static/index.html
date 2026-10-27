@@ -118,6 +118,11 @@ main > * { min-width: 0; }
   background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 12px; white-space: pre-wrap; opacity: 0;
   transition: opacity .2s; pointer-events: none; z-index: 30; }
 #toast.show { opacity: .96; }
+.obit { text-align: left; margin: 8px 0; overflow-wrap: anywhere; }
+.obit-title { font-weight: 700; font-style: italic; text-align: center; margin-bottom: 4px; }
+.obit-story { margin: 4px 0; padding-left: 18px; font-size: 13px; }
+.obit-story li { margin: 2px 0; }
+.obit-epitaph { font-style: italic; text-align: center; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -188,6 +193,15 @@ async function act(action, x, extra = {}) {
 const bar = (icon, v) => `<span>${icon}</span><div class="bar ${v < 25 ? "low" : v < 55 ? "mid" : ""}" title="${v}"><i style="width:${v}%"></i></div>`;
 
 /* ---------- pet card (always visible) ---------- */
+function obit(p) {
+  const s = p.summary;
+  if (!s) return `<p>🪦 ${esc(p.cause)}</p>`;
+  const story = s.story.length ? `<div class="muted" style="margin-top:6px">📖 Найяскравіше:</div><ul class="obit-story">${s.story.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  return `<div class="obit"><div class="obit-title">${esc(s.title)}</div><p>⚰️ ${esc(s.cause.charAt(0).toUpperCase() + s.cause.slice(1))}</p>
+    ${s.facts.map(x => `<div class="meta">${esc(x)}</div>`).join("")}${story}
+    ${s.family ? `<div class="meta">${esc(s.family)}</div>` : ""}${s.epitaph ? `<p class="obit-epitaph">«${esc(s.epitaph)}»</p>` : ""}</div>`;
+}
+
 function renderPet() {
   const el = $("#pet"), p = S.pet;
   const speciesGrid = S.species.map(([id, e, n]) => `<button data-sp="${id}">${e}<br><small>${esc(n)}</small></button>`).join("");
@@ -197,7 +211,7 @@ function renderPet() {
     let h = `<img class="sprite" src="/img/pet/${S.owner}.gif?k=${p.look}" alt="${esc(p.name)}">
       <div class="name">${p.emoji} ${esc(p.name)}</div><div class="meta">${esc(p.stage)} · ${p.age} дн. · ${tags}</div>`;
     if (p.state === "egg") h += `<p class="muted">Вилупиться приблизно за ${p.egg_left} хв. гри — натисни ⏩ Час.</p>`;
-    if (p.state === "dead") h += `<p>🪦 ${esc(p.cause)}</p><button class="primary" id="heir" style="width:100%">🥚 Спадкоємець${p.heir ? " (від пари)" : ""}</button>
+    if (p.state === "dead") h += `${obit(p)}<button class="primary" id="heir" style="width:100%">🥚 Спадкоємець${p.heir ? " (від пари)" : ""}</button>
       <details style="margin-top:8px"><summary class="muted">або новий рід</summary><div class="species">${speciesGrid}</div></details>`;
     if (p.state === "alive") {
       const s = p.stats;
