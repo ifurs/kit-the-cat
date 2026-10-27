@@ -138,3 +138,19 @@ async def test_spar(client):
     foe = next(p["owner"] for p in s["players"] if p["npc"])
     b = (await do(client, "spar", "cunning", **{"with": foe}))["battle"]
     assert "error" not in b and b["log"] and b["fighters"][0]["strategy"].startswith("🎭")
+
+
+@pytest.mark.parametrize("npcs", [2, 4, 6])  # 3, 5, 7 fighters: brackets with byes
+async def test_tournament_with_byes_never_stalls(client, npcs):
+    await do(client, "create", "cat")
+    await do(client, "npcs", npcs)
+    await do(client, "advance", 24 * 2, care=True)
+    assert "Турнір на" in (await do(client, "t_new"))["message"]
+    for _ in range(20):
+        t = (await (await client.get("/api/tour?as=1")).json())["tour"]
+        if t["status"] == "done":
+            break
+        assert t["current"], "a running tournament must always show the next real match"
+        b = (await do(client, "t_next"))["battle"]
+        assert "error" not in b
+    assert t["status"] == "done" and t["champion"]
