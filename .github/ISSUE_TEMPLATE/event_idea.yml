@@ -1,0 +1,28 @@
+name: Ідея пригоди
+description: Запропонуй пригоду, ланцюжок, річ або фон для Kit the Cat
+labels: [content]
+body:
+  - type: textarea
+    id: situation
+    attributes:
+      label: Ситуація
+      description: Що стається з петом? Чим смішніше й впізнаваніше — тим краще (ЦНАП, маршрутка, бабуся, відключення…)
+      placeholder: "{name} стоїть у черзі на Новій пошті, а посилка — живий гусак…"
+    validations: {required: true}
+  - type: textarea
+    id: choices
+    attributes:
+      label: Варіанти й наслідки
+      description: 2–4 варіанти вибору, що з кожного виходить (можна приблизно)
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Вік пета
+      options: [будь-який, малюк, підліток, дорослий, старий]
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Правила
+      options:
+        - label: Без висміювання за ідентичністю, з повагою до військових і без реальних приватних людей
+          required: true
