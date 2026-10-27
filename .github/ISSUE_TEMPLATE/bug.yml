@@ -1,0 +1,19 @@
+name: Bug
+description: Something broken in the engine, sandbox or browser build
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Steps to reproduce, expected vs actual. Attach play.json (sandbox) or a screenshot if useful.
+    validations: {required: true}
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      placeholder: "browser build on iPhone Safari / local sandbox / as a module v0.1.1"
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit

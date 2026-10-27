@@ -11,10 +11,12 @@
 
 Детально: [docs/PET.md](docs/PET.md) · галерея: [docs/sprites/](docs/sprites/) · ідеї: [docs/ideas/PET_IDEAS.md](docs/ideas/PET_IDEAS.md)
 
+Пишеш пригоди? [Як писати](docs/CONTENT_GUIDE.md) · [довідник DSL](docs/DSL.md) · [внесок](CONTRIBUTING.md) · [зміни](CHANGELOG.md)
+
 ## Як модуль
 
 ```bash
-uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat@v0.1.0"
+uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat@v0.1.1"
 ```
 
 ```python
@@ -30,7 +32,7 @@ gif = sprites.render_gif(pet.look())         # потребує extra `images` (
 doc = pet.to_dict()                          # збереження — справа хоста (JSON-документ)
 ```
 
-Контракт контенту: `kit_the_cat/content/dsl.py` (ефекти й вимоги, які рушій гарантовано підтримує).
+Контракт контенту: `kit_the_cat/content/dsl.py` (ефекти й вимоги, які рушій гарантовано підтримує). Інтеграція у свій застосунок: [docs/INTEGRATION.md](docs/INTEGRATION.md), будова: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Пісочниця
 
@@ -48,6 +50,9 @@ uv run pytest -q
 uv run python -m kit_the_cat.content.validate
 uv run python scripts/gallery.py              # спрайт-галереї в docs/sprites/
 uv run python scripts/uniqueness.py           # 200 петів в одному чаті: 0 двійників
+uv run python scripts/content_stats.py --gaps # де контенту замало
+uv run python scripts/balance.py              # симуляція району петів і цілі балансу
+uv run python scripts/preview.py --items cap  # аркуш спрайтів для малювання
 ```
 
 Сторонні компоненти браузерної збірки: [Pyodide](https://github.com/pyodide/pyodide) (MPL-2.0), завантажується з npm при збірці.

@@ -14,6 +14,7 @@ Effects (o(..., **fx)):
   money xp lifespan                    ₴, experience, days of life
   item="cowboy@6" | ["a", "b"]         give & equip;  item_slot="head" → random item for slot
   lose_item="random" | "id"            take away
+  unequip="head" | "all"               take off what is worn in that slot (or everything); items stay owned
   flag={"crime": 2}  unflag="crime"    story flags (quest chains)
   job="it" | job=""                    hire / fire
   edu="kpi"                            diploma
@@ -36,7 +37,7 @@ Effects (o(..., **fx)):
 
 Requirements (req=dict(...)):
   stage=2 | (2, 3)   species="pig"   flag="crime" | flag={"crime": 2}   noflag="crime"
-  trait={"toxic": 10}   skill={"int": 30}   money=100   job="it"|"any"|"none"   edu="kpi"
+  trait={"toxic": 10}   skill={"int": 30}   money=100   job="it"|"any"|"none"   edu="kpi"   noedu="kpi"
   has="sabre"   partner=True|False   night=True   jail=True (only while jailed)
   status=["crush"] (social: relation with the other pet)   other_stage=2   age=(min_days, max_days)
   debt=500 (money <= -500)   low={"health": 40}   role="vampire" | role="any" | norole=True
