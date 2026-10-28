@@ -51,6 +51,7 @@ uv run python -m kit_the_cat.content.validate
 uv run python scripts/gallery.py              # спрайт-галереї в docs/sprites/
 uv run python scripts/uniqueness.py           # 200 петів в одному чаті: 0 двійників
 uv run python scripts/content_stats.py --gaps # де контенту замало
+uv run python scripts/content_gate.py         # усі перевірки контенту, зокрема українська мова (ua_lint)
 uv run python scripts/balance.py              # симуляція району петів і цілі балансу
 uv run python scripts/preview.py --items cap  # аркуш спрайтів для малювання
 ```

@@ -5,6 +5,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Changed
+- **Decisions weigh more, the clock less.** Choices without a hand-set `time` get one computed from what they
+  do (`dsl.infer_time`: studying, a job, moving, a serious relationship, a story step, skills learned, money
+  earned), so options within an event differ (events where every choice costs the same: 328 → ~60). Prison and
+  hospital cost life time (`jail=48` ≈ 1 year). Adult clock 2.0 → 1.05 years/day: decisions now eat ~35% of a
+  life (was ~15%); a life is ~45 real days. Hand-tuned times for the most common everyday events.
+- Personality steers what happens: situations where a pet can act in character come up more often.
+
+### Added
+- **Consequences:** `then=("fu_id", "2y")` schedules a follow-up event after that much of the pet's life;
+  `ev(..., followup=True)` events never fire at random. 21 follow-ups (`content/consequences.py`) for common
+  choices — the scam call, «КумКоїн», the kum's wedding, ЦНАП, the socket, the shelter, the TikTok video…
+- Life summary: «рішення забрали N років життя» (`counters["dec_years"]`).
+- Content pipeline: `scripts/ua_lint.py` (Ukrainian lint over every player-facing string: Russian letters, Latin
+  look-alikes, apostrophes, placeholders, «», russisms/surzhyk, typography; strict in CI), `scripts/content_gate.py`
+  (all content gates in one command), the `kit-event-writer` skill as a plan → write → gate → review → simulate
+  pipeline, a stronger `content-reviewer` agent; balance target `decision_share`.
+
 ## [0.3.0] — 2026-10-28
 
 ### Changed — the life model (breaking for hosts that show care)

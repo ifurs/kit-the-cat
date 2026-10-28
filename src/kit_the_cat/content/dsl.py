@@ -9,7 +9,9 @@
 
 Time is the price of every decision: a choice costs `time` of the pet's life (shown on its button), an outcome
 can cost extra (a sentence, a coma). Durations: "3d", "2w", "6m", "4y" or a number of years. A choice without
-`time` costs its event's `time`, else its module's default (content/events.py).
+`time` gets one computed from what it does (`infer_time`: studying, a new job, moving, a romance, a chain step,
+skills and money earned cost more; trivia costs days) on top of its event's / module's base. Prison and hospital
+also cost years/months of life (jail=48 ≈ 1 year).
     ch("Вступити в КПІ", o("…", int=6, edu="kpi"), time="4y")
     o("Дали п'ять років умовно… ні, реально.", time="5y", jail=24)
 
@@ -40,6 +42,8 @@ Effects (o(..., **fx)):
   role="vampire" | role=""             supernatural role (see engine.ROLES) / cure
   reroll_persona=True                  amnesia: new temperament, dream, fear, quirk
   twist=True                           marks the outcome as a plot twist (announced louder)
+  then=("fu_kum_returns", "2y")        schedule a follow-up event after that much of the pet's life: earlier
+                                       choices come back (the follow-up must be an ev(..., followup=True))
   # social events only:
   rel=+10  status="friend|bestie|rival|enemy|crush|partner|ex"  other={...effects for the other pet}
   baby=True                            the couple gets an heir egg (hybrid genes)
@@ -57,6 +61,7 @@ Requirements (req=dict(...)):
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence) | list of those | month numbers (real Kyiv date)
 """
+import math
 from dataclasses import dataclass, field
 
 # The contract between content (storyline) and engine. Content may only use these keys;
@@ -65,7 +70,7 @@ STATS = {"hunger", "mood", "clean", "health", "energy"}
 LIFE = {"fame", "auth", "blat", "fin", "attr"}
 SKILLS = {"str", "int", "cha", "luck"}
 TRAITS = {"toxic", "gambler", "dark", "party", "patriot", "glutton", "love", "mystic"}
-KNOWN_FX = STATS | SKILLS | TRAITS | LIFE | {"time",
+KNOWN_FX = STATS | SKILLS | TRAITS | LIFE | {"time", "then",
     "money", "money_mult", "xp", "lifespan", "item", "item_slot", "lose_item", "unequip", "flag", "unflag", "job", "edu",
     "home", "jail", "hospital", "die", "achievement", "free", "gene", "mutate", "species", "role", "reroll_persona",
     "twist", "rel", "status", "other", "baby", "swap_genes",
@@ -76,6 +81,7 @@ KNOWN_REQ = {
     "season", "other_stage_max", "life", "tier", "tier_max", "years",
 }
 UNITS = {"d": 1 / 365, "w": 7 / 365, "m": 1 / 12, "y": 1.0}
+SNAP = ["1d", "2d", "3d", "1w", "2w", "1m", "2m", "3m", "6m", "9m", "1y", "2y", "3y", "4y", "5y", "7y", "10y"]
 
 
 def years(v) -> float:
@@ -85,6 +91,29 @@ def years(v) -> float:
     if isinstance(v, str) and len(v) > 1 and v[-1] in UNITS:
         return float(v[:-1]) * UNITS[v[-1]]
     raise ValueError(f"bad duration {v!r}")
+
+
+def snap(y: float) -> str:
+    """Nearest friendly duration (by ratio) for a number of years."""
+    return min(SNAP, key=lambda s: abs(math.log(years(s) / max(y, 1 / 365))))
+
+
+def infer_time(c: "Choice", base: str | float) -> str:
+    """Life time a choice costs, from what it does: the base (event/module) plus studying, settling into a job,
+    moving, a serious relationship, a story step, skills learned and money earned (averaged over outcomes)."""
+    outs = (c.outs + c.fail) or c.outs
+    num = lambda v: v if isinstance(v, (int, float)) and not isinstance(v, bool) else 0  # noqa: E731
+
+    def cost(fx: dict) -> float:
+        y = 3.0 if fx.get("edu") else 0.0
+        y += 1.0 if fx.get("job") else 0.0
+        y += 0.5 if fx.get("home") else 0.0
+        y += 0.5 if fx.get("flag") else 0.0
+        y += 1.0 if fx.get("baby") or fx.get("status") == "partner" else 0.0
+        y += 0.15 * max(0.0, sum(num(v) for k, v in fx.items() if k in SKILLS)) / 3
+        y += 0.25 * max(0.0, num(fx.get("money", 0))) / 1000
+        return y
+    return snap(years(base) + sum(cost(o.fx) for o in outs) / len(outs))
 ROLES = {"vampire", "werewolf", "zombie", "demon", "angel", "cyborg", "alien", "quantum"}
 
 
@@ -118,6 +147,7 @@ class Event:
     once: bool = False
     aff: tuple = ()         # traits that make this event more likely
     time: str | float = ""  # default cost of its choices
+    followup: bool = False  # only comes as a consequence (`then=`), never at random
 
 
 def o(text: str, w: float = 1.0, **fx) -> Out:
@@ -129,5 +159,5 @@ def ch(label: str, *outs: Out, check=None, fail=None, req=None, auto: str = "", 
 
 
 def ev(id: str, text: str, *choices: Choice, req=None, w: float = 1.0, social: bool = False, bg: str = "",
-       once: bool = False, aff: tuple = (), time: str | float = "") -> Event:
-    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), time)
+       once: bool = False, aff: tuple = (), time: str | float = "", followup: bool = False) -> Event:
+    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), time, followup)
