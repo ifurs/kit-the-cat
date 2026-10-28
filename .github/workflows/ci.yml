@@ -12,7 +12,7 @@ jobs:
       - run: uv run python scripts/gen_dsl_docs.py --check
       - run: uv run python scripts/content_stats.py --strict --gaps
       - run: uv run pytest -q
-      - run: uv run python scripts/balance.py --pets 16 --days 30
+      - run: uv run python scripts/balance.py --pets 16 --days 45
       - run: uv run python scripts/preview.py --smoke
       - name: core has no third-party imports
         run: uv run python scripts/build_web.py --tree --no-runtime && cd build/web-py && python3 -I -S -c "import sys; sys.path.insert(0,'.'); import bridge"
