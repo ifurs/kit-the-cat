@@ -16,6 +16,7 @@ uv run pytest -q
 uv run python -m kit_the_cat.content.validate
 uv run python scripts/gen_dsl_docs.py --check
 uv run python scripts/content_stats.py --strict
+uv run python scripts/ua_lint.py --strict
 uv run python scripts/balance.py
 uv run python scripts/preview.py --smoke
 git status --short        # nothing unexpected; no play.json, build/, secrets

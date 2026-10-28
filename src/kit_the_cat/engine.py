@@ -74,7 +74,7 @@ FALLBACK_NAMES = ["Бублик", "Пончик", "Шпротик", "Кекси�
                   "Пельмешка", "Галушка", "Сирник", "Кавунчик", "Буряк", "Шкварка"]
 EGG_HOURS = 1.0
 # life (0.3): upkeep is automatic, every decision costs time, life stats have tiers
-YEARS_PER_DAY = {1: 8.0, 2: 2.6, 3: 2.0, 4: 2.0}     # passive ageing per game day, by stage
+YEARS_PER_DAY = {1: 7.0, 2: 1.8, 3: 1.05, 4: 1.05}     # the clock; decisions add about as much again     # passive ageing per game day, by stage
 STAGE_YEARS = {2: 12, 3: 18, 4: 60}
 LIFESPAN_YEARS = (74, 92)
 DEFAULT_TIME = "2w"                                   # a choice with no time anywhere
@@ -409,6 +409,7 @@ class Pet:
     recent: list = field(default_factory=list)
     seen: dict = field(default_factory=dict)      # event id -> times lived (this life)
     story: list = field(default_factory=list)     # [ts, kind, text] highlights for the life summary
+    followups: list = field(default_factory=list)  # [event id, due at age in years]: consequences of earlier choices
     persona: dict = field(default_factory=dict)
     achievements: list = field(default_factory=list)
     jail_until: float = 0.0
@@ -918,6 +919,10 @@ class Pet:
                     v = round(v * (1 - self.life["fin"] / 300))
                 self.money += v
                 notes.append(f"{'+' if v > 0 else ''}{v:g} ₴")
+            elif k == "then":
+                fid, after = v
+                if fid in EVENTS and all(f[0] != fid for f in self.followups):
+                    self.followups = (self.followups + [[fid, self.years + parse_years(after)]])[-8:]
             elif k == "time":
                 y = parse_years(v)
                 self.years += y
@@ -983,6 +988,7 @@ class Pet:
                     notes.append(f"🏠 {bg_name(v)}")
             elif k == "jail":
                 self.jail_until = max(self.jail_until, now()) + v * hour()
+                self.years += v / 48  # a sentence eats years of life (48 h behind bars ≈ a year)
                 self.flags["jailed_times"] = self.flags.get("jailed_times", 0) + 1
                 notes.append(f"⛓ {v} год. за ґратами")
                 self.note("jail", f"⛓ {self.name} сів на {v} год.")
@@ -990,6 +996,7 @@ class Pet:
                     self.ach("Рецидивіст")
             elif k == "hospital":
                 self.hospital_until = max(self.hospital_until, now()) + v * hour()
+                self.years += v / 24 / 12
                 notes.append(f"🏥 {v} год. у лікарні")
             elif k == "free":
                 if v and self.jail_until:
@@ -1236,6 +1243,13 @@ class Pet:
 
     def pick_event(self, others: list["Pet"], rng: random.Random, kind: str = "") -> tuple[Event | None, "Pet | None"]:
         """kind: "" any, "solo", "social", "twist", "date", "fight". Others = other pets in the chat."""
+        if kind in ("", "solo") and self.followups:  # an earlier choice comes back
+            self.followups = [f for f in self.followups if f[0] in EVENTS and self.years - f[1] < 15]
+            for f in sorted(self.followups, key=lambda f: f[1]):
+                e = EVENTS[f[0]]
+                if self.years >= f[1] and self.eligible(e, None, fresh=False):
+                    self.followups.remove(f)
+                    return e, None
         pool = [x for x in others if x.alive and x.pid != self.pid and x.stage >= 1 and not x.jailed]
         twist = kind == "twist" or (not kind and self.flags.get("_twist"))
         other = None
@@ -1248,7 +1262,7 @@ class Pet:
             other = None
         cands, ws = [], []
         for e in EVENTS.values():
-            if twist and e.id not in TWIST_IDS:
+            if e.followup or (twist and e.id not in TWIST_IDS):
                 continue
             if kind == "date" and not (any(h in e.id for h in DATE_HINTS) or "love" in e.aff):
                 continue
@@ -1257,6 +1271,8 @@ class Pet:
             if not self.eligible(e, other, fresh=False):
                 continue
             w = e.w * (1 + sum(self.traits.get(t, 0) for t in e.aff) / 15) * REPEAT_DECAY ** self.seen.get(e.id, 0)
+            # personality: situations where the pet can act in character come up more often
+            w *= 1 + sum(self.traits.get(c.auto, 0) for c in e.choices if c.auto) / len(e.choices) / 40
             if "flag" in e.req:
                 w *= 3.0    # storylines move forward
             elif any(k in e.req for k in ("job", "jail", "role", "season")):
@@ -1361,9 +1377,11 @@ class Pet:
             fx["health"] = fx.get("health", 0) - 10
             fx["mood"] = fx.get("mood", 0) - 10
         res.text = self.fmt(out.text, other)
+        y0 = self.years
         res.time = self.choice_time(e, c)
         self.years += res.time
         res.notes = self.apply(fx, other, rng)
+        self.counters["dec_years"] = round(self.counters.get("dec_years", 0) + self.years - y0, 3)
         if self.alive:
             self._age_checks(rng)
         res.twist = bool(fx.get("twist")) or e.id.startswith("twist_")
@@ -1824,6 +1842,7 @@ def casino(p: Pet, venue: str, stake: int, rng: random.Random) -> tuple[str, lis
     if not isinstance(stake, int) or isinstance(stake, bool) or not lo <= stake <= min(hi, int(p.money)):
         return f"Ставка від {lo} до {min(hi, max(lo, int(p.money)))} ₴"
     p.years += parse_years(t)
+    p.counters["dec_years"] = round(p.counters.get("dec_years", 0) + parse_years(t), 3)
     p.counters["casino"] = p.counters.get("casino", 0) + 1
     p._add("gambler", 1)
     fin = p.life.get("fin", 0)
@@ -2124,6 +2143,9 @@ def life_summary(p: Pet, names: dict[str, str] | None = None) -> dict:
              + (f" · 👑 {p.dynasty}, покоління {p.gen}" if p.gen > 1 and p.dynasty else ""),
              f"🎲 {p.events_done} {plural(p.events_done, 'пригода', 'пригоди', 'пригод')}" + (f" · 🎯 кубик: {ok}✅ {fail}❌" if ok + fail else "")
              + (f" · 🌀 поворотів: {c['twists']}" if c.get("twists") else "")]
+    if c.get("dec_years", 0) >= 1:
+        dy = int(c["dec_years"])
+        facts.append(f"⏳ рішення забрали {dy} {plural(dy, 'рік', 'роки', 'років')} життя")
     career = [JOBS[p.job]["name"] if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else ""]
     money = f"💰 найбільше мав {c.get('money_max', int(p.money)):,} ₴".replace(",", " ")
     facts.append(" · ".join(x for x in career + [money] if x))

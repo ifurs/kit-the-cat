@@ -48,6 +48,23 @@ def main() -> None:
                 errors.append(f"{e.id}/{c.label}: no outcomes")
         if len(e.text) > 450:
             errors.append(f"{e.id}: text too long for a caption")
+    by_id = {e.id: e for e in ALL}
+    targets = set()
+    for e in ALL:
+        for c in e.choices:
+            for out in c.outs + c.fail:
+                if "then" in out.fx:
+                    v = out.fx["then"]
+                    ok = isinstance(v, tuple) and len(v) == 2 and v[0] in by_id and by_id[v[0]].followup
+                    try:
+                        ok = ok and dsl.years(v[1]) > 0
+                    except ValueError:
+                        ok = False
+                    if not ok:
+                        errors.append(f"{e.id}/{c.label}: then={v!r} must be (followup event id, duration)")
+                    else:
+                        targets.add(v[0])
+    errors += [f"{e.id}: follow-up that nothing schedules (then=)" for e in ALL if e.followup and e.id not in targets]
     print(f"{len(ALL)} events, {sum(len(e.choices) for e in ALL)} choices")
     print("\n".join(errors) or "OK")
     raise SystemExit(1 if errors else 0)

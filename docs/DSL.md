@@ -2,7 +2,7 @@
 
 > Згенеровано `scripts/gen_dsl_docs.py` з коду — не редагуй вручну. Як писати гарні пригоди: [CONTENT_GUIDE.md](CONTENT_GUIDE.md).
 
-Контракт: **52 ефектів**, **30 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
+Контракт: **53 ефектів**, **30 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
 
 ## Синтаксис (з `content/dsl.py`)
 
@@ -18,7 +18,9 @@ Tiny DSL for writing life events.
 
 Time is the price of every decision: a choice costs `time` of the pet's life (shown on its button), an outcome
 can cost extra (a sentence, a coma). Durations: "3d", "2w", "6m", "4y" or a number of years. A choice without
-`time` costs its event's `time`, else its module's default (content/events.py).
+`time` gets one computed from what it does (`infer_time`: studying, a new job, moving, a romance, a chain step,
+skills and money earned cost more; trivia costs days) on top of its event's / module's base. Prison and hospital
+also cost years/months of life (jail=48 ≈ 1 year).
     ch("Вступити в КПІ", o("…", int=6, edu="kpi"), time="4y")
     o("Дали п'ять років умовно… ні, реально.", time="5y", jail=24)
 
@@ -49,6 +51,8 @@ Effects (o(..., **fx)):
   role="vampire" | role=""             supernatural role (see engine.ROLES) / cure
   reroll_persona=True                  amnesia: new temperament, dream, fear, quirk
   twist=True                           marks the outcome as a plot twist (announced louder)
+  then=("fu_kum_returns", "2y")        schedule a follow-up event after that much of the pet's life: earlier
+                                       choices come back (the follow-up must be an ev(..., followup=True))
   # social events only:
   rel=+10  status="friend|bestie|rival|enemy|crush|partner|ex"  other={...effects for the other pet}
   baby=True                            the couple gets an heir egg (hybrid genes)
