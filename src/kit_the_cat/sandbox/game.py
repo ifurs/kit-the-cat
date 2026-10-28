@@ -92,8 +92,8 @@ class Sandbox:
             life=[dict(key=k, icon=v[0], name=v[1], value=round(p.life.get(k, 0)), tier=p.tier_name(k)[2:])
                   for k, v in E.LIFE.items()],
             money_tier=p.tier_name("money"),
-            casino=[dict(id=k, name=E.CASINO[k][0], lo=E.CASINO[k][2], hi=min(E.CASINO[k][3], int(p.money)),
-                         time=E.time_label(E.parse_years(E.CASINO[k][4]))) for k in E.casino_venues(p)],
+            casino=[dict(id=k, name=E.CASINO[k][0], lo=E.CASINO[k][2], hi=min(E.CASINO[k][3], int(p.money)))
+                    for k in E.casino_venues(p)],
             role=E.ROLES[p.role]["name"] if p.role in E.ROLES else "", job=JOBS[p.job]["name"] if p.job in JOBS else "",
             traits={E.TRAITS[t]: round(p.traits.get(t, 0), 1) for t in p.top_traits()},
             skills={k: round(p.skills.get(k, 0)) for k in E.SKILLS}, jailed=p.jailed, pending=None,
@@ -198,7 +198,7 @@ class Sandbox:
 
     # --- adventures ------------------------------------------------------------------------------
     async def adventure(self, owner: int, kind: str = "", with_owner: int = 0) -> str:
-        """kind '' = any (costs energy), 'date' / 'fight' = with a chosen pet."""
+        """kind '' = any, 'date' / 'fight' = with a chosen pet."""
         async with self.lock:
             pets = await self.pets()
             p = next((x for x in pets if x.owner_id == owner), None)
@@ -206,8 +206,6 @@ class Sandbox:
                 return "Пригоди — для живих 🪦"
             if p.pending:
                 return "Спершу дорозв'яжи поточну пригоду"
-            if p.energy < E.EVENT_ENERGY:
-                return f"⚡ Без сил ({p.energy:.0f}/{E.EVENT_ENERGY}). ⏩ Промотай час, хай поспить."
             if kind:
                 other = next((x for x in pets if x.owner_id == with_owner and x.alive and x is not p), None)
                 if not other:
@@ -217,7 +215,6 @@ class Sandbox:
                 e, other = p.pick_event(pets, self.rng)
             if not e:
                 return "Сьогодні нічого не трапилось. Навіть дивно."
-            p.energy -= E.EVENT_ENERGY
             p.start(e, other, "manual")
             await self.save(p)
         return "🎲 Пригода!"
@@ -471,10 +468,7 @@ class Sandbox:
                 return dict(error="Обери суперника")
             if not B.eligible(a) or not B.eligible(b):
                 return dict(error="Битися можуть живі пети від підлітка, не в тюрмі й не в лікарні")
-            if a.energy < 15:
-                return dict(error=f"⚡ {a.name} без сил для бійки")
             res = self._battle(a, b, strategy, B.auto_strategy(b, self.rng))
-            a.energy = max(0.0, a.energy - 15)
             await self.save(a, b)
         return res
 

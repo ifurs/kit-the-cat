@@ -221,7 +221,7 @@ function renderPet() {
     if (p.state === "alive") {
       const s = p.stats;
       h += `<div class="meta" style="margin-top:6px">🎭 ${esc(p.persona.temper)}, мріє ${esc(p.persona.dream)}</div>
-        <div class="bars">${bar("❤️", s.health)}${bar("😊", s.mood)}${bar("⚡", s.energy)}</div>
+        <div class="bars">${bar("❤️", s.health)}${bar("😊", s.mood)}</div>
         <div class="meta">${esc(p.money_tier)}</div>
         <div class="life">${p.life.map(l => `<span class="stat" title="${esc(l.name)}">${l.icon} ${l.value} <small>${esc(l.tier)}</small></span>`).join("")}</div>
         <div class="care"><button data-care="heal" title="Лікувати">💊</button><button data-more="casino" title="Казино">🎰</button>
@@ -248,7 +248,7 @@ function renderMore() {
   const opts = [["wardrobe", "👗 Речі"], ["shop", "🛒 Базар"], ["homes", "🏠 Дім"], ["jobs", "💼 Робота"], ["dna", "🧬 Гени"], ["name", "✏️ Ім'я"]];
   const head = more === "casino" ? "" : `<div class="seg">${opts.map(([k, n]) => `<button data-sec="${k}" class="${more === k ? "on" : ""}">${n}</button>`).join("")}</div>`;
   let list = "";
-  if (more === "casino") list = S.pet.casino.length ? S.pet.casino.map(v => `<div class="row"><span>${esc(v.name)} <small class="muted">${v.lo}–${v.hi} ₴ · ${esc(v.time)}</small></span>
+  if (more === "casino") list = S.pet.casino.length ? S.pet.casino.map(v => `<div class="row"><span>${esc(v.name)} <small class="muted">${v.lo}–${v.hi} ₴</small></span>
       <span class="bet"><input type="number" inputmode="numeric" min="${v.lo}" max="${v.hi}" value="${v.lo}" data-stake="${v.id}"><button data-bet="${v.id}">Ставка</button></span></div>`).join("")
     : `<p class="muted">Казино — лише для дорослих при грошах. Автомати в переході пускають від 20 ₴.</p>`;
   if (more === "wardrobe") list = L.wardrobe.length ? L.wardrobe.map(w => row((w.on ? "✅ " : "") + esc(w.name), "", `<button data-eq="${w.i}">${w.on ? "Зняти" : "Одягти"}</button>`)).join("") : `<p class="muted">Поки порожньо — загляни на базар.</p>`;
@@ -307,9 +307,7 @@ function renderAdv() {
     el.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => act("choose", b.dataset.ch === "auto" ? null : +b.dataset.ch));
     return;
   }
-  const tired = p.stats.energy < 20;
-  el.innerHTML = `<div class="empty"><button class="primary" id="go" ${tired ? "disabled" : ""}>🎲 Нова пригода</button>
-    <p class="muted">${tired ? "⚡ Пет без сил — ⏩ промотай час" : "коштує ⚡ 20 енергії"}</p></div>${resultHtml(lastResult)}`;
+  el.innerHTML = `<div class="empty"><button class="primary" id="go">🎲 Нова пригода</button></div>${resultHtml(lastResult)}`;
   $("#go").onclick = () => { lastResult = null; act("adventure"); };
 }
 

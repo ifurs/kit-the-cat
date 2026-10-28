@@ -24,6 +24,15 @@ async def do(c, action, x=None, who=1, **kw):
     return await r.json()
 
 
+async def ready_for_tournament(c, need: int) -> None:
+    """Grow everyone into teens; wait out hospital/jail stays (they depend on the real time of day)."""
+    await do(c, "advance", 24 * 2, care=True)
+    for _ in range(16):
+        if (await (await c.get("/api/tour?as=1")).json())["eligible"] >= need:
+            return
+        await do(c, "advance", 6, care=True)
+
+
 async def state(c, who=1):
     r = await c.get(f"/api/state?as={who}")
     assert r.status == 200
@@ -34,7 +43,7 @@ async def test_page_and_empty_state(client):
     r = await client.get("/")
     assert r.status == 200 and "Пісочниця" in await r.text()
     s = await state(client)
-    assert s["pet"] is None and len(s["species"]) == 6
+    assert s["pet"] is None and len(s["species"]) == 7
 
 
 async def test_a_life(client):
@@ -97,7 +106,7 @@ async def test_reset(client):
 async def test_tournament(client):
     await do(client, "create", "horse")
     await do(client, "npcs", 6)
-    await do(client, "advance", 24 * 2, care=True)  # everyone is a teen now
+    await ready_for_tournament(client, 3)
     t = await (await client.get("/api/tour?as=1")).json()
     assert t["eligible"] >= 3
     assert "Турнір на" in (await do(client, "t_new"))["message"]
@@ -108,8 +117,9 @@ async def test_tournament(client):
     for _ in range(40):
         t = await (await client.get("/api/tour?as=1")).json()
         cur = t["tour"]["current"]
-        if cur and 1 not in (cur["a"]["owner"], cur["b"]["owner"]) and not battles:
-            msg = (await do(client, "t_bet", 0, key=cur["key"], amount=50))["message"]
+        money = (await state(client))["pet"]["money"]
+        if cur and 1 not in (cur["a"]["owner"], cur["b"]["owner"]) and not battles and money >= 20:
+            msg = (await do(client, "t_bet", 0, key=cur["key"], amount=20))["message"]
             assert "Ставка" in msg, msg
         b = (await do(client, "t_next"))["battle"]
         assert "error" not in b, b
@@ -133,7 +143,7 @@ async def test_tournament(client):
 async def test_spar(client):
     await do(client, "create", "pig")
     await do(client, "npcs", 1)
-    await do(client, "advance", 24 * 2, care=True)
+    await ready_for_tournament(client, 2)
     s = await state(client)
     foe = next(p["owner"] for p in s["players"] if p["npc"])
     b = (await do(client, "spar", "cunning", **{"with": foe}))["battle"]
@@ -144,7 +154,7 @@ async def test_spar(client):
 async def test_tournament_with_byes_never_stalls(client, npcs):
     await do(client, "create", "cat")
     await do(client, "npcs", npcs)
-    await do(client, "advance", 24 * 2, care=True)
+    await ready_for_tournament(client, npcs + 1)
     assert "Турнір на" in (await do(client, "t_new"))["message"]
     for _ in range(20):
         t = (await (await client.get("/api/tour?as=1")).json())["tour"]

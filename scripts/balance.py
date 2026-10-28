@@ -24,15 +24,14 @@ MIN_DEATHS = 10  # death-based shares are "n/a" below this (one unlucky death in
 # (low, high): outside → WARN; far outside (×0.5 / ×1.5) → FAIL
 TARGETS = {
     "life_years": (65, 95),                  # median age at death, years
-    "life_real_days": (25, 48),              # …and how many real days such a life takes
+    "life_real_days": (22, 42),              # …and how many real days such a life takes
     "early_death_share": (0.0, 0.25),        # died before 40 years (debt, events, sickness)
     "debt_share": (0.0, 0.25),               # living adults in debt at the end
-    "tier2_share": (0.35, 1.0),
-    "decision_share": (0.30, 0.65),          # share of a life's years eaten by decisions (vs the clock)             # lives that reached tier 2 of some life stat (the new content fires)
+    "tier2_share": (0.35, 1.0),              # lives that reached tier 2 of some life stat (the new content fires)
     "check_success": (0.45, 0.70),           # dice checks: hopeful, not trivial
     "event_coverage": (0.55, 1.0),           # share of content that actually fires in the run
     "money_median": (150, 6000),             # living pets' wallets
-    "event_deaths_share": (0.0, 0.15),       # deaths by events (vs hunger/dirt/age): rare and dramatic
+    "event_deaths_share": (0.0, 0.15),       # deaths by events (vs debt/age): rare and dramatic
 }
 
 
@@ -74,7 +73,6 @@ async def run(pets: int, days: float, neglect: float, seed: int) -> dict:
                 if p.state == "dead" and p.pid not in seen_dead:
                     seen_dead.add(p.pid)
                     deaths.append(dict(owner=p.owner_id, age=p.age_days, years=p.years, cause=p.cause,
-                                       dec=p.counters.get("dec_years", 0) / max(1.0, p.years),
                                        neglected=p.owner_id in neglected,
                                        tier2=any(p.counters.get(f"tier_{k}", 0) >= 2 for k in E.LIFE),
                                        event=not any(w in p.cause for w in ("борг", "старост", "туг", "сну", "пенсі"))))
@@ -98,7 +96,6 @@ async def run(pets: int, days: float, neglect: float, seed: int) -> dict:
         life_real_days=statistics.median(d["age"] for d in deaths) if deaths else None,
         early_death_share=sum(d["years"] < 40 for d in deaths_for_stats) / len(deaths_for_stats) if deaths_for_stats else None,
         debt_share=sum(p.money < 0 for p in adults) / len(adults) if adults else None,
-        decision_share=statistics.median(d["dec"] for d in deaths_for_stats) if deaths_for_stats else None,
         tier2_share=sum(d["tier2"] for d in deaths_for_stats) / len(deaths_for_stats) if deaths_for_stats else None,
         check_success=checks["ok"] / total_checks if total_checks else None,
         event_coverage=len(fired) / len(E.EVENTS),

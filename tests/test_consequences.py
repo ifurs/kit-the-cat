@@ -3,7 +3,6 @@ import random
 
 from kit_the_cat import engine as E
 from kit_the_cat.content import dsl
-from kit_the_cat.content.dsl import ch, o
 from kit_the_cat.content.events import ALL, FOLLOWUPS
 
 
@@ -15,18 +14,12 @@ def _adult() -> E.Pet:
     return p
 
 
-def test_inferred_time_follows_what_a_choice_does():
-    study = ch("Вчитися", o("Диплом", edu="kpi", int=5))
-    job = ch("Працювати", o("Взяли", job="it", money=500))
-    party = ch("Тусити", o("Ура", mood=10, party=2))
-    assert dsl.years(dsl.infer_time(study, "3d")) >= 3
-    assert dsl.years(dsl.infer_time(job, "3d")) >= 0.75
-    assert dsl.infer_time(party, "3d") == "3d"
-
-
-def test_most_events_offer_choices_with_different_time():
-    same = [e.id for e in ALL if len({dsl.years(c.time) for c in e.choices}) == 1]
-    assert len(same) < len(ALL) * 0.3, same[:10]
+def test_decisions_cost_no_time_but_story_skips_do():
+    p, rng = _adult(), random.Random(0)
+    p.resolve(E.EVENTS["teen_uni"], 0, None, rng)
+    assert p.years == 30.0 and p.button(E.EVENTS["teen_uni"], 0) == "КПІ"
+    p.resolve(E.EVENTS["st_coma"], 0, None, random.Random(0))  # waiting out a coma: the story skips years
+    assert p.years > 30.0
 
 
 def test_followups_are_never_random_and_always_scheduled():
@@ -56,17 +49,6 @@ def test_followups_wait_until_due_and_expire():
     p.years += 25  # overdue by 20 years: the moment has passed
     e, _ = p.pick_event([p], rng, "solo")
     assert not p.followups
-
-
-def test_decision_years_are_counted_and_shown():
-    p, rng = _adult(), random.Random(3)
-    p.resolve(E.EVENTS["teen_uni"], 0, None, rng) if p.meets(E.EVENTS["teen_uni"].req) else None
-    p.apply({"jail": 48})
-    assert p.years >= 31  # a 48-hour sentence costs about a year
-    p.resolve(E.EVENTS["daily_marshrutka"], 0, None, rng)
-    assert p.counters["dec_years"] > 0
-    p.counters["dec_years"] = 12.5
-    assert any("рішення забрали 12 років" in f for f in E.life_summary(p)["facts"])
 
 
 def test_personality_makes_in_character_events_likelier():

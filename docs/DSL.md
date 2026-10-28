@@ -16,20 +16,15 @@ Tiny DSL for writing life events.
           fail=[o("Нічого не виграв.", money=-50)], auto="gambler"),
        req=dict(stage=2))
 
-Time is the price of every decision: a choice costs `time` of the pet's life (shown on its button), an outcome
-can cost extra (a sentence, a coma). Durations: "3d", "2w", "6m", "4y" or a number of years. A choice without
-`time` gets one computed from what it does (`infer_time`: studying, a new job, moving, a romance, a chain step,
-skills and money earned cost more; trivia costs days) on top of its event's / module's base. Prison and hospital
-also cost years/months of life (jail=48 ≈ 1 year).
-    ch("Вступити в КПІ", o("…", int=6, edu="kpi"), time="4y")
-    o("Дали п'ять років умовно… ні, реально.", time="5y", jail=24)
+Time: a pet ages by the clock (engine.YEARS_PER_DAY); decisions themselves cost no time. A story outcome may
+skip years: o("Прокинувся через п'ять років…", time="5y"). Durations: "3d", "2w", "6m", "4y" or years.
 
 Effects (o(..., **fx)):
-  hunger mood clean health energy      stat deltas (0..100); hunger/clean/energy are automatic upkeep now — use
+  hunger mood clean health energy      stat deltas (0..100); hunger/clean/energy are automatic upkeep — use
                                        mood and health in new content
   fame auth blat fin attr              life stats 0..100 with tiers (engine.LIFE): популярність, авторитет, блат,
                                        фінграмотність, привабливість (style and charm, never mocking looks)
-  time="6m"                            extra life time this outcome costs
+  time="5y"                            the story skips that much of the pet's life (coma, a sentence, cryosleep)
   str int cha luck                     skill deltas
   toxic gambler dark party patriot glutton love mystic   trait deltas
   money xp lifespan                    ₴, experience, years of life
@@ -134,9 +129,9 @@ Requirements (req=dict(...)):
 
 | venue | Назва | Рівень статків | Ставка ₴ | Час |
 |---|---|---|---|---|
-| `underpass` | 🎰 Автомати в переході | 1 | 20–300 | 1d |
-| `bukovel` | 🎲 Казино в Буковелі | 2 | 300–5000 | 3d |
-| `private` | 🃏 Закритий покер олігархів | 4 | 5000–50000 | 1w |
+| `underpass` | 🎰 Автомати в переході | 1 | 20–300 | metro |
+| `bukovel` | 🎲 Казино в Буковелі | 2 | 300–5000 | bukovel |
+| `private` | 🃏 Закритий покер олігархів | 4 | 5000–50000 | casino |
 
 ## Етапи життя
 
@@ -367,9 +362,9 @@ Requirements (req=dict(...)):
 
 | Ген | Значення |
 |---|---|
-| `ears` | `cat_pointy`, `cat_big`, `cat_lynx`, `cat_fold`, `dog_floppy`, `dog_pointy`, `dog_round`, `dog_long`, `pig_floppy`, `pig_up`, `fox_ears`, `fennec`, `horse_ears`, `unicorn_mane`, `gills`, `gills_big`, `bunny`, `devil` |
-| `tail` | `cat_long`, `cat_fluffy`, `bobtail`, `dog_wag`, `dog_curl`, `pig_curl`, `pig_straight`, `fox`, `horse_tail`, `axo_fin`, `devil_tail` |
-| `face` | `cat`, `dog`, `dog_muzzle`, `pig`, `pig_big`, `fox_snout`, `horse_muzzle`, `axo_smile`, `heart_nose` |
+| `ears` | `cat_pointy`, `cat_big`, `cat_lynx`, `cat_fold`, `dog_floppy`, `dog_pointy`, `dog_round`, `dog_long`, `pig_floppy`, `pig_up`, `fox_ears`, `fennec`, `horse_ears`, `unicorn_mane`, `gills`, `gills_big`, `crest`, `crest_big`, `bunny`, `devil` |
+| `tail` | `cat_long`, `cat_fluffy`, `bobtail`, `dog_wag`, `dog_curl`, `pig_curl`, `pig_straight`, `fox`, `horse_tail`, `axo_fin`, `bird_fan`, `bird_fork`, `devil_tail` |
+| `face` | `cat`, `dog`, `dog_muzzle`, `pig`, `pig_big`, `fox_snout`, `horse_muzzle`, `axo_smile`, `beak`, `beak_hook`, `heart_nose` |
 | `head` | `round`, `wide`, `tall`, `small`, `big` |
 | `body` | `round`, `chubby`, `slim`, `tall` |
 | `eyes` | `dot`, `big`, `slit`, `sleepy`, `button`, `hetero`, `cyclops`, `three`, `star` |
