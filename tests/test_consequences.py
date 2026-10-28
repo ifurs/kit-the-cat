@@ -52,10 +52,10 @@ def test_followups_wait_until_due_and_expire():
 
 
 def test_personality_makes_in_character_events_likelier():
-    calm, glutton = _adult(), _adult()
-    glutton.traits["glutton"] = 60
+    calm, mystic = _adult(), _adult()
+    mystic.traits["mystic"] = 60
     rng_a, rng_b = random.Random(5), random.Random(5)
-    food = lambda e: e and any(c.auto == "glutton" for c in e.choices)  # noqa: E731
-    a = sum(bool(food(calm.pick_event([calm], rng_a, "solo")[0])) for _ in range(400))
-    b = sum(bool(food(glutton.pick_event([glutton], rng_b, "solo")[0])) for _ in range(400))
-    assert b > a * 1.2
+    fits = lambda e: e and any(c.auto == "mystic" for c in e.choices)  # noqa: E731
+    a = sum(bool(fits(calm.pick_event([calm], rng_a, "solo")[0])) for _ in range(600))
+    b = sum(bool(fits(mystic.pick_event([mystic], rng_b, "solo")[0])) for _ in range(600))
+    assert b > a * 1.25

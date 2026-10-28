@@ -5,6 +5,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Changed
+- **Decisions cost no life time again** (no labels, no inference; `Pet.button()` returns the plain label;
+  `Choice.time`/`Event.time` removed). The clock ages pets: a life is ~80 years ≈ 30 real days. Story outcomes
+  may still skip years (`o(..., time="5y")`). The casino costs no time; `CASINO` tuples lost the time field.
+- **Energy is automatic** like food and sleep (`EVENT_ENERGY = 0`); the card shows only ❤️ and 😊. Hosts pace
+  manual adventures with their own cooldowns.
+
+### Added
+- 🐦 **Bird**, the 7th species: crest / parrot crest, beak / hooked beak, feather fan / swallow tail, wings,
+  three-toed feet; sparrow, tit, canary, robin, parrot, pigeon, crow and bullfinch colours; 🐦 Політ battle
+  passive (+12% dodge, fast); names; 6 bird events; a twist can turn a pet into a bird.
+- **92 new events as branching life arcs** (`arcs.py`, `arcs_adult.py`, `arcs_soul.py`): every choice of a root
+  event schedules its own consequence, some chain further — the drawing on the wallpaper, the music school, the
+  school bully, the love note, the olympiad, the stray puppy, the time capsule, flooding the neighbours, the found
+  wallet, a loan to a friend, the ОСББ chair, a car from Lithuania, grandma's recipe, great-grandpa's house, fraud
+  at work, the stairwell generator, the bench committee, a charity run, fortune tellers, the домовик, Andriy's
+  Eve, prophetic dreams, grandpa's telescope, switching to Ukrainian, grandma's vyshyvanka, the veteran next
+  door, the drone jar. 478 events / 1598 choices in total.
+
 ## [0.4.0] — 2026-10-28
 
 ### Changed
