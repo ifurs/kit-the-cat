@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-28
+
 ### Changed
 - **Decisions weigh more, the clock less.** Choices without a hand-set `time` get one computed from what they
   do (`dsl.infer_time`: studying, a job, moving, a serious relationship, a story step, skills learned, money
@@ -78,7 +80,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/ifurs/kit-the-cat/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/ifurs/kit-the-cat/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ifurs/kit-the-cat/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/ifurs/kit-the-cat/compare/v0.1.0...v0.1.1
