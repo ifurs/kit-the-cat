@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-28
+
 ### Changed
 - **Decisions cost no life time again** (no labels, no inference; `Pet.button()` returns the plain label;
   `Choice.time`/`Event.time` removed). The clock ages pets: a life is ~80 years ≈ 30 real days. Story outcomes
@@ -99,7 +101,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/ifurs/kit-the-cat/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/ifurs/kit-the-cat/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/ifurs/kit-the-cat/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ifurs/kit-the-cat/compare/v0.1.1...v0.2.0
