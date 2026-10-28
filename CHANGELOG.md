@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-28
+
 ### Changed — the life model (breaking for hosts that show care)
 - **Upkeep is automatic.** Food, washing and sleep happen by themselves; adults pay a daily cost of living by
   wealth tier. Debt shows on the sprite (hungry, dirty), brings poverty events and slowly hurts health.
@@ -58,7 +60,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/ifurs/kit-the-cat/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ifurs/kit-the-cat/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/ifurs/kit-the-cat/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ifurs/kit-the-cat/releases/tag/v0.1.0
