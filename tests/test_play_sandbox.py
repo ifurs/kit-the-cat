@@ -159,8 +159,11 @@ async def test_tournament_with_byes_never_stalls(client, npcs):
 async def test_dead_pet_has_life_summary(client):
     await do(client, "create", "pig")
     await do(client, "advance", 2)
-    await do(client, "advance", 24 * 6)  # nobody cares → starves
-    p = (await state(client))["pet"]
+    for _ in range(12):  # pets no longer starve: live a whole life on autopilot until old age
+        await do(client, "advance", 24 * 7)
+        p = (await state(client))["pet"]
+        if p["state"] == "dead":
+            break
     assert p["state"] == "dead"
     s = p["summary"]
     assert s["title"] and s["cause"] and s["facts"]

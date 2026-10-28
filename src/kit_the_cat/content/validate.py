@@ -16,8 +16,18 @@ def main() -> None:
         if not e.choices:
             errors.append(f"{e.id}: no choices")
         for c in e.choices:
+            for t in (c.time, e.time):
+                if t != "":
+                    try:
+                        dsl.years(t)
+                    except ValueError:
+                        errors.append(f"{e.id}/{c.label}: bad time {t!r}")
             if len(c.label) > 40:
                 errors.append(f"{e.id}: label too long ({c.label})")
+            for r in (e.req, c.req):
+                for k in ("life", "tier", "tier_max"):
+                    bad = [x for x in r.get(k, {}) if x not in dsl.LIFE | ({"money"} if k != "life" else set())]
+                    errors += [f"{e.id}: unknown {k} key {x}" for x in bad]
             for k in c.req:
                 if k not in dsl.KNOWN_REQ:
                     errors.append(f"{e.id}/{c.label}: unknown req {k}")
@@ -25,6 +35,11 @@ def main() -> None:
                 for k, v in out.fx.items():
                     if k not in dsl.KNOWN_FX:
                         errors.append(f"{e.id}/{c.label}: unknown effect {k}")
+                    if k == "time":
+                        try:
+                            dsl.years(v)
+                        except ValueError:
+                            errors.append(f"{e.id}/{c.label}: bad time {v!r}")
                     if k == "role" and v and v not in dsl.ROLES:
                         errors.append(f"{e.id}: unknown role {v}")
                     if k == "other":

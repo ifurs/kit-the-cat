@@ -2,7 +2,7 @@
 
 > Згенеровано `scripts/gen_dsl_docs.py` з коду — не редагуй вручну. Як писати гарні пригоди: [CONTENT_GUIDE.md](CONTENT_GUIDE.md).
 
-Контракт: **46 ефектів**, **26 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
+Контракт: **52 ефектів**, **30 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
 
 ## Синтаксис (з `content/dsl.py`)
 
@@ -16,11 +16,21 @@ Tiny DSL for writing life events.
           fail=[o("Нічого не виграв.", money=-50)], auto="gambler"),
        req=dict(stage=2))
 
+Time is the price of every decision: a choice costs `time` of the pet's life (shown on its button), an outcome
+can cost extra (a sentence, a coma). Durations: "3d", "2w", "6m", "4y" or a number of years. A choice without
+`time` costs its event's `time`, else its module's default (content/events.py).
+    ch("Вступити в КПІ", o("…", int=6, edu="kpi"), time="4y")
+    o("Дали п'ять років умовно… ні, реально.", time="5y", jail=24)
+
 Effects (o(..., **fx)):
-  hunger mood clean health energy      stat deltas (0..100)
+  hunger mood clean health energy      stat deltas (0..100); hunger/clean/energy are automatic upkeep now — use
+                                       mood and health in new content
+  fame auth blat fin attr              life stats 0..100 with tiers (engine.LIFE): популярність, авторитет, блат,
+                                       фінграмотність, привабливість (style and charm, never mocking looks)
+  time="6m"                            extra life time this outcome costs
   str int cha luck                     skill deltas
   toxic gambler dark party patriot glutton love mystic   trait deltas
-  money xp lifespan                    ₴, experience, days of life
+  money xp lifespan                    ₴, experience, years of life
   item="cowboy@6" | ["a", "b"]         give & equip;  item_slot="head" → random item for slot
   lose_item="random" | "id"            take away
   unequip="head" | "all"               take off what is worn in that slot (or everything); items stay owned
@@ -51,6 +61,8 @@ Requirements (req=dict(...)):
   status=["crush"] (social: relation with the other pet)   other_stage=2   age=(min_days, max_days)
   debt=500 (money <= -500)   low={"health": 40}   role="vampire" | role="any" | norole=True
   other_role="vampire"   nostatus=[...]   other_partner=False   other_stage_max=2
+  life={"fame": 40} (life stat at least)   tier={"fame": 2, "money": 3} (tier at least; money tiers too)
+  tier_max={"auth": 0}   years=(18, 60) (age in years)
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence) | list of those | month numbers (real Kyiv date)
 ```
@@ -99,15 +111,38 @@ Requirements (req=dict(...)):
 | `love` | 💖 ніжність |
 | `mystic` | 🔮 містика |
 
+## Життєві стати (`fame`, `auth`, `blat`, `fin`, `attr`) і рівні
+
+Значення 0–100; рівні з порогами 0 / 20 / 45 / 70 / 90. Вимога `tier={"fame": 2}` = щонайменше 2-й рівень (рахуємо з 0). Гроші теж мають рівні (`tier={"money": 3}`).
+
+| Ключ | Що це | Рівні |
+|---|---|---|
+| `fame` | 📈 популярність | Ніхто → Зірка під'їзду → Мікроблогер → Медійна персона → Зірка Євробачення |
+| `auth` | 🕶 авторитет | Чистий перед законом → Хуліган з району → Решала → Авторитет → Хрещений батько |
+| `blat` | 🤝 блат | Ніхто нікого не знає → Кум у ЦНАПі → Свій у міськраді → Людина зі зв'язками → Телефонне право |
+| `fin` | 📊 фінграмотність | Гроші під матрацом → Знає, що таке відсоток → Веде таблицю витрат → Інвестор → Фінансовий гуру |
+| `attr` | ✨ привабливість | Звичайний → Охайний → Стильний → Красунчик району → Ікона стилю |
+| `money` | 💰 статки (₴) | 🕳 У боргах (<0) → 🥫 Бідний студент (≥0) → 🧾 Середній клас (≥1000) → 🚗 Мажор (≥5000) → 🛥 Олігарх (≥20000) |
+
+Високі рівні приносять дохід (реклама, «дах», відсотки, зарплата з блатом) і ризики (облави, НАБУ, скандали, податкова). Привабливість підсилює ріст популярності, фінграмотність зменшує втрати грошей.
+
+## 🎰 Казино (дія, не DSL)
+
+| venue | Назва | Рівень статків | Ставка ₴ | Час |
+|---|---|---|---|---|
+| `underpass` | 🎰 Автомати в переході | 1 | 20–300 | 1d |
+| `bukovel` | 🎲 Казино в Буковелі | 2 | 300–5000 | 3d |
+| `private` | 🃏 Закритий покер олігархів | 4 | 5000–50000 | 1w |
+
 ## Етапи життя
 
-| stage | Назва | Від віку (дн.) |
+| stage | Назва | Від віку (років) |
 |---|---|---|
 | 0 | 🥚 Яйце | яйце ~1 год |
 | 1 | 👶 Малюк | 0 |
-| 2 | 🧒 Підліток | 1.5 |
-| 3 | 🧑 Дорослий | 4.0 |
-| 4 | 👴 Старий | 20.0 |
+| 2 | 🧒 Підліток | 12 |
+| 3 | 🧑 Дорослий | 18 |
+| 4 | 👴 Старий | 60 |
 
 ## Ролі (`role=`)
 

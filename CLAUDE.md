@@ -4,8 +4,9 @@ Kit the Cat: the pet life-sim of the Ukrainian Telegram bot «Кошеня», as
 (`kit_the_cat`). The bot (private repo `koshenyat`) installs it as a dependency; never import bot code here.
 
 ## Map
-- `engine.py` — Pet (JSON document), time/ageing, events, effects, roles, world events, economy, scheduling plan
-- `content/` — 313 life events in a tiny DSL; `content/dsl.py` is the contract (KNOWN_FX / KNOWN_REQ) the engine implements
+- `engine.py` — Pet (JSON document), years/ageing (decisions cost time), automatic upkeep, life stats with tiers
+  (`LIFE`, `MONEY_TIERS`), events, effects, roles, world events, economy, casino, scheduling plan
+- `content/` — 360 life events in a tiny DSL (`status.py`: life-stat events); `content/dsl.py` is the contract (KNOWN_FX / KNOWN_REQ) the engine implements
 - `sprites*.py` — procedural pixel art: genome, species, roles, items (fixed + generated), backgrounds, groups
 - `battle.py` — fighters, battles, tournaments (brackets, Elo)
 - `storage.py` — MemoryStore (in-memory, JSON dump/load); hosts may provide their own with the same methods

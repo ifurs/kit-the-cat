@@ -4,8 +4,9 @@
     uv run python scripts/balance.py --pets 40 --days 60 --neglect 0.25 --seed 7
     uv run python scripts/balance.py --json out.json       # machine-readable report
 
-Uses the real sandbox (engine, content, autopilot owners): `--neglect` is the share of owners who never care
-(their pets show how fast neglect kills). No Telegram, no network. Exit code 1 if a target is badly missed.
+Uses the real sandbox (engine, content, autopilot owners): `--neglect` is the share of owners who never take a sick
+pet to the doctor. Upkeep is automatic, so lives end by old age, debt or events. No Telegram, no network.
+Exit code 1 if a target is badly missed.
 """
 import argparse
 import asyncio
@@ -21,8 +22,11 @@ from kit_the_cat.storage import MemoryStore
 
 # (low, high): outside → WARN; far outside (×0.5 / ×1.5) → FAIL
 TARGETS = {
-    "neglect_death_days": (2.0, 5.0),        # forgotten pets die in ~3 days: harsh but fair
-    "cared_alive_share": (0.75, 1.0),        # cared pets mostly survive the run (old age comes ~24–36 days)
+    "life_years": (65, 95),                  # median age at death, years
+    "life_real_days": (18, 45),              # …and how many real days such a life takes
+    "early_death_share": (0.0, 0.25),        # died before 40 years (debt, events, sickness)
+    "debt_share": (0.0, 0.25),               # living adults in debt at the end
+    "tier2_share": (0.35, 0.95),             # lives that reached tier 2 of some life stat (the new content fires)
     "check_success": (0.45, 0.70),           # dice checks: hopeful, not trivial
     "event_coverage": (0.55, 1.0),           # share of content that actually fires in the run
     "money_median": (150, 6000),             # living pets' wallets
@@ -67,8 +71,10 @@ async def run(pets: int, days: float, neglect: float, seed: int) -> dict:
             for p in await sb.pets(tick=False):
                 if p.state == "dead" and p.pid not in seen_dead:
                     seen_dead.add(p.pid)
-                    deaths.append(dict(owner=p.owner_id, age=p.age_days, cause=p.cause, neglected=p.owner_id in neglected,
-                                       event=not any(w in p.cause for w in ("голод", "бруд", "старост", "туг", "сну", "пенсі"))))
+                    deaths.append(dict(owner=p.owner_id, age=p.age_days, years=p.years, cause=p.cause,
+                                       neglected=p.owner_id in neglected,
+                                       tier2=any(p.counters.get(f"tier_{k}", 0) >= 2 for k in E.LIFE),
+                                       event=not any(w in p.cause for w in ("борг", "старост", "туг", "сну", "пенсі"))))
             # heirs keep the neighbourhood populated, like real owners pressing "спадкоємець"
             for p in await sb.pets(tick=False):
                 if p.state == "dead" and p.owner_id >= NPC_BASE:
@@ -78,12 +84,14 @@ async def run(pets: int, days: float, neglect: float, seed: int) -> dict:
         E.Pet.resolve, Sandbox._autocare = orig, orig_care
 
     alive = [p for p in final if p.alive]
-    cared = [p for p in final if p.owner_id not in neglected]
-    neglect_deaths = [d["age"] for d in deaths if d["neglected"]]
+    adults = [p for p in alive if p.stage >= 3]
     total_checks = checks["ok"] + checks["fail"]
     m = dict(
-        neglect_death_days=statistics.median(neglect_deaths) if neglect_deaths else None,
-        cared_alive_share=sum(p.alive for p in cared) / len(cared) if cared else None,
+        life_years=statistics.median(d["years"] for d in deaths) if deaths else None,
+        life_real_days=statistics.median(d["age"] for d in deaths) if deaths else None,
+        early_death_share=sum(d["years"] < 40 for d in deaths) / len(deaths) if deaths else None,
+        debt_share=sum(p.money < 0 for p in adults) / len(adults) if adults else None,
+        tier2_share=sum(d["tier2"] for d in deaths) / len(deaths) if deaths else None,
         check_success=checks["ok"] / total_checks if total_checks else None,
         event_coverage=len(fired) / len(E.EVENTS),
         money_median=statistics.median([p.money for p in alive]) if alive else None,
@@ -96,6 +104,8 @@ async def run(pets: int, days: float, neglect: float, seed: int) -> dict:
         roles=Counter(p.role for p in final if p.role).most_common(),
         jobs=Counter(p.job for p in final if p.job).most_common(8),
         stages=Counter(E.STAGES[p.stage] for p in alive).most_common(),
+        tiers={k: Counter(p.tier_name(k, p.counters.get(f"tier_{k}", 0)) for p in final).most_common()
+               for k in ("money", *E.LIFE)},
         never_fired=sorted(set(E.EVENTS) - set(fired))[:40], never_fired_total=len(set(E.EVENTS) - set(fired)),
         top_events=fired.most_common(10),
     )
@@ -126,9 +136,10 @@ def main() -> None:
         vd = verdict(k, v)
         worst = "FAIL" if vd == "FAIL" else ("WARN" if vd == "WARN" and worst == "OK" else worst)
         lo, hi = TARGETS[k]
-        shown = "—" if v is None else (f"{v:.0%}" if isinstance(v, float) and v <= 1 and k != "neglect_death_days" else f"{v:.1f}")
+        shown = "—" if v is None else (f"{v:.0%}" if k.endswith(("share", "success", "coverage")) else f"{v:.1f}")
         print(f"  {vd:4}  {k:20} {shown:>8}   target {lo:g}–{hi:g}")
     print(f"\ncauses of death: {rep['causes']}\nroles: {rep['roles']}\njobs: {rep['jobs']}\nalive by stage: {rep['stages']}")
+    print("peak tiers:\n" + "\n".join(f"  {k}: {v}" for k, v in rep["tiers"].items()))
     print(f"\nnever fired: {rep['never_fired_total']} (first 40): {', '.join(rep['never_fired'])}")
     if a.json:
         with open(a.json, "w") as f:

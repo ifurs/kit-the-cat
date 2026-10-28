@@ -7,11 +7,21 @@
           fail=[o("Нічого не виграв.", money=-50)], auto="gambler"),
        req=dict(stage=2))
 
+Time is the price of every decision: a choice costs `time` of the pet's life (shown on its button), an outcome
+can cost extra (a sentence, a coma). Durations: "3d", "2w", "6m", "4y" or a number of years. A choice without
+`time` costs its event's `time`, else its module's default (content/events.py).
+    ch("Вступити в КПІ", o("…", int=6, edu="kpi"), time="4y")
+    o("Дали п'ять років умовно… ні, реально.", time="5y", jail=24)
+
 Effects (o(..., **fx)):
-  hunger mood clean health energy      stat deltas (0..100)
+  hunger mood clean health energy      stat deltas (0..100); hunger/clean/energy are automatic upkeep now — use
+                                       mood and health in new content
+  fame auth blat fin attr              life stats 0..100 with tiers (engine.LIFE): популярність, авторитет, блат,
+                                       фінграмотність, привабливість (style and charm, never mocking looks)
+  time="6m"                            extra life time this outcome costs
   str int cha luck                     skill deltas
   toxic gambler dark party patriot glutton love mystic   trait deltas
-  money xp lifespan                    ₴, experience, days of life
+  money xp lifespan                    ₴, experience, years of life
   item="cowboy@6" | ["a", "b"]         give & equip;  item_slot="head" → random item for slot
   lose_item="random" | "id"            take away
   unequip="head" | "all"               take off what is worn in that slot (or everything); items stay owned
@@ -42,6 +52,8 @@ Requirements (req=dict(...)):
   status=["crush"] (social: relation with the other pet)   other_stage=2   age=(min_days, max_days)
   debt=500 (money <= -500)   low={"health": 40}   role="vampire" | role="any" | norole=True
   other_role="vampire"   nostatus=[...]   other_partner=False   other_stage_max=2
+  life={"fame": 40} (life stat at least)   tier={"fame": 2, "money": 3} (tier at least; money tiers too)
+  tier_max={"auth": 0}   years=(18, 60) (age in years)
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence) | list of those | month numbers (real Kyiv date)
 """
@@ -50,9 +62,10 @@ from dataclasses import dataclass, field
 # The contract between content (storyline) and engine. Content may only use these keys;
 # the engine must implement every one. content/validate.py checks it.
 STATS = {"hunger", "mood", "clean", "health", "energy"}
+LIFE = {"fame", "auth", "blat", "fin", "attr"}
 SKILLS = {"str", "int", "cha", "luck"}
 TRAITS = {"toxic", "gambler", "dark", "party", "patriot", "glutton", "love", "mystic"}
-KNOWN_FX = STATS | SKILLS | TRAITS | {
+KNOWN_FX = STATS | SKILLS | TRAITS | LIFE | {"time",
     "money", "money_mult", "xp", "lifespan", "item", "item_slot", "lose_item", "unequip", "flag", "unflag", "job", "edu",
     "home", "jail", "hospital", "die", "achievement", "free", "gene", "mutate", "species", "role", "reroll_persona",
     "twist", "rel", "status", "other", "baby", "swap_genes",
@@ -60,8 +73,18 @@ KNOWN_FX = STATS | SKILLS | TRAITS | {
 KNOWN_REQ = {
     "stage", "species", "flag", "noflag", "trait", "skill", "money", "debt", "job", "edu", "noedu", "has", "partner",
     "night", "jail", "age", "low", "status", "nostatus", "other_stage", "other_partner", "role", "norole", "other_role",
-    "season", "other_stage_max",
+    "season", "other_stage_max", "life", "tier", "tier_max", "years",
 }
+UNITS = {"d": 1 / 365, "w": 7 / 365, "m": 1 / 12, "y": 1.0}
+
+
+def years(v) -> float:
+    """"3d" / "2w" / "6m" / "4y" / number of years → years. Raises ValueError on anything else."""
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return float(v)
+    if isinstance(v, str) and len(v) > 1 and v[-1] in UNITS:
+        return float(v[:-1]) * UNITS[v[-1]]
+    raise ValueError(f"bad duration {v!r}")
 ROLES = {"vampire", "werewolf", "zombie", "demon", "angel", "cyborg", "alien", "quantum"}
 
 
@@ -80,6 +103,7 @@ class Choice:
     fail: list[Out] = field(default_factory=list)
     req: dict = field(default_factory=dict)
     auto: str = ""          # trait this choice expresses (used when the pet decides on its own)
+    time: str | float = ""  # life time this decision costs ("" → the event's / module's default)
 
 
 @dataclass
@@ -93,16 +117,17 @@ class Event:
     bg: str = ""
     once: bool = False
     aff: tuple = ()         # traits that make this event more likely
+    time: str | float = ""  # default cost of its choices
 
 
 def o(text: str, w: float = 1.0, **fx) -> Out:
     return Out(text, fx, w)
 
 
-def ch(label: str, *outs: Out, check=None, fail=None, req=None, auto: str = "") -> Choice:
-    return Choice(label, list(outs), check, list(fail or []), dict(req or {}), auto)
+def ch(label: str, *outs: Out, check=None, fail=None, req=None, auto: str = "", time: str | float = "") -> Choice:
+    return Choice(label, list(outs), check, list(fail or []), dict(req or {}), auto, time)
 
 
 def ev(id: str, text: str, *choices: Choice, req=None, w: float = 1.0, social: bool = False, bg: str = "",
-       once: bool = False, aff: tuple = ()) -> Event:
-    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff))
+       once: bool = False, aff: tuple = (), time: str | float = "") -> Event:
+    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), time)
