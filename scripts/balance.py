@@ -20,6 +20,7 @@ from kit_the_cat import engine as E
 from kit_the_cat.sandbox.game import NPC_BASE, Sandbox
 from kit_the_cat.storage import MemoryStore
 
+MIN_DEATHS = 10  # death-based shares are "n/a" below this (one unlucky death in a tiny run is noise)
 # (low, high): outside → WARN; far outside (×0.5 / ×1.5) → FAIL
 TARGETS = {
     "life_years": (65, 95),                  # median age at death, years
@@ -86,16 +87,20 @@ async def run(pets: int, days: float, neglect: float, seed: int) -> dict:
     alive = [p for p in final if p.alive]
     adults = [p for p in alive if p.stage >= 3]
     total_checks = checks["ok"] + checks["fail"]
+    if len(deaths) < MIN_DEATHS:  # too few lives ended to judge death-based shares
+        deaths_for_stats: list[dict] = []
+    else:
+        deaths_for_stats = deaths
     m = dict(
         life_years=statistics.median(d["years"] for d in deaths) if deaths else None,
         life_real_days=statistics.median(d["age"] for d in deaths) if deaths else None,
-        early_death_share=sum(d["years"] < 40 for d in deaths) / len(deaths) if deaths else None,
+        early_death_share=sum(d["years"] < 40 for d in deaths_for_stats) / len(deaths_for_stats) if deaths_for_stats else None,
         debt_share=sum(p.money < 0 for p in adults) / len(adults) if adults else None,
-        tier2_share=sum(d["tier2"] for d in deaths) / len(deaths) if deaths else None,
+        tier2_share=sum(d["tier2"] for d in deaths_for_stats) / len(deaths_for_stats) if deaths_for_stats else None,
         check_success=checks["ok"] / total_checks if total_checks else None,
         event_coverage=len(fired) / len(E.EVENTS),
         money_median=statistics.median([p.money for p in alive]) if alive else None,
-        event_deaths_share=sum(d["event"] for d in deaths) / len(deaths) if deaths else 0.0,
+        event_deaths_share=sum(d["event"] for d in deaths_for_stats) / len(deaths_for_stats) if deaths_for_stats else None,
     )
     return dict(
         params=dict(pets=pets, days=days, neglect=neglect, seed=seed), seconds=round(time.time() - t0, 1),
