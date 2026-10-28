@@ -24,7 +24,7 @@ one gap from the report (an underused personality, a thin stage, a job or role w
 
 Pick the module: `life.py` (stages), `daily.py` (everyday, seasons), `chains.py` (quests), `jobs.py`, `species.py`,
 `social.py`, `twists.py` (roles, supernatural), `status.py` (life stats & tiers, big life decisions, casino),
-`consequences.py` (follow-ups). Read 2–3 neighbouring events first and match their rhythm.
+`arcs.py` / `arcs_adult.py` / `arcs_soul.py` (branching life arcs), `consequences.py` (follow-ups of older events). Read 2–3 neighbouring events first and match their rhythm.
 
 ## 2. Write
 
@@ -33,13 +33,12 @@ different characters, each with `auto="<trait>"`; several weighted outcomes, one
 visible change: `item=`, `gene=`, a tier); checks `check=("skill", diff)` with a funny `fail=[...]`; `req=` that
 matches the story.
 
-**Time is the price of a decision.** Most choices get a computed cost (`infer_time`: studying, a job, moving, a
-romance, a chain step, skills and money earned add to the module base). Write `time=` on a choice when the real
-duration differs (walking vs squeezing into the marshrutka, a marathon needs months of training, university 4y),
-and `o(..., time="5y")` for consequences like a sentence or a coma. Long and short options in one event make the
-choice interesting.
+Decisions cost no life time (the clock ages pets); only a story outcome may skip years
+(`o(..., time="5y")` for a coma or a sentence).
 
-**Earlier choices should come back.** When a choice would plausibly matter years later, add
+**Earlier choices must come back — this is the main rule.** Prefer *arcs* (`arcs*.py`): a root event where
+each choice schedules its own follow-up, and follow-ups sometimes lead further. When a choice would plausibly
+matter years later, add
 `then=("fu_<id>", "2y")` to its outcomes and write the follow-up in `consequences.py` with `followup=True`; its
 text recalls the original choice («Пам'ятаєш, як {name}…»). Follow-ups never fire at random.
 
@@ -84,6 +83,6 @@ uv run python scripts/content_gate.py      # with the balance simulation
 uv run kit-the-cat                         # optional: play the new events in the sandbox
 ```
 
-Report: new events (id → one-line pitch), which gaps they fill, time costs and follow-ups added, before/after
+Report: new events (id → one-line pitch), which gaps they fill, follow-ups and arcs added, before/after
 counts from `content_stats.py`, lint and reviewer results, balance changes. Add a CHANGELOG line under
 Unreleased → Added (e.g. «12 пригод про відключення, 3 наслідки»). Commit when the user asked for it.

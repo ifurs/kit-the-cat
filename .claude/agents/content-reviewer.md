@@ -32,9 +32,9 @@ in your head as a native speaker would.
 3. **Craft** — is it actually funny and specific (Ukrainian reality, escalation, a visible consequence)? 2–4
    choices with different characters and `auto=`; funny failure text; outcome sizes within the guide's table;
    `req=` matches the story (jobs → adult etc.).
-4. **Mechanics** — `uv run python scripts/content_stats.py --strict`; time costs that feel wrong for the action
-   (a day for a university, a month for a marshrutka ride — check `Pet.button` labels); follow-ups whose text
-   doesn't recall the original choice; report anything flagged for the reviewed events.
+4. **Mechanics** — `uv run python scripts/content_stats.py --strict`; choices that should matter later but
+   schedule nothing (`then=`); follow-ups whose text doesn't recall the original choice; report anything flagged
+   for the reviewed events.
 
 ## Output
 A table: event id · severity (block / fix / nit) · problem · proposed replacement. Then a short verdict:

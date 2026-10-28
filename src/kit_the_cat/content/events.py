@@ -3,6 +3,9 @@
 FOLLOWUPS links choices of older events to their consequences (content/consequences.py): an earlier choice comes
 back years later. New content writes `then=` inline instead.
 """
+from .arcs import ARCS_YOUNG
+from .arcs_adult import ARCS_ADULT
+from .arcs_soul import ARCS_SOUL
 from .chains import CHAINS
 from .consequences import CONSEQUENCES
 from .daily import DAILY
@@ -13,7 +16,7 @@ from .species import SPECIES
 from .status import STATUS
 from .twists import TWISTS
 
-ALL = LIFE + DAILY + CHAINS + JOBS_LIFE + SPECIES + SOCIAL + TWISTS + STATUS + CONSEQUENCES
+ALL = LIFE + DAILY + CHAINS + JOBS_LIFE + SPECIES + SOCIAL + TWISTS + STATUS + CONSEQUENCES + ARCS_YOUNG + ARCS_ADULT + ARCS_SOUL
 # (event, choice index): (follow-up event, after how much of the pet's life)
 FOLLOWUPS = {
     ("daily_scam_call", 2): ("fu_scam_return", "6m"), ("daily_scam_call", 1): ("fu_scam_fame", "3m"),
