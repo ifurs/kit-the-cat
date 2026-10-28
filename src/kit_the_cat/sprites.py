@@ -50,7 +50,7 @@ from .sprites_gen import GEN, GEN_SLOTS, gen_count, gen_item, random_item  # noq
 # foreign/rare value. Breeding mixes parents gene-by-gene. Colours are continuous (HSV + jitter),
 # so even "the same" combination of discrete genes rarely produces the same pet twice.
 
-SPECIES = ["pig", "cat", "dog", "fox", "horse", "axolotl"]
+SPECIES = ["pig", "cat", "dog", "fox", "horse", "axolotl", "bird"]
 GHOST = ("привид", (220, 232, 255), (176, 192, 230), (245, 250, 255), (190, 205, 240))
 
 # natural base colours (h, s, v) per species
@@ -67,6 +67,9 @@ NATURAL = {
               (0.11, 0.45, 0.95), (0.07, 0.3, 0.75)],
     "axolotl": [(0.95, 0.25, 1.0), (0.25, 0.3, 0.4), (0.12, 0.5, 1.0), (0.7, 0.15, 0.2), (0.55, 0.35, 0.85),
                 (0.78, 0.2, 0.85), (0.97, 0.15, 0.95)],
+    # sparrow, blue tit, canary, robin, parrot, pigeon, crow, bullfinch
+    "bird": [(0.08, 0.45, 0.62), (0.58, 0.55, 0.88), (0.14, 0.8, 1.0), (0.04, 0.7, 0.88), (0.3, 0.7, 0.75),
+             (0.65, 0.08, 0.62), (0.7, 0.15, 0.2), (0.98, 0.55, 0.9)],
 }
 # gene -> {value: (ukr name, natural species or None for mutation-only)}
 GENES = {
@@ -77,18 +80,21 @@ GENES = {
         "dog_long": ("бассет-вуха", "dog"), "pig_floppy": ("свинячі звислі", "pig"), "pig_up": ("свинячі стирчаки", "pig"),
         "fox_ears": ("лисячі", "fox"), "fennec": ("фенек-локатори", "fox"), "horse_ears": ("конячі з гривою", "horse"),
         "unicorn_mane": ("грива з чубом", "horse"), "gills": ("зябра", "axolotl"), "gills_big": ("пишні зябра", "axolotl"),
+        "crest": ("чубчик з пір'я", "bird"), "crest_big": ("папужий чуб", "bird"),
         "bunny": ("заячі", None), "devil": ("кажанячі", None),
     },
     "tail": {
         "cat_long": ("довгий", "cat"), "cat_fluffy": ("пухнастий", "cat"), "bobtail": ("куций", "cat"),
         "dog_wag": ("виляючий", "dog"), "dog_curl": ("бублик", "dog"), "pig_curl": ("закрутка", "pig"),
         "pig_straight": ("пряма мотузочка", "pig"), "fox": ("лисячий", "fox"), "horse_tail": ("кінський", "horse"),
-        "axo_fin": ("плавник", "axolotl"), "devil_tail": ("чортячий", None),
+        "axo_fin": ("плавник", "axolotl"), "bird_fan": ("віяло пір'я", "bird"), "bird_fork": ("ластівчин", "bird"),
+        "devil_tail": ("чортячий", None),
     },
     "face": {
         "cat": ("котячий носик", "cat"), "dog": ("собачий ніс", "dog"), "dog_muzzle": ("світла морда", "dog"),
         "pig": ("п'ятачок", "pig"), "pig_big": ("великий п'ятак", "pig"), "fox_snout": ("лисяча мордочка", "fox"),
         "horse_muzzle": ("кінська морда", "horse"), "axo_smile": ("усмішка аксолотля", "axolotl"),
+        "beak": ("дзьобик", "bird"), "beak_hook": ("гачкуватий дзьоб", "bird"),
         "heart_nose": ("ніс-сердечко", None),
     },
     "head": {"round": ("кругла", 0), "wide": ("широка", 0), "tall": ("видовжена", 0), "small": ("маленька", 0),
@@ -335,6 +341,8 @@ def palette(g: Genome, role: str = "") -> tuple:
         accent = hsv(h, min(1, s + 0.15), v * 0.45)
     elif g.species == "axolotl":
         accent = hsv(0.97, 0.65, 0.95) if v > 0.5 else hsv(0.9, 0.45, 0.55)
+    elif g.species == "bird":
+        accent = hsv(0.1, 0.8, 0.98) if v > 0.3 else hsv(0.12, 0.6, 0.7)  # beak and feet
     elif v < 0.35:
         accent = (255, 150, 170)
     else:
@@ -398,7 +406,7 @@ def _geom(lk: Look, f: int) -> tuple[tuple, tuple, int]:
 # --- creature ------------------------------------------------------------------------------
 
 BACK_EARS = {"cat_pointy", "cat_big", "cat_lynx", "pig_floppy", "pig_up", "dog_pointy", "dog_round", "bunny", "devil",
-             "fox_ears", "fennec", "horse_ears", "unicorn_mane", "gills", "gills_big"}
+             "fox_ears", "fennec", "horse_ears", "unicorn_mane", "gills", "gills_big", "crest", "crest_big"}
 
 
 def _ears(cv: Canvas, style: str, hx, hy, hrx, hry, base, shade, accent, f):
@@ -445,6 +453,14 @@ def _ears(cv: Canvas, style: str, hx, hy, hrx, hry, base, shade, accent, f):
                 x1, y1 = x0 + s * (6 + (1 if style == "gills_big" else 0)) * math.cos(ang), y0 + 6 * math.sin(ang)
                 cv.part(line(x0, y0, x1, y1) | ellipse(x1, y1, 1.3, 1.3), accent, outline=OUTLINE)
                 cv.paint({(int((x0 + x1) / 2) + s, int((y0 + y1) / 2) - 1)}, accent)
+        elif style in ("crest", "crest_big") and s == 1:  # feathers on the crown (drawn once)
+            big = style == "crest_big"
+            sway = (0, 1, 0, -1)[f % 4] * 0.5
+            for i, (dx, h) in enumerate(((-2, 4), (0, 6), (2, 4)) + (((-4, 3), (4, 3)) if big else ())):
+                k = 1.5 if big else 1.0
+                tip = (hx + dx * k + sway, top - h * k)
+                col = accent if big and i == 1 else (shade if i % 2 else base)
+                cv.part(poly([(hx + dx * k - 1.2, top + 2), tip, (hx + dx * k + 1.2, top + 2)]), col, shade)
         elif style == "devil":
             cv.part(poly([(hx + s * 5, top + 3), (hx + s * 14, top - 3), (hx + s * 11, top + 2), (hx + s * 12, top + 5),
                           (hx + s * 8, top + 6)]), shade, mix(shade, OUTLINE, 0.3))
@@ -496,6 +512,14 @@ def _tail(cv: Canvas, style: str, bx, by, brx, bry, base, shade, light, f):
         px = ellipse(x0 + 4, by + 2, 6, 2.5)
         cv.part(px, base, shade)
         cv.paint({q for q in px if q[1] < by + 1}, mix(base, WHITE, 0.45))
+    elif style == "bird_fan":
+        for i, ang in enumerate((-0.6, -0.2, 0.2)):
+            ex_, ey_ = x0 + 5 * math.cos(ang) + 1, by + 2 + 5 * math.sin(ang) + wag * 0.4
+            cv.part(ellipse((x0 + ex_) / 2 + 1, (by + 2 + ey_) / 2, 3.2, 1.5) | ellipse(ex_, ey_, 1.6, 1.6),
+                    shade if i % 2 else base, shade)
+    elif style == "bird_fork":
+        for dy in (-1.5, 1.5):
+            cv.part(poly([(x0 - 1, by + 1), (x0 + 8, by + 1 + dy * 2.5 + wag * 0.5), (x0 + 6, by + 1 + dy)]), shade)
     elif style == "devil_tail":
         cv.paint(line(x0, by + 1, x0 + 5, by - 4 + wag) | line(x0 + 5, by - 4 + wag, x0 + 7, by - 8), OUTLINE)
         cv.part(poly([(x0 + 5, by - 8), (x0 + 9, by - 10), (x0 + 8, by - 6)]), RED)
@@ -520,6 +544,12 @@ def _snout(cv: Canvas, style: str, hx, hy, hrx, hry, light, accent, shade):
         cv.paint({(hx - 3, int(my)), (hx + 2, int(my))}, OUTLINE)
     elif style == "axo_smile":
         pass
+    elif style == "beak":
+        cv.part(poly([(hx - 2.2, hy + 1.5), (hx + 2.2, hy + 1.5), (hx, hy + 4.5)]), accent, mix(accent, OUTLINE, 0.4))
+    elif style == "beak_hook":
+        cv.part(poly([(hx - 3, hy + 1), (hx + 3, hy + 1), (hx + 2, hy + 4), (hx, hy + 6), (hx - 1, hy + 4)]), accent,
+                mix(accent, OUTLINE, 0.4))
+        cv.paint({(hx - 1, hy + 4), (hx, hy + 4)}, mix(accent, OUTLINE, 0.55))
     elif style == "heart_nose":
         cv.grid(hx - 2, hy + 1, ["a.a", "aaa", ".a."], {"a": (240, 70, 120)})
     else:
@@ -939,11 +969,23 @@ def creature(cv: Canvas, lk: Look, f: int, roles: set[str] | None = None) -> Bod
     else:
         paw = WHITE if g.pattern in ("socks", "tuxedo") else pointc or shade
         for s in (-1, 1):
-            cv.part(ellipse(bx + s * (brx * 0.55), by + bry - 1, 2.6, 2), paw)
+            if g.species == "bird":  # thin legs with three toes
+                fx_, fy_ = int(bx + s * (brx * 0.4)), int(by + bry)
+                cv.paint(line(fx_, fy_ - 2, fx_, fy_ + 1) | line(fx_ - 2, fy_ + 2, fx_ + 2, fy_ + 2) | {(fx_, fy_ + 2)},
+                         mix(accent, OUTLINE, 0.35))
+            else:
+                cv.part(ellipse(bx + s * (brx * 0.55), by + bry - 1, 2.6, 2), paw)
     cv.part(body_px, base, shade, light)
     belly = ellipse(bx, by + 1, brx * (0.65 if g.pattern == "tuxedo" else 0.55), bry * 0.6) & body_px
     cv.paint(belly, WHITE if g.pattern == "tuxedo" else light)
     b.body_px = body_px
+    if g.species == "bird" and not lk.ghost:  # folded wings on the sides, a little flap
+        flap = (0, -1, 0, 1)[f % 4] * 0.6
+        for s in (-1, 1):
+            wing = ellipse(bx + s * (brx - 1.5), by - 0.5 + flap, max(2.5, brx * 0.35), bry * 0.75)
+            cv.part(wing, shade, mix(shade, OUTLINE, 0.3))
+            cv.paint({q for q in wing if (q[1] - int(by)) % 3 == 0 and abs(q[0] - (bx + s * (brx - 1.5))) < 2},
+                     mix(shade, OUTLINE, 0.35))
     if roles:
         _role_body(cv, roles, b, f)
 

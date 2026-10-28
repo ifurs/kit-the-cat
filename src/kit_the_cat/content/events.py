@@ -1,14 +1,11 @@
 """All life events, aggregated. Each module exports a list of dsl.Event.
 
-Time: every module has a base cost; a choice without its own `time` costs `infer_time(choice, base)` — what the
-choice does (studying, a job, moving, romance, a story step, skills and money earned) adds to the base, so the
-choices of one event differ. CHOICE_TIME hand-tunes common and big older events. FOLLOWUPS links choices of older
-events to their consequences (content/consequences.py); new content writes `then=` inline.
+FOLLOWUPS links choices of older events to their consequences (content/consequences.py): an earlier choice comes
+back years later. New content writes `then=` inline instead.
 """
 from .chains import CHAINS
 from .consequences import CONSEQUENCES
 from .daily import DAILY
-from .dsl import infer_time
 from .jobs import JOBS_LIFE
 from .life import LIFE
 from .social import SOCIAL
@@ -16,41 +13,7 @@ from .species import SPECIES
 from .status import STATUS
 from .twists import TWISTS
 
-DEFAULT_TIME = [(DAILY, "3d"), (LIFE, "1m"), (CHAINS, "3m"), (JOBS_LIFE, "1m"), (SPECIES, "1w"), (SOCIAL, "1w"),
-                (TWISTS, "1m"), (STATUS, "1m"), (CONSEQUENCES, "2w")]
-CHOICE_TIME = {
-    "teen_uni": ["4y", "4y", "6y", "3y", "1y"],
-    "baby_kindergarten": ["3y", "3y", "3y"],
-    "army_join": ["2y", "1y", ""],
-    "space_launch": ["1y", "", ""],
-    "space_mars": ["", "2y", "3y"],
-    "crime_heist": ["1w", "1m", ""],
-    "crime_retire": ["1y", "", "5y", "1y"],
-    "jail_escape": ["1m", "3y", "6m"],
-    "pol_mayor": ["5y", "", "5y"],
-    "pol_president": ["5y", "", ""],
-    "pol_nabu": ["3y", "1y", "6m"],
-    "band_tour": ["6m", "6m", "2y", ""],
-    "adult_vacation": ["2w", "1w", "2w", "1w"],
-    "health_surgery": ["1m", "3m", ""],
-    # everyday events: walking is slower than squeezing in, a marathon needs months of training…
-    "daily_marshrutka": ["1d", "2d", "1d", "1d"],
-    "adult_hamster": ["3m", "1w", "2m", "1d"],
-    "daily_mushrooms": ["1d", "1d", "2d", "3d"],
-    "health_cold": ["1w", "3d", "2w"],
-    "adult_therapy": ["1y", "1w", "1d"],
-    "adult_gym": ["6m", "3m", "1d"],
-    "daily_train": ["1d", "1d", "1d", "1d"],
-    "adult_marathon": ["6m", "1d", "1d"],
-    "startup_idea": ["1y", "2m", "1w", "1d"],
-    "adult_credit": ["1y", "1y", "1d"],
-    "blog_start": ["6m", "1d", "1m"],
-    "adult_cooking": ["1d", "1d", "1d"],
-    "daily_light_back": ["1d", "1d", "1d", "1d"],
-    "daily_scam_call": ["1d", "1d", "1d", "1d"],
-    "daily_lost_keys": ["1d", "1d", "1d", "1d"],
-    "daily_kum_wedding": ["2d", "3d", "2d", "2d", "1d"],
-}
+ALL = LIFE + DAILY + CHAINS + JOBS_LIFE + SPECIES + SOCIAL + TWISTS + STATUS + CONSEQUENCES
 # (event, choice index): (follow-up event, after how much of the pet's life)
 FOLLOWUPS = {
     ("daily_scam_call", 2): ("fu_scam_return", "6m"), ("daily_scam_call", 1): ("fu_scam_fame", "3m"),
@@ -65,17 +28,7 @@ FOLLOWUPS = {
     ("adult_therapy", 0): ("fu_therapy_progress", "1y"), ("daily_lost_keys", 2): ("fu_neighbor_pies", "3m"),
     ("st_charity_stream", 0): ("fu_drone_thanks", "1y"), ("st_startup", 1): ("fu_startup_exit", "3y"),
 }
-_by_id = {e.id: e for _events, _ in DEFAULT_TIME for e in _events}
-for _id, _times in CHOICE_TIME.items():
-    for _c, _t in zip(_by_id[_id].choices, _times):
-        _c.time = _c.time or _t
+_by_id = {e.id: e for e in ALL}
 for (_id, _i), _then in FOLLOWUPS.items():
     for _o in _by_id[_id].choices[_i].outs + _by_id[_id].choices[_i].fail:
         _o.fx.setdefault("then", _then)
-for _events, _t in DEFAULT_TIME:
-    for _e in _events:
-        _e.time = _e.time or _t
-        for _c in _e.choices:
-            _c.time = _c.time or infer_time(_c, _e.time)
-
-ALL = LIFE + DAILY + CHAINS + JOBS_LIFE + SPECIES + SOCIAL + TWISTS + STATUS + CONSEQUENCES

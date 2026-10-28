@@ -16,12 +16,6 @@ def main() -> None:
         if not e.choices:
             errors.append(f"{e.id}: no choices")
         for c in e.choices:
-            for t in (c.time, e.time):
-                if t != "":
-                    try:
-                        dsl.years(t)
-                    except ValueError:
-                        errors.append(f"{e.id}/{c.label}: bad time {t!r}")
             if len(c.label) > 40:
                 errors.append(f"{e.id}: label too long ({c.label})")
             for r in (e.req, c.req):

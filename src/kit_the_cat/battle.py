@@ -26,6 +26,7 @@ SPECIES_PASSIVE = {
     "fox": ("🦊 Хитрість", "+6% крит, краде трохи здоров'я"),
     "horse": ("🐴 Копито", "перший удар +40%"),
     "axolotl": ("🦎 Регенерація", "лікує 3% здоров'я щоходу"),
+    "bird": ("🐦 Політ", "+12% ухилятися, атакує першою"),
 }
 # items that matter in a fight: (attack, defense)
 ITEM_POWER = {"sabre": (6, 0), "helmet": (0, 5), "bronik": (0, 7), "cape": (1, 2), "horns": (3, 0),
@@ -48,6 +49,7 @@ HITS = {
     "fox": ["кусає з-за спини", "б'є хвостом", "робить підсічку"],
     "horse": ["б'є копитом", "кусає за гриву", "лягає зверху"],
     "axolotl": ["шльопає плавником", "плює водою", "кусає беззубим ротом"],
+    "bird": ["клює в тім'я", "б'є крилом", "пікірує з висоти"],
 }
 WIN_LINES = ["{w} переміг! {l} лежить і рахує зірочки.", "Нокаут! {w} — справжній боєць.",
              "{l} здається й просить шаурму. {w} перемагає.", "Суддя зупиняє бій: {w} забирає перемогу.",
@@ -95,9 +97,9 @@ class Fighter:
                 hp=hp * stage_k, max_hp=hp * stage_k,
                 atk=(8 + sk("str") * 0.25 + lvl * 0.8 + atk_i) * stage_k * cond,
                 dfn=(3 + sk("int") * 0.1 + dfn_i) * cond,
-                spd=5 + sk("luck") * 0.05 + sk("int") * 0.05 + (3 if p.species in ("cat", "fox") else 0),
+                spd=5 + sk("luck") * 0.05 + sk("int") * 0.05 + (3 if p.species in ("cat", "fox") else 5 if p.species == "bird" else 0),
                 crit=0.05 + sk("luck") * 0.003 + (0.06 if p.species == "fox" else 0),
-                dodge=0.04 + sk("luck") * 0.002 + (0.08 if p.species == "cat" else 0) + (0.25 if p.role == "quantum" else 0),
+                dodge=0.04 + sk("luck") * 0.002 + (0.08 if p.species == "cat" else 0.12 if p.species == "bird" else 0) + (0.25 if p.role == "quantum" else 0),
                 strategy=strategy if strategy in STRATEGIES else "careful",
                 specials=[(t, *SPECIALS[t]) for t in p.top_traits(2)],
                 ultimate=ULTIMATES.get(p.role, ""), elo=float(p.flags.get("elo", 1000)))

@@ -32,21 +32,11 @@ def test_time_labels():
         ["1 дн.", "3 дн.", "2 тиж.", "6 міс.", "4 р.", "1.5 р."]
 
 
-def test_decisions_cost_time_and_show_it_on_buttons():
-    e = ev("t_uni", "?", ch("Вчитися", o("Диплом!", int=5), time="4y"), ch("Гуляти", o("Ура", mood=5)), time="1w")
-    p, rng = _adult(), random.Random(1)
-    assert p.button(e, 0) == "Вчитися · 4 р." and p.button(e, 1) == "Гуляти · 1 тиж."
-    res = p.resolve(e, 0, None, rng)
-    assert res.time == pytest.approx(4.0) and p.years == pytest.approx(34.0)
-    p.resolve(ev("t_jail", "?", ch("Так", o("Сів", time="5y"))), 0, None, rng)
-    assert p.years == pytest.approx(34 + 5 + dsl.years(E.DEFAULT_TIME))
-
-
-def test_a_long_decision_can_end_a_life():
+def test_an_outcome_that_skips_years_can_end_a_life():
     p = _adult()
     p.years, p.lifespan = 79.0, 80.0
-    p.resolve(ev("t_mon", "?", ch("Монастир", o("Тиша"), time="2y")), 0, None, random.Random(0))
-    assert p.state == "dead" and "старост" in p.cause + "старості" and p.counters.get("natural")
+    p.resolve(ev("t_cryo", "?", ch("Кріосон", o("Розморозили", time="2y"))), 0, None, random.Random(0))
+    assert p.state == "dead" and p.counters.get("natural")
 
 
 def test_no_starving_without_care_but_debt_hurts():
@@ -99,9 +89,8 @@ def test_casino_rules():
     for bad in (5, 10**9, -50, "100", True):
         assert isinstance(E.casino(p, "underpass", bad, rng), str)
     assert isinstance(E.casino(p, "private", 5000, rng), str)
-    before = p.years
     text, notes = E.casino(p, "underpass", 100, rng)
-    assert text and p.years == pytest.approx(before + dsl.years("1d")) and p.counters["casino"] == 1
+    assert text and p.counters["casino"] == 1
 
 
 def test_old_documents_migrate_to_years_and_life_stats():

@@ -7,20 +7,15 @@
           fail=[o("Нічого не виграв.", money=-50)], auto="gambler"),
        req=dict(stage=2))
 
-Time is the price of every decision: a choice costs `time` of the pet's life (shown on its button), an outcome
-can cost extra (a sentence, a coma). Durations: "3d", "2w", "6m", "4y" or a number of years. A choice without
-`time` gets one computed from what it does (`infer_time`: studying, a new job, moving, a romance, a chain step,
-skills and money earned cost more; trivia costs days) on top of its event's / module's base. Prison and hospital
-also cost years/months of life (jail=48 ≈ 1 year).
-    ch("Вступити в КПІ", o("…", int=6, edu="kpi"), time="4y")
-    o("Дали п'ять років умовно… ні, реально.", time="5y", jail=24)
+Time: a pet ages by the clock (engine.YEARS_PER_DAY); decisions themselves cost no time. A story outcome may
+skip years: o("Прокинувся через п'ять років…", time="5y"). Durations: "3d", "2w", "6m", "4y" or years.
 
 Effects (o(..., **fx)):
-  hunger mood clean health energy      stat deltas (0..100); hunger/clean/energy are automatic upkeep now — use
+  hunger mood clean health energy      stat deltas (0..100); hunger/clean/energy are automatic upkeep — use
                                        mood and health in new content
   fame auth blat fin attr              life stats 0..100 with tiers (engine.LIFE): популярність, авторитет, блат,
                                        фінграмотність, привабливість (style and charm, never mocking looks)
-  time="6m"                            extra life time this outcome costs
+  time="5y"                            the story skips that much of the pet's life (coma, a sentence, cryosleep)
   str int cha luck                     skill deltas
   toxic gambler dark party patriot glutton love mystic   trait deltas
   money xp lifespan                    ₴, experience, years of life
@@ -61,7 +56,6 @@ Requirements (req=dict(...)):
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence) | list of those | month numbers (real Kyiv date)
 """
-import math
 from dataclasses import dataclass, field
 
 # The contract between content (storyline) and engine. Content may only use these keys;
@@ -81,7 +75,6 @@ KNOWN_REQ = {
     "season", "other_stage_max", "life", "tier", "tier_max", "years",
 }
 UNITS = {"d": 1 / 365, "w": 7 / 365, "m": 1 / 12, "y": 1.0}
-SNAP = ["1d", "2d", "3d", "1w", "2w", "1m", "2m", "3m", "6m", "9m", "1y", "2y", "3y", "4y", "5y", "7y", "10y"]
 
 
 def years(v) -> float:
@@ -93,27 +86,6 @@ def years(v) -> float:
     raise ValueError(f"bad duration {v!r}")
 
 
-def snap(y: float) -> str:
-    """Nearest friendly duration (by ratio) for a number of years."""
-    return min(SNAP, key=lambda s: abs(math.log(years(s) / max(y, 1 / 365))))
-
-
-def infer_time(c: "Choice", base: str | float) -> str:
-    """Life time a choice costs, from what it does: the base (event/module) plus studying, settling into a job,
-    moving, a serious relationship, a story step, skills learned and money earned (averaged over outcomes)."""
-    outs = (c.outs + c.fail) or c.outs
-    num = lambda v: v if isinstance(v, (int, float)) and not isinstance(v, bool) else 0  # noqa: E731
-
-    def cost(fx: dict) -> float:
-        y = 3.0 if fx.get("edu") else 0.0
-        y += 1.0 if fx.get("job") else 0.0
-        y += 0.5 if fx.get("home") else 0.0
-        y += 0.5 if fx.get("flag") else 0.0
-        y += 1.0 if fx.get("baby") or fx.get("status") == "partner" else 0.0
-        y += 0.15 * max(0.0, sum(num(v) for k, v in fx.items() if k in SKILLS)) / 3
-        y += 0.25 * max(0.0, num(fx.get("money", 0))) / 1000
-        return y
-    return snap(years(base) + sum(cost(o.fx) for o in outs) / len(outs))
 ROLES = {"vampire", "werewolf", "zombie", "demon", "angel", "cyborg", "alien", "quantum"}
 
 
@@ -132,7 +104,6 @@ class Choice:
     fail: list[Out] = field(default_factory=list)
     req: dict = field(default_factory=dict)
     auto: str = ""          # trait this choice expresses (used when the pet decides on its own)
-    time: str | float = ""  # life time this decision costs ("" → the event's / module's default)
 
 
 @dataclass
@@ -146,7 +117,6 @@ class Event:
     bg: str = ""
     once: bool = False
     aff: tuple = ()         # traits that make this event more likely
-    time: str | float = ""  # default cost of its choices
     followup: bool = False  # only comes as a consequence (`then=`), never at random
 
 
@@ -154,10 +124,10 @@ def o(text: str, w: float = 1.0, **fx) -> Out:
     return Out(text, fx, w)
 
 
-def ch(label: str, *outs: Out, check=None, fail=None, req=None, auto: str = "", time: str | float = "") -> Choice:
-    return Choice(label, list(outs), check, list(fail or []), dict(req or {}), auto, time)
+def ch(label: str, *outs: Out, check=None, fail=None, req=None, auto: str = "") -> Choice:
+    return Choice(label, list(outs), check, list(fail or []), dict(req or {}), auto)
 
 
 def ev(id: str, text: str, *choices: Choice, req=None, w: float = 1.0, social: bool = False, bg: str = "",
-       once: bool = False, aff: tuple = (), time: str | float = "", followup: bool = False) -> Event:
-    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), time, followup)
+       once: bool = False, aff: tuple = (), followup: bool = False) -> Event:
+    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), followup)

@@ -67,17 +67,16 @@ SKILLS = {"str": "💪", "int": "🧠", "cha": "😎", "luck": "🍀"}
 SKILL_NAMES = {"str": "сила", "int": "розум", "cha": "харизма", "luck": "удача"}
 STATS = {"hunger": "🍖", "mood": "😊", "clean": "🧼", "health": "❤️", "energy": "⚡"}
 STAGES = {0: "🥚 Яйце", 1: "👶 Малюк", 2: "🧒 Підліток", 3: "🧑 Дорослий", 4: "👴 Старий"}
-SPECIES_EMOJI = {"pig": "🐷", "cat": "🐱", "dog": "🐶", "fox": "🦊", "horse": "🐴", "axolotl": "🦎"}
+SPECIES_EMOJI = {"pig": "🐷", "cat": "🐱", "dog": "🐶", "fox": "🦊", "horse": "🐴", "axolotl": "🦎", "bird": "🐦"}
 SPECIES_NAME = {"pig": "Свинка", "cat": "Котик", "dog": "Песик", "fox": "Лисичка", "horse": "Конячка",
-                "axolotl": "Аксолотль"}
+                "axolotl": "Аксолотль", "bird": "Пташка"}
 FALLBACK_NAMES = ["Бублик", "Пончик", "Шпротик", "Кексик", "Пиріжок", "Ґудзик", "Мармелад", "Чіпс", "Тефтелька",
                   "Пельмешка", "Галушка", "Сирник", "Кавунчик", "Буряк", "Шкварка"]
 EGG_HOURS = 1.0
-# life (0.3): upkeep is automatic, every decision costs time, life stats have tiers
-YEARS_PER_DAY = {1: 7.0, 2: 1.8, 3: 1.05, 4: 1.05}     # the clock; decisions add about as much again     # passive ageing per game day, by stage
+# life: upkeep is automatic, age is in years (the clock), life stats have tiers
+YEARS_PER_DAY = {1: 8.0, 2: 2.6, 3: 2.8, 4: 2.8}     # the clock: a life of ~80 years takes ~30 real days     # passive ageing per game day, by stage
 STAGE_YEARS = {2: 12, 3: 18, 4: 60}
 LIFESPAN_YEARS = (74, 92)
-DEFAULT_TIME = "2w"                                   # a choice with no time anywhere
 LIFE = {  # key: (icon, name, tier titles at LIFE_STEPS)
     "fame": ("📈", "популярність", ["Ніхто", "Зірка під'їзду", "Мікроблогер", "Медійна персона", "Зірка Євробачення"]),
     "auth": ("🕶", "авторитет", ["Чистий перед законом", "Хуліган з району", "Решала", "Авторитет", "Хрещений батько"]),
@@ -96,7 +95,7 @@ MONEY_TIERS = [(-1e12, "🕳 У боргах"), (0, "🥫 Бідний студ�
                (20000, "🛥 Олігарх")]
 UPKEEP = [10, 20, 60, 180, 600]   # ₴/day cost of living by money tier (food, bills, «статус»); adults only
 DEBT_HARD = 3000                   # deeper debt hurts health faster
-EVENT_ENERGY = 20
+EVENT_ENERGY = 0          # energy is automatic (kept for hosts that still check it); pace adventures with cooldowns
 RECENT = 40              # last N events of a pet are not offered again (unless nothing else fits)
 REPEAT_DECAY = 0.3       # weight × this per earlier time the pet lived the event: fresh content first
 STORY_MAX = 10           # highlights kept for the life summary
@@ -361,7 +360,6 @@ class Result:
     tail_notes: list = field(default_factory=list)
     died: bool = False
     label: str = ""
-    time: float = 0.0            # years the decision cost
 
 
 @dataclass
@@ -688,7 +686,7 @@ class Pet:
             self.traits["toxic"] = self.traits.get("toxic", 0) + 0.05 * h
         if self.in_hospital:
             self.health = min(100.0, self.health + 3 * h)
-        self.energy = min(100.0, self.energy + (9 if night else 5) * h)
+        self.energy = 100.0  # automatic, like food and sleep
         if broke:
             self.health -= (0.8 if self.money < -DEBT_HARD else 0.3) * h * (0.25 if role == "zombie" else 1)
         elif self.mood < 10:
@@ -988,7 +986,6 @@ class Pet:
                     notes.append(f"🏠 {bg_name(v)}")
             elif k == "jail":
                 self.jail_until = max(self.jail_until, now()) + v * hour()
-                self.years += v / 48  # a sentence eats years of life (48 h behind bars ≈ a year)
                 self.flags["jailed_times"] = self.flags.get("jailed_times", 0) + 1
                 notes.append(f"⛓ {v} год. за ґратами")
                 self.note("jail", f"⛓ {self.name} сів на {v} год.")
@@ -996,7 +993,6 @@ class Pet:
                     self.ach("Рецидивіст")
             elif k == "hospital":
                 self.hospital_until = max(self.hospital_until, now()) + v * hour()
-                self.years += v / 24 / 12
                 notes.append(f"🏥 {v} год. у лікарні")
             elif k == "free":
                 if v and self.jail_until:
@@ -1377,11 +1373,7 @@ class Pet:
             fx["health"] = fx.get("health", 0) - 10
             fx["mood"] = fx.get("mood", 0) - 10
         res.text = self.fmt(out.text, other)
-        y0 = self.years
-        res.time = self.choice_time(e, c)
-        self.years += res.time
         res.notes = self.apply(fx, other, rng)
-        self.counters["dec_years"] = round(self.counters.get("dec_years", 0) + self.years - y0, 3)
         if self.alive:
             self._age_checks(rng)
         res.twist = bool(fx.get("twist")) or e.id.startswith("twist_")
@@ -1414,14 +1406,9 @@ class Pet:
         self.note(kind, line)
         return res
 
-    def choice_time(self, e: Event, c: Choice) -> float:
-        """Years of life this decision costs."""
-        return parse_years(c.time or e.time or DEFAULT_TIME)
-
     def button(self, e: Event, idx: int, other: "Pet | None" = None) -> str:
-        """Choice label for a button, with its time cost: «Вступити в КПІ · 4 р.»."""
-        c = e.choices[idx]
-        return f"{self.fmt(c.label, other)} · {time_label(self.choice_time(e, c))}"
+        """Choice label for a button (placeholders filled)."""
+        return self.fmt(e.choices[idx].label, other)
 
     def lived(self, eid: str) -> None:
         self.recent = (self.recent + [eid])[-RECENT:]
@@ -1817,11 +1804,11 @@ def buy(p: Pet, entry: dict, rng: random.Random) -> tuple[bool, str]:
 
 # --- world events ------------------------------------------------------------------------------
 # global: effects on every alive pet the moment it happens (role-specific extras), claim: first N clickers.
-# 🎰 one venue per wealth tier: (name, money tier, min stake, max stake, time, background, jackpot ×)
+# 🎰 one venue per wealth tier: (name, money tier, min stake, max stake, background, jackpot ×)
 CASINO = {
-    "underpass": ("🎰 Автомати в переході", 1, 20, 300, "1d", "metro", 10),
-    "bukovel": ("🎲 Казино в Буковелі", 2, 300, 5000, "3d", "bukovel", 20),
-    "private": ("🃏 Закритий покер олігархів", 4, 5000, 50000, "1w", "casino", 8),
+    "underpass": ("🎰 Автомати в переході", 1, 20, 300, "metro", 10),
+    "bukovel": ("🎲 Казино в Буковелі", 2, 300, 5000, "bukovel", 20),
+    "private": ("🃏 Закритий покер олігархів", 4, 5000, 50000, "casino", 8),
 }
 
 
@@ -1834,15 +1821,13 @@ def casino_venues(p: Pet) -> list[str]:
 
 
 def casino(p: Pet, venue: str, stake: int, rng: random.Random) -> tuple[str, list[str]] | str:
-    """Bet `stake` ₴ at a venue. Costs life time; the house edge is real, luck and fin literacy soften it.
+    """Bet `stake` ₴ at a venue. The house edge is real; luck and fin literacy soften it.
     Returns (text, notes) or an error string."""
     if venue not in casino_venues(p):
         return "Сюди тебе не пустять" if p.alive and p.stage >= 3 else "Казино — тільки для дорослих"
-    name, _, lo, hi, t, _, jackpot = CASINO[venue]
+    name, _, lo, hi, _, jackpot = CASINO[venue]
     if not isinstance(stake, int) or isinstance(stake, bool) or not lo <= stake <= min(hi, int(p.money)):
         return f"Ставка від {lo} до {min(hi, max(lo, int(p.money)))} ₴"
-    p.years += parse_years(t)
-    p.counters["dec_years"] = round(p.counters.get("dec_years", 0) + parse_years(t), 3)
     p.counters["casino"] = p.counters.get("casino", 0) + 1
     p._add("gambler", 1)
     fin = p.life.get("fin", 0)
@@ -1874,10 +1859,9 @@ def casino(p: Pet, venue: str, stake: int, rng: random.Random) -> tuple[str, lis
         text += " За столом сидів заступник міністра. Тепер він «знайомий»."
     raw_money = fx.pop("money")
     p.money += raw_money  # stake rules above already include fin literacy
-    notes = [f"{'+' if raw_money > 0 else ''}{raw_money} ₴", f"⏳ +{time_label(parse_years(t))}"]
+    notes = [f"{'+' if raw_money > 0 else ''}{raw_money} ₴"]
     notes += p.apply(fx, None, rng)
     p._tiers()
-    p._age_checks(rng)
     text = p.fmt(text)
     p.note("casino", f"{name}: {text} ({raw_money:+d} ₴)")
     return text, notes
@@ -2143,9 +2127,6 @@ def life_summary(p: Pet, names: dict[str, str] | None = None) -> dict:
              + (f" · 👑 {p.dynasty}, покоління {p.gen}" if p.gen > 1 and p.dynasty else ""),
              f"🎲 {p.events_done} {plural(p.events_done, 'пригода', 'пригоди', 'пригод')}" + (f" · 🎯 кубик: {ok}✅ {fail}❌" if ok + fail else "")
              + (f" · 🌀 поворотів: {c['twists']}" if c.get("twists") else "")]
-    if c.get("dec_years", 0) >= 1:
-        dy = int(c["dec_years"])
-        facts.append(f"⏳ рішення забрали {dy} {plural(dy, 'рік', 'роки', 'років')} життя")
     career = [JOBS[p.job]["name"] if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else ""]
     money = f"💰 найбільше мав {c.get('money_max', int(p.money)):,} ₴".replace(",", " ")
     facts.append(" · ".join(x for x in career + [money] if x))
@@ -2207,7 +2188,7 @@ def card(p: Pet, names: dict[str, str]) -> str:
     if p.role:
         lines.append(f"{ROLES[p.role]['name']} — <i>{ROLES[p.role]['desc']}</i>")
     lines += [
-        f"❤️{bar(p.health)} 😊{bar(p.mood)} ⚡{bar(p.energy)}",
+        f"❤️{bar(p.health)} 😊{bar(p.mood)}",
         f"💰 {int(p.money)} ₴ · {p.tier_name('money')}",
         " ".join(f"{LIFE[k][0]}{int(p.life.get(k, 0))}" for k in LIFE)
         + "".join(f" · {p.tier_name(k)}" for k in sorted(LIFE, key=lambda k: -p.life.get(k, 0))[:2] if p.tier(k) >= 1),
