@@ -25,6 +25,8 @@ async def dispatch(sb: Sandbox, o: int, b: dict) -> dict:
         msg = await sb.care(int(b.get("owner") or o), str(x), actor_id=o)
     elif a == "feed":
         msg = await sb.feed(o, str(x))
+    elif a == "casino":
+        msg = await sb.casino(o, str(x), int(b.get("stake") or 0))
     elif a == "adventure":
         msg = await sb.adventure(o, str(b.get("kind", "")), int(b.get("with") or 0))
     elif a == "choose":

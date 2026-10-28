@@ -5,6 +5,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Changed — the life model (breaking for hosts that show care)
+- **Upkeep is automatic.** Food, washing and sleep happen by themselves; adults pay a daily cost of living by
+  wealth tier. Debt shows on the sprite (hungry, dirty), brings poverty events and slowly hurts health.
+  Pets no longer die of neglect. `care()`/`feed()` still work but are no longer needed (healing is).
+- **Age is in years.** `Pet.years`: the clock ages a pet (faster in childhood), and **every decision costs time**
+  (`time=` on choices/outcomes, module defaults; `Pet.button()` shows it: «Вступити в КПІ · 4 р.»). A life is
+  ~75–90 years ≈ 30 real days; stages at 12/18/60 years; `lifespan` is in years.
+- **Life stats with tiers:** 📈 популярність, 🕶 авторитет, 🤝 блат, 📊 фінграмотність, ✨ привабливість (0–100) and
+  💰 wealth tiers. Tiers bring income (ads, «дах», interest, better pay) and risks (raids, NABU, scandals, tax
+  checks), are announced, and are recorded in the life summary. Personality in outcomes echoes into them.
+- Old pet documents migrate on load (age → years, life stats guessed from skills, traits, job and record).
+
+### Added
+- 🎰 Casino: `engine.casino(p, venue, stake, rng)`, venues per wealth tier (`CASINO`, `casino_venues`).
+- 47 new events (`content/status.py`): blogging and fame, money and investments, «крипта від кума», street
+  authority, connections, style, big life decisions with years, casino; per-choice time on key older events.
+- DSL: effects `fame auth blat fin attr time`; requirements `life tier tier_max years`; `dsl.years()`.
+- Sandbox: life stats with tier names, casino, time on choice buttons, age in years; care buttons removed.
+
 ## [0.2.0] — 2026-10-27
 
 ### Added

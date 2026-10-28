@@ -58,7 +58,7 @@ def _source_handles(src: str, key: str) -> bool:
 def test_engine_implements_every_known_effect():
     from kit_the_cat import engine
     src = inspect.getsource(engine.Pet.apply)
-    implicit = dsl.STATS | dsl.SKILLS | dsl.TRAITS
+    implicit = dsl.STATS | dsl.SKILLS | dsl.TRAITS | dsl.LIFE
     missing = sorted(k for k in dsl.KNOWN_FX - implicit if not _source_handles(src, k))
     assert not missing, f"engine.Pet.apply ignores: {missing}"
 

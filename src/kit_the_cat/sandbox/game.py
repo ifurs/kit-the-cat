@@ -88,7 +88,13 @@ class Sandbox:
         out["pet"] = dict(
             name=p.name, state=p.state, stage=E.STAGES.get(p.stage, ""), card=E.card(p, names),
             stats={k: round(getattr(p, k)) for k in E.STATS}, money=int(p.money), level=p.level,
-            age=round(p.age_days, 1), role=E.ROLES[p.role]["name"] if p.role in E.ROLES else "", job=JOBS[p.job]["name"] if p.job in JOBS else "",
+            age=round(p.age_days, 1), years=int(p.years),
+            life=[dict(key=k, icon=v[0], name=v[1], value=round(p.life.get(k, 0)), tier=p.tier_name(k)[2:])
+                  for k, v in E.LIFE.items()],
+            money_tier=p.tier_name("money"),
+            casino=[dict(id=k, name=E.CASINO[k][0], lo=E.CASINO[k][2], hi=min(E.CASINO[k][3], int(p.money)),
+                         time=E.time_label(E.parse_years(E.CASINO[k][4]))) for k in E.casino_venues(p)],
+            role=E.ROLES[p.role]["name"] if p.role in E.ROLES else "", job=JOBS[p.job]["name"] if p.job in JOBS else "",
             traits={E.TRAITS[t]: round(p.traits.get(t, 0), 1) for t in p.top_traits()},
             skills={k: round(p.skills.get(k, 0)) for k in E.SKILLS}, jailed=p.jailed, pending=None,
             genes=sprites.describe(p.genome), dna=sprites.dna_code(p.genome), rarity=sprites.rarity(p.genome)[1],
@@ -104,7 +110,7 @@ class Sandbox:
             out["pet"]["pending"] = dict(
                 id=e.id, text=p.fmt(e.text, other), other=other.name if other else "",
                 twist=E.is_twist_event(e), mode=p.pending.get("mode", ""),
-                choices=[dict(i=i, label=p.fmt(c.label, other), chance=p.chance(c)) for i, c in p.options(e, other)])
+                choices=[dict(i=i, label=p.button(e, i, other), chance=p.chance(c)) for i, c in p.options(e, other)])
         rows = await self.db.pet_log(SANDBOX, owner, p.gen, 40)
         out["journal"] = [dict(ts=E.kyiv(r["ts"]).strftime("%d.%m %H:%M"), kind=r["kind"], text=r["text"])
                           for r in rows][::-1]
@@ -174,6 +180,17 @@ class Sandbox:
                 return r
             await self.save(p)
         return f"{r[0]}\n{' · '.join(r[1])}"
+
+    async def casino(self, owner: int, venue: str, stake: int) -> str:
+        async with self.lock:
+            p = await self.pet(owner)
+            if not p:
+                return "Спершу заведи пета"
+            r = E.casino(p, venue, stake, self.rng)
+            if isinstance(r, str):
+                return r
+            await self.save(p)
+        return f"{E.CASINO[venue][0]}: {r[0]}\n{' · '.join(r[1])}"
 
     def foods(self, p_role: str = "") -> list[dict]:
         return [dict(id=k, name=v[0], price=v[1]) for k, v in FOOD.items()
@@ -374,17 +391,9 @@ class Sandbox:
         return f"{'🌀 ' if twist else ''}{text}\n{' '.join(notes)}"
 
     def _autocare(self, p: E.Pet) -> None:
-        """What a reasonable owner does: NPC owners always, yours only with autopilot on."""
-        if p.hunger < 45:
-            for food in ("borsch", "varenyky", "salo", "mivina", "blood", "brains", "crust"):
-                if not isinstance(E.feed(p, food, self.rng, p), str):
-                    break
-        if p.clean < 35:
-            E.care(p, "wash", self.rng)
+        """Food, washing and sleep are automatic now; a reasonable owner only takes a sick pet to the doctor."""
         if p.health < 40:
             E.care(p, "heal", self.rng)
-        if p.mood < 35:
-            E.care(p, "play", self.rng)
 
     async def advance(self, hours: float, auto_me: bool = True, care_me: bool = False) -> dict:
         """Fast-forward game time hour by hour: ageing, salaries, NPC lives, your pet's auto-decisions, world events."""

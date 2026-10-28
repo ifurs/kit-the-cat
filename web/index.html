@@ -26,7 +26,7 @@ button:hover { border-color: var(--accent); }
 button:disabled { opacity: .45; cursor: default; }
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 button.ghost { background: none; border-color: transparent; }
-select, input[type=text] { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; max-width: 100%; }
+select, input[type=text], input[type=number] { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; max-width: 100%; }
 .muted { color: var(--muted); }
 small { font-size: 12.5px; }
 
@@ -60,6 +60,11 @@ main > * { min-width: 0; }
 .bar > i { display: block; height: 100%; background: var(--good); transition: width .3s; }
 .bar.mid > i { background: var(--warn); } .bar.low > i { background: var(--bad); }
 .care { display: flex; gap: 6px; }
+.life { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+.life .stat { border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; font-size: 13px; white-space: nowrap; }
+.life .stat small { color: var(--muted); }
+.bet { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.bet input { width: 84px; min-width: 0; }
 .care button { flex: 1; font-size: 18px; padding: 8px 0; }
 .sub { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
 .seg { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -156,7 +161,7 @@ canvas.sprite, canvas.event-img, canvas.zoo { max-width: 100%; height: auto; }
     <div class="pop" id="setPop" hidden>
       <button id="npcs">🏘 Заселити 3 сусідів</button>
       <button id="world">🌍 Світова подія</button>
-      <label><input type="checkbox" id="care"> Автодогляд при перемотуванні</label>
+      <label><input type="checkbox" id="care"> Автопілот: лікувати при перемотуванні</label>
       <label><input type="checkbox" id="auto" checked> Пригоди чекають на мене</label>
       <button id="theme">🌓 Тема</button>
       <small class="muted" style="padding:2px">Гра зберігається лише в цьому браузері.</small>
@@ -282,17 +287,18 @@ function renderPet() {
   else {
     const tags = [`💰 ${p.money} ₴`, `ур. ${p.level}`, p.rarity, p.role, p.job].filter(Boolean).map(esc).join(" · ");
     let h = `<canvas class="sprite" id="petCv" role="img" aria-label="${esc(p.name)}"></canvas>
-      <div class="name">${p.emoji} ${esc(p.name)}</div><div class="meta">${esc(p.stage)} · ${p.age} дн. · ${tags}</div>`;
+      <div class="name">${p.emoji} ${esc(p.name)}</div><div class="meta">${esc(p.stage)} · ${p.years} р. · ${tags}</div>`;
     if (p.state === "egg") h += `<p class="muted">Вилупиться приблизно за ${p.egg_left} хв. гри — натисни ⏩ Час.</p>`;
     if (p.state === "dead") h += `${obit(p)}<button class="primary" id="heir" style="width:100%">🥚 Спадкоємець${p.heir ? " (від пари)" : ""}</button>
       <details style="margin-top:8px"><summary class="muted">або новий рід</summary><div class="species">${speciesGrid}</div></details>`;
     if (p.state === "alive") {
       const s = p.stats;
       h += `<div class="meta" style="margin-top:6px">🎭 ${esc(p.persona.temper)}, мріє ${esc(p.persona.dream)}</div>
-        <div class="bars">${bar("🍖", s.hunger)}${bar("😊", s.mood)}${bar("🧼", s.clean)}${bar("❤️", s.health)}${bar("⚡", s.energy)}</div>
-        <div class="care"><button data-more="food" title="Годувати">🍖</button><button data-care="play" title="Пограти">🎾</button>
-          <button data-care="wash" title="Помити">🧼</button><button data-care="pat" title="Погладити">🤗</button>
-          <button data-care="heal" title="Лікувати">💊</button><button data-more="menu" title="Речі, базар, дім, робота…">⋯</button></div>
+        <div class="bars">${bar("❤️", s.health)}${bar("😊", s.mood)}${bar("⚡", s.energy)}</div>
+        <div class="meta">${esc(p.money_tier)}</div>
+        <div class="life">${p.life.map(l => `<span class="stat" title="${esc(l.name)}">${l.icon} ${l.value} <small>${esc(l.tier)}</small></span>`).join("")}</div>
+        <div class="care"><button data-care="heal" title="Лікувати">💊</button><button data-more="casino" title="Казино">🎰</button>
+          <button data-more="menu" title="Речі, базар, дім, робота…">⋯</button></div>
         <div id="more"></div>`;
     }
     el.innerHTML = h;
@@ -300,8 +306,8 @@ function renderPet() {
   el.querySelectorAll("[data-sp]").forEach(b => b.onclick = () => act("create", b.dataset.sp));
   el.querySelectorAll("[data-care]").forEach(b => b.onclick = () => act("care", b.dataset.care));
   el.querySelectorAll("[data-more]").forEach(b => b.onclick = () => {
-    if (b.dataset.more === "food") more = more === "food" ? "" : "food";
-    else more = more && more !== "food" ? "" : "wardrobe";
+    if (b.dataset.more === "casino") more = more === "casino" ? "" : "casino";
+    else more = more && more !== "casino" ? "" : "wardrobe";
     renderMore();
   });
   const h = $("#heir"); if (h) h.onclick = () => act("heir");
@@ -314,9 +320,11 @@ function renderMore() {
   if (!more) { el.innerHTML = ""; return; }
   const row = (l, r, btn) => `<div class="row"><span>${l}${r ? ` <small class="muted">${r}</small>` : ""}</span>${btn || ""}</div>`;
   const opts = [["wardrobe", "👗 Речі"], ["shop", "🛒 Базар"], ["homes", "🏠 Дім"], ["jobs", "💼 Робота"], ["dna", "🧬 Гени"], ["name", "✏️ Ім'я"]];
-  const head = more === "food" ? "" : `<div class="seg">${opts.map(([k, n]) => `<button data-sec="${k}" class="${more === k ? "on" : ""}">${n}</button>`).join("")}</div>`;
+  const head = more === "casino" ? "" : `<div class="seg">${opts.map(([k, n]) => `<button data-sec="${k}" class="${more === k ? "on" : ""}">${n}</button>`).join("")}</div>`;
   let list = "";
-  if (more === "food") list = L.foods.map(f => row(esc(f.name), f.price ? f.price + " ₴" : "безкоштовно", `<button data-feed="${f.id}">Дати</button>`)).join("");
+  if (more === "casino") list = S.pet.casino.length ? S.pet.casino.map(v => `<div class="row"><span>${esc(v.name)} <small class="muted">${v.lo}–${v.hi} ₴ · ${esc(v.time)}</small></span>
+      <span class="bet"><input type="number" inputmode="numeric" min="${v.lo}" max="${v.hi}" value="${v.lo}" data-stake="${v.id}"><button data-bet="${v.id}">Ставка</button></span></div>`).join("")
+    : `<p class="muted">Казино — лише для дорослих при грошах. Автомати в переході пускають від 20 ₴.</p>`;
   if (more === "wardrobe") list = L.wardrobe.length ? L.wardrobe.map(w => row((w.on ? "✅ " : "") + esc(w.name), "", `<button data-eq="${w.i}">${w.on ? "Зняти" : "Одягти"}</button>`)).join("") : `<p class="muted">Поки порожньо — загляни на базар.</p>`;
   if (more === "shop") list = L.stock.map(x => row(esc(x.name), x.price + " ₴", `<button data-buy="${x.i}">Купити</button>`)).join("");
   if (more === "homes") list = L.homes.map(x => row((x.here ? "📍 " : "") + esc(x.name), "", x.here ? "" : `<button data-mv="${x.i}">Сюди</button>`)).join("");
@@ -327,7 +335,7 @@ function renderMore() {
   if (more === "name") list = `<div class="row"><input type="text" id="newName" maxlength="24" value="${esc(S.pet.name)}" style="flex:1;min-width:0"><button id="saveName">OK</button></div>`;
   el.innerHTML = `<div class="sub">${head}<div class="list">${list}</div></div>`;
   el.querySelectorAll("[data-sec]").forEach(b => b.onclick = () => { more = b.dataset.sec; renderMore(); });
-  el.querySelectorAll("[data-feed]").forEach(b => b.onclick = () => act("feed", b.dataset.feed));
+  el.querySelectorAll("[data-bet]").forEach(b => b.onclick = () => act("casino", b.dataset.bet, {stake: +el.querySelector(`[data-stake="${b.dataset.bet}"]`).value}));
   el.querySelectorAll("[data-eq]").forEach(b => b.onclick = () => act("equip", +b.dataset.eq));
   el.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => act("buy", +b.dataset.buy));
   el.querySelectorAll("[data-mv]").forEach(b => b.onclick = () => act("move", +b.dataset.mv));
