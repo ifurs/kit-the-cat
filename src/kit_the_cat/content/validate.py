@@ -66,10 +66,58 @@ def main() -> None:
                         errors.append(f"{e.id}/{c.label}: then={v!r} must be (followup event id, duration)")
                     else:
                         targets.add(v[0])
-    errors += [f"{e.id}: follow-up that nothing schedules (then=)" for e in ALL if e.followup and e.id not in targets]
+    errors += story_errors(by_id, targets)
+    errors += [f"{e.id}: follow-up that nothing schedules (then= / step=)" for e in ALL if e.followup and e.id not in targets]
     print(f"{len(ALL)} events, {sum(len(e.choices) for e in ALL)} choices")
     print("\n".join(errors) or "OK")
     raise SystemExit(1 if errors else 0)
+
+
+STORY_STEPS = 6  # a story is 1–6 decisions long
+
+
+def story_errors(by_id: dict, targets: set) -> list[str]:
+    """Stories (step=): steps exist, belong to the same story, are follow-ups; no loops; ≤ STORY_STEPS deep;
+    a list of next steps ends with an unconditional fallback; sv= is used only inside stories."""
+    errors, nxt = [], {}
+    for e in by_id.values():
+        if "sv" in e.req and not e.story:
+            errors.append(f"{e.id}: sv= outside a story")
+        if e.story and e.social:
+            errors.append(f"{e.id}: stories are solo (social=False)")
+        for c in e.choices:
+            for out in c.outs + c.fail:
+                if "sv" in out.fx and not e.story:
+                    errors.append(f"{e.id}/{c.label}: sv= outside a story")
+                if "step" not in out.fx:
+                    continue
+                v = out.fx["step"]
+                ids = [v] if isinstance(v, str) else list(v) if isinstance(v, (list, tuple)) else []
+                if not ids or not e.story:
+                    errors.append(f"{e.id}/{c.label}: step={v!r} needs a story event and step ids")
+                    continue
+                for i in ids:
+                    t = by_id.get(i)
+                    if not t or not t.followup or t.story != e.story:
+                        errors.append(f"{e.id}/{c.label}: step {i!r} must be a follow-up of the story «{e.story}»")
+                    else:
+                        targets.add(i)
+                        nxt.setdefault(e.id, set()).add(i)
+                last = by_id.get(ids[-1])
+                if len(ids) > 1 and last and last.req:
+                    errors.append(f"{e.id}/{c.label}: the last of step=[…] is the fallback and must have no req")
+
+    def depth(i: str, seen: tuple) -> int:
+        if i in seen:
+            errors.append(f"{i}: story loops back ({' → '.join(seen + (i,))})")
+            return 0
+        return 1 + max((depth(j, seen + (i,)) for j in nxt.get(i, ())), default=0)
+    for e in by_id.values():
+        if e.story and not e.followup:
+            d = depth(e.id, ())
+            if d > STORY_STEPS:
+                errors.append(f"{e.id}: story «{e.story}» is {d} steps deep (max {STORY_STEPS})")
+    return errors
 
 
 if __name__ == "__main__":

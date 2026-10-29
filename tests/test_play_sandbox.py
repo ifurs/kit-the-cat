@@ -26,7 +26,7 @@ async def do(c, action, x=None, who=1, **kw):
 
 async def ready_for_tournament(c, need: int) -> None:
     """Grow everyone into teens; wait out hospital/jail stays (they depend on the real time of day)."""
-    await do(c, "advance", 24 * 2, care=True)
+    await do(c, "advance", 24 * E.STAGE_YEARS[2] / E.YEARS_PER_DAY[1] + 6, care=True)  # all of childhood
     for _ in range(16):
         if (await (await c.get("/api/tour?as=1")).json())["eligible"] >= need:
             return

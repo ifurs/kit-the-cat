@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **Stories — several decisions in a row** (`content/stories.py`): 8 small real-life Ukrainian situations played as
+  2–4 decisions without pressing 🎲 again — «Ніч тривоги», «Потяг до Ужгорода», «Авто з OLX», «Весілля в селі»,
+  «Збір на пікап», «Довідка з ЦНАПу», «Не та посилка», «Квартира в Києві». Hidden story scores pick one of 2–3
+  endings, and the last result lists every decision with «Разом за історію» totals.
+- DSL: effect `step="id" | [ids]` (the next step starts at once; a list picks the first whose `req` holds, the last
+  is the fallback), effect `sv={...}` and requirement `sv={...}` (story scores), `ev(..., story="Назва")`.
+  `Result.next` and `Result.story` tell hosts to show the next step right away and the recap at the end; the
+  story being played lives in `Pet.tale`. The validator checks steps, loops and depth (≤ 6).
+- Browser game: «📖 Назва · крок N», the previous step's outcome above the next one, the recap in the result card;
+  on phones the adventure scrolls so its choices sit right above the bottom dock.
+
+### Fixed
+- `test_tournament` was flaky after the longer childhood: the test now grows pets through all of childhood.
+
 ## [0.8.1] — 2026-10-29
 
 ### Changed

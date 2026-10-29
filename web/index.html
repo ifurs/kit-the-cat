@@ -88,6 +88,10 @@ main > * { min-width: 0; }
 .result { border-left: 3px solid var(--accent); padding: 8px 12px; margin-top: 12px; background: var(--chip); border-radius: 8px; white-space: pre-wrap; }
 .notes { font-family: ui-monospace, monospace; font-size: 12.5px; color: var(--muted); margin-top: 6px; white-space: normal; }
 .empty { text-align: center; padding: 26px 10px; }
+.story-head { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+.prev { font-size: 13.5px; color: var(--muted); border-left: 3px solid var(--line); padding: 4px 10px; margin-top: 10px; }
+.recap { margin: 4px 0 0; padding-left: 22px; font-size: 13.5px; white-space: normal; }
+.recap li { margin: 2px 0; }
 
 .vs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; text-align: center; margin: 10px 0; }
 .vs > div { min-width: 0; }  /* sides align at the bottom, so HP bars line up even when one name wraps */
@@ -155,6 +159,7 @@ canvas.sprite, canvas.event-img, canvas.zoo { max-width: 100%; height: auto; }
   .dock button { min-height: 48px; font-size: 16px; }
   .dock .primary { flex: 1; }
   body.has-dock { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  html:has(body.has-dock) { scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
   body.has-dock #toast { bottom: calc(84px + env(safe-area-inset-bottom)); }
 }
 </style>
@@ -300,7 +305,7 @@ function renderDock() {  // phones: the main action is always one thumb away
   if (!on) { el.innerHTML = ""; return; }
   el.innerHTML = `<button class="primary" id="dockGo">${p.pending ? "❗ Вирішити пригоду" : "🎲 Нова пригода"}</button>
     <button id="dockHeal" title="Лікувати" aria-label="Лікувати">💊</button><button id="dockPet" title="До пета" aria-label="До пета">🐾</button>`;
-  const toView = () => $("#view").scrollIntoView({block: "start"});
+  const toView = () => $("#view").scrollIntoView({block: "end"});  // choices right above the dock
   $("#dockGo").onclick = async () => {
     if (tab !== "adv") { tab = "adv"; store.set("ks-tab", tab); battle = null; renderTabs(); }
     if (!S.pet.pending) { lastResult = null; await act("adventure"); }
@@ -403,7 +408,11 @@ function resultHtml(r) {
   const verdict = r.ok === null ? "" : (r.crit === "win" ? "🌟 Критичний успіх" : r.crit === "fail" ? "💥 Критичний провал" : r.ok ? "✅ Успіх" : "❌ Провал");
   const notes = (r.notes || []).concat(r.tail_notes || []);
   return `<div class="result">${r.twist ? "🌀 <b>Сюжетний поворот!</b>\n" : ""}<b>${esc(r.label)}</b>${verdict ? ` — ${verdict} <small class="muted">(🎲 ${r.roll}, шанс ${Math.round(r.chance * 100)}%)</small>` : ""}
-${esc(r.text)}${r.tail ? `\n🌀 ${esc(r.tail)}` : ""}${r.died ? `\n⚰️ <b>${esc(r.name)} помер.</b> ${esc(r.cause)}` : ""}${notes.length ? `<div class="notes">${esc(notes.join(" · "))}</div>` : ""}</div>`;
+${esc(r.text)}${r.tail ? `\n🌀 ${esc(r.tail)}` : ""}${r.died ? `\n⚰️ <b>${esc(r.name)} помер.</b> ${esc(r.cause)}` : ""}${notes.length ? `<div class="notes">${esc(notes.join(" · "))}</div>` : ""}${recapHtml(r.story)}</div>`;
+}
+function recapHtml(st) {  // the end of a multi-step story: every decision and what it all added up to
+  if (!st || !st.steps) return "";
+  return `<div class="story-head">📖 <b>${esc(st.title)}</b> — твої рішення:</div><ol class="recap">${st.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ol>${st.notes.length ? `<div class="notes">Разом за історію: ${esc(st.notes.join(" · "))}</div>` : ""}`;
 }
 
 function renderAdv() {
@@ -414,6 +423,8 @@ function renderAdv() {
   }
   if (ev) {
     el.innerHTML = `<canvas class="event-img" id="evCv" role="img" aria-label="Сцена пригоди"></canvas>
+      ${ev.story ? `<div class="story-head">📖 <b>${esc(ev.story.title)}</b> · крок ${ev.story.step}</div>` : ""}
+      ${ev.story && lastResult && lastResult.next === ev.id ? `<div class="prev">«${esc(lastResult.label)}» — ${esc(lastResult.text)}</div>` : ""}
       <p>${ev.twist ? "🌀 " : ""}${ev.other ? `👥 <b>${esc(ev.other)}</b> · ` : ""}${esc(ev.text)}</p>
       <div class="choices">${ev.choices.map(c => `<button data-ch="${c.i}"><span>${esc(c.label)}</span>${c.chance != null ? `<small class="muted">🎲 ${Math.round(c.chance * 100)}%</small>` : ""}</button>`).join("")}
         <button data-ch="auto" class="ghost muted">Хай вирішить сам</button></div>`;

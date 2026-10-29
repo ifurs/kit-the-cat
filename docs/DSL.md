@@ -2,7 +2,7 @@
 
 > Згенеровано `scripts/gen_dsl_docs.py` з коду — не редагуй вручну. Як писати гарні пригоди: [CONTENT_GUIDE.md](CONTENT_GUIDE.md).
 
-Контракт: **53 ефектів**, **32 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
+Контракт: **55 ефектів**, **33 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
 
 ## Синтаксис (з `content/dsl.py`)
 
@@ -52,6 +52,10 @@ Effects (o(..., **fx)):
   twist=True                           marks the outcome as a plot twist (announced louder)
   then=("fu_kum_returns", "2y")        schedule a follow-up event after that much of the pet's life: earlier
                                        choices come back (the follow-up must be an ev(..., followup=True))
+  step="st_alarm_2" | ["a", "b"]       story: the next step comes right away (no 🎲). A list = the first step whose
+                                       req (usually sv=) holds; the last one is the fallback. Steps are
+                                       ev(..., story="Назва", followup=True); the first step has story= only
+  sv={"kind": 1, "risk": 2}            story variables: hidden scores the later steps and the ending read (sv=)
   # social events only:
   rel=+10  status="friend|bestie|rival|enemy|crush|partner|ex"  other={...effects for the other pet}
   baby=True                            the couple gets an heir egg (hybrid genes)
@@ -66,6 +70,7 @@ Requirements (req=dict(...)):
   other_role="vampire"   nostatus=[...]   other_partner=False   other_stage_max=2
   life={"fame": 40} (life stat at least)   tier={"fame": 2, "money": 3} (tier at least; money tiers too)
   tier_max={"auth": 0}   years=(18, 60) (age in years)   goal="mayor" (the pet's dream, persona.GOALS)
+  sv={"kind": (2, 9)} (story variables of the story being played, at least / within a range)
   phase="young" | ["young", "middle"]   life phase by age: kid 0–12, teen 12–18, young 18–30, middle 30–60, grand 60+
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence) | list of those | month numbers (real Kyiv date)
