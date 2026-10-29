@@ -43,6 +43,10 @@ Effects (o(..., **fx)):
   twist=True                           marks the outcome as a plot twist (announced louder)
   then=("fu_kum_returns", "2y")        schedule a follow-up event after that much of the pet's life: earlier
                                        choices come back (the follow-up must be an ev(..., followup=True))
+  step="st_alarm_2" | ["a", "b"]       story: the next step comes right away (no 🎲). A list = the first step whose
+                                       req (usually sv=) holds; the last one is the fallback. Steps are
+                                       ev(..., story="Назва", followup=True); the first step has story= only
+  sv={"kind": 1, "risk": 2}            story variables: hidden scores the later steps and the ending read (sv=)
   # social events only:
   rel=+10  status="friend|bestie|rival|enemy|crush|partner|ex"  other={...effects for the other pet}
   baby=True                            the couple gets an heir egg (hybrid genes)
@@ -57,6 +61,7 @@ Requirements (req=dict(...)):
   other_role="vampire"   nostatus=[...]   other_partner=False   other_stage_max=2
   life={"fame": 40} (life stat at least)   tier={"fame": 2, "money": 3} (tier at least; money tiers too)
   tier_max={"auth": 0}   years=(18, 60) (age in years)   goal="mayor" (the pet's dream, persona.GOALS)
+  sv={"kind": (2, 9)} (story variables of the story being played, at least / within a range)
   phase="young" | ["young", "middle"]   life phase by age: kid 0–12, teen 12–18, young 18–30, middle 30–60, grand 60+
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence) | list of those | month numbers (real Kyiv date)
@@ -72,12 +77,12 @@ TRAITS = {"toxic", "gambler", "dark", "party", "patriot", "glutton", "love", "my
 KNOWN_FX = STATS | SKILLS | TRAITS | LIFE | {"time", "then",
     "money", "money_mult", "xp", "lifespan", "item", "item_slot", "lose_item", "unequip", "flag", "unflag", "job", "edu",
     "home", "jail", "hospital", "die", "achievement", "free", "gene", "mutate", "species", "role", "reroll_persona",
-    "twist", "rel", "status", "other", "baby", "swap_genes",
+    "twist", "rel", "status", "other", "baby", "swap_genes", "step", "sv",
 }
 KNOWN_REQ = {
     "stage", "species", "flag", "noflag", "trait", "skill", "money", "debt", "job", "edu", "noedu", "has", "partner",
     "night", "jail", "age", "low", "status", "nostatus", "other_stage", "other_partner", "role", "norole", "other_role",
-    "season", "other_stage_max", "life", "tier", "tier_max", "years", "goal", "phase",
+    "season", "other_stage_max", "life", "tier", "tier_max", "years", "goal", "phase", "sv",
 }
 UNITS = {"d": 1 / 365, "w": 7 / 365, "m": 1 / 12, "y": 1.0}
 
@@ -144,6 +149,7 @@ class Event:
     aff: tuple = ()         # traits that make this event more likely
     time: str | float = ""  # base cost of its choices ("" → the module's base)
     followup: bool = False  # only comes as a consequence (`then=`), never at random
+    story: str = ""         # title of the multi-step story this event is a step of (`step=` links the steps)
 
 
 def o(text: str, w: float = 1.0, **fx) -> Out:
@@ -155,5 +161,5 @@ def ch(label: str, *outs: Out, check=None, fail=None, req=None, auto: str = "", 
 
 
 def ev(id: str, text: str, *choices: Choice, req=None, w: float = 1.0, social: bool = False, bg: str = "",
-       once: bool = False, aff: tuple = (), time: str | float = "", followup: bool = False) -> Event:
-    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), time, followup)
+       once: bool = False, aff: tuple = (), time: str | float = "", followup: bool = False, story: str = "") -> Event:
+    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), time, followup, story)

@@ -45,6 +45,11 @@ matter years later, add
 `then=("fu_<id>", "2y")` to its outcomes and write the follow-up in `consequences.py` with `followup=True`; its
 text recalls the original choice («Пам'ятаєш, як {name}…»). Follow-ups never fire at random.
 
+**Stories** (`stories.py`): a small real situation played as 2–6 decisions in a row — the next step comes at once
+(`step=`), hidden scores (`sv=`) pick the ending, and the last message lists every decision. First step
+`story="Назва"`, the rest `story="Назва", followup=True`; a list `step=[...]` ends with a fallback without `req`;
+put `step=` on `fail=` outcomes too. See docs/CONTENT_GUIDE.md «Історії».
+
 **Life stats:** personality in outcomes already echoes into fame/authority/blat/fin/attr; write them explicitly
 only when they're the point. Tier-gated events (`req=dict(tier={"fame": 2})`) show the price of success.
 

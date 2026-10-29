@@ -360,6 +360,14 @@ def sprites_draw_roles() -> bool:
 LOOK_FIELDS = set(getattr(sprites.Look, "__dataclass_fields__", {}))
 
 
+def fx_note(k: str, v: float) -> str:
+    """«😊+5», «🧠-1», «+300 ₴»: a short note for one effect."""
+    if k == "money":
+        return f"{'+' if v > 0 else ''}{v:g} ₴"
+    icon = STATS.get(k) or SKILLS.get(k) or (LIFE[k][0] if k in LIFE else TRAITS[k].split()[0])
+    return f"{icon}{'+' if v > 0 else ''}{round(v, 1):g}"
+
+
 @dataclass
 class Result:
     text: str
@@ -375,6 +383,8 @@ class Result:
     died: bool = False
     label: str = ""
     time: float = 0.0            # years the decision cost (hidden from players; hosts use it to pace the world)
+    next: str = ""               # story: id of the step that is pending now (hosts show it right away)
+    story: dict = field(default_factory=dict)  # story: {title, step} mid-way; {title, steps, notes} at the end
 
 
 @dataclass
@@ -418,6 +428,7 @@ class Pet:
     heir: dict = field(default_factory=dict)      # genes of the egg waiting for the next generation
     children: int = 0
     pending: dict = field(default_factory=dict)
+    tale: dict = field(default_factory=dict)      # the multi-step story being played: id, title, path, vars, fx
     next_ev: float = 0.0
     recent: list = field(default_factory=list)
     seen: dict = field(default_factory=dict)      # event id -> times lived (this life)
@@ -657,7 +668,7 @@ class Pet:
         if natural:
             self.counters["natural"] = 1
         self.epitaph = rng.choice(EPITAPHS)
-        self.pending = {}
+        self.pending, self.tale = {}, {}
         self.jail_until = self.hospital_until = 0.0
         self.note("died", f"⚰️ {self.name} {cause}. Прожив {int(self.years)} {plural(int(self.years), 'рік', 'роки', 'років')}, рівень {self.level}.")
         return True
@@ -766,7 +777,7 @@ class Pet:
                 if st == 4 and "cane" not in self.items:
                     self.items.append("cane")
         if self.pending and not self.age_fits(EVENTS.get(self.pending.get("id", ""))):
-            self.pending = {}  # outgrown while nobody answered: a teen no longer teethes
+            self.pending, self.tale = {}, {}  # outgrown while nobody answered: a teen no longer teethes
         return True
 
     def _daily(self, rng: random.Random) -> None:
@@ -943,13 +954,14 @@ class Pet:
                 if k == "fame" and v > 0:  # charm helps to go viral
                     v = round(v * (1 + self.life.get("attr", 0) / 200), 1)
                 self._add(k, v)
-                icon = STATS.get(k) or SKILLS.get(k) or (LIFE[k][0] if k in LIFE else TRAITS[k].split()[0])
-                notes.append(f"{icon}{'+' if v > 0 else ''}{v:g}")
+                notes.append(fx_note(k, v))
+                self._tally(k, v)
             elif k == "money":
                 if v < 0 and self.life.get("fin", 0) > 0:  # financially literate pets lose less
                     v = round(v * (1 - self.life["fin"] / 300))
                 self.money += v
-                notes.append(f"{'+' if v > 0 else ''}{v:g} ₴")
+                notes.append(fx_note(k, v))
+                self._tally(k, v)
             elif k == "then":
                 fid, after = v
                 n = self.counters.get(f"then_{fid}", 0)
@@ -1070,6 +1082,12 @@ class Pet:
                     notes.append(f"🌀 новий характер: {t}")
             elif k == "twist":
                 pass  # marker, handled by resolve()
+            elif k == "sv":
+                if self.tale:  # hidden story scores: later steps and the ending read them (req sv=)
+                    for var, d in v.items():
+                        self.tale["vars"][var] = self.tale["vars"].get(var, 0) + d
+            elif k == "step":
+                pass  # handled by resolve(): the next story step starts right away
             elif other is None:
                 continue  # social-only effects without a partner pet
             elif k == "rel":
@@ -1219,6 +1237,9 @@ class Pet:
             elif k == "age" and not v[0] <= self.age_days <= v[1]:
                 return False
             elif k == "years" and not v[0] <= self.years <= v[1]:
+                return False
+            elif k == "sv" and not all((lambda x, r: r[0] <= x <= r[1] if isinstance(r, (tuple, list)) else x >= r)(
+                    self.tale.get("vars", {}).get(var, 0), want) for var, want in v.items()):
                 return False
             elif k == "phase" and self.phase() not in ([v] if isinstance(v, str) else v):
                 return False
@@ -1400,6 +1421,10 @@ class Pet:
         """Apply a choice: skill check with natural 1/20, weighted outcomes, crits, twist tail, journal."""
         c = e.choices[idx]
         res = Result("", [], label=self.fmt(c.label, other))
+        if e.story and (not e.followup or self.tale.get("title") != e.story):
+            self.tale = dict(id=e.id, title=e.story, path=[], vars={}, fx={})  # a story begins
+        elif not e.story:
+            self.tale = {}
         outs = c.outs
         if c.check:
             res.chance = self.chance(c)
@@ -1431,6 +1456,8 @@ class Pet:
         self.years += res.time
         res.notes = self.apply(fx, other, rng)
         self.counters["dec_years"] = round(self.counters.get("dec_years", 0) + self.years - y0, 3)
+        if self.tale:
+            self.tale["path"].append(res.label)
         if self.in_character(c):
             res.notes.insert(0, f"🎭 {self.persona.get('temper', '')}: у своїй стихії")
         if self.alive and self.health <= 0:
@@ -1447,9 +1474,20 @@ class Pet:
         self.lived(e.id)
         if e.once:
             self.flags[f"seen_{e.id}"] = 1
-        self.pending = {}
+        prev, self.pending = self.pending, {}
         self.next_ev = now() + rng.uniform(*BUDGET.every) * hour()
-        if self.alive and rng.random() < TWIST_TAIL:
+        if self.tale:
+            nxt = self.next_step(fx.get("step")) if self.alive and not self.jailed and not self.in_hospital else None
+            if nxt:  # the story goes on right away: same place (chat or DM), new message
+                self.start(nxt, None, prev.get("mode", "manual"))
+                if "at" in prev:
+                    self.pending["at"] = prev["at"]
+                res.next, res.story = nxt.id, dict(title=self.tale["title"], step=len(self.tale["path"]) + 1)
+            else:    # the ending: every decision of the story and what it all added up to
+                res.story = dict(title=self.tale["title"], steps=list(self.tale["path"]),
+                                 notes=[fx_note(k, v) for k, v in self.tale["fx"].items() if round(v, 1)])
+                self.tale = {}
+        if self.alive and not res.next and rng.random() < TWIST_TAIL:
             tt, tfx, _ = rng.choices(TAILS, [x[2] for x in TAILS])[0]
             res.tail = self.fmt(tt)
             res.tail_notes = self.apply(tfx, None, rng)
@@ -1472,6 +1510,16 @@ class Pet:
             line += f" 🌀 {res.tail}"
         self.note(kind, line)
         return res
+
+    def next_step(self, v) -> Event | None:
+        """The story step to play next: the first of `step=` whose req holds (story vars); the last is the fallback."""
+        ids = [v] if isinstance(v, str) else list(v or [])
+        steps = [EVENTS[i] for i in ids if i in EVENTS]
+        return next((e for e in steps if self.meets(e.req, None)), steps[-1] if steps else None)
+
+    def _tally(self, k: str, v: float) -> None:
+        if self.tale:  # what the whole story changed, shown at its end
+            self.tale["fx"][k] = self.tale["fx"].get(k, 0) + v
 
     def choice_time(self, e: Event, c: Choice) -> float:
         """Years of life this decision costs (never shown to the player)."""
