@@ -1315,6 +1315,8 @@ class Pet:
                 w *= 3.0    # storylines move forward
             elif any(k in e.req for k in ("job", "jail", "role", "season")):
                 w *= 1.6    # situations the pet is in right now
+            if "phase" in e.req:
+                w *= 2.0    # the age the pet is living through right now: kid and teen stories beat generic ones
             if e.id.startswith("_"):
                 w *= 0.4 if not kind else 1
             cands.append(e)
