@@ -136,26 +136,26 @@ main > * { min-width: 0; }
 /* look: pixel RPG — square panels, bevelled buttons, dialog boxes, ▶ cursor */
 body { font-family: var(--ui); font-size: 15.5px; line-height: 1.5; }  /* running text stays easy to read */
 header h1 { font-family: var(--pixel); }  /* only the logo is pixel type: everything you read is in the system font */
-header { border-bottom: 3px solid var(--line); background: var(--bg); }
+header { border-bottom: 2px solid var(--line); background: var(--bg); }
 header h1 { font-size: 17px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
 .clock { color: var(--muted); }
 button, select, input[type=text], input[type=number] { border-radius: 0; }
-select, input[type=text], input[type=number] { background: var(--bg); border: 3px solid var(--line); }
-button { background: var(--chip); color: var(--ink); border: 3px solid var(--bg); outline: 0;
-  box-shadow: inset -3px -3px 0 #0006, inset 3px 3px 0 #ffffff1f, 0 0 0 3px var(--line); margin: 3px; }
+select, input[type=text], input[type=number] { background: var(--bg); border: 2px solid var(--line); }
+button { background: var(--chip); color: var(--ink); border: 2px solid var(--bg); outline: 0;
+  box-shadow: inset -2px -2px 0 #0006, inset 2px 2px 0 #ffffff1f, 0 0 0 2px var(--line); margin: 2px; }
 button:hover { background: #3d4868; border-color: var(--bg); }
-button:active:not(:disabled) { box-shadow: inset 3px 3px 0 #0006, 0 0 0 3px var(--line); transform: none; }
+button:active:not(:disabled) { box-shadow: inset 2px 2px 0 #0006, 0 0 0 2px var(--line); transform: none; }
 button.primary { background: var(--accent); color: var(--accent-ink); font-weight: 700;
-  box-shadow: inset -3px -3px 0 #b5732e, inset 3px 3px 0 #fff3c4, 0 0 0 3px var(--frame); }
+  box-shadow: inset -2px -2px 0 #b5732e, inset 2px 2px 0 #fff3c4, 0 0 0 2px var(--frame); }
 button.primary:hover { background: #ffd98f; }
 button.ghost { background: none; box-shadow: none; border-color: transparent; margin: 0; }
 :is(button, select, input, summary):focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
 .card, .row, .match, .banner, .champ, .pop, #toast, .species button { border-radius: 0; }
-.card { background: var(--panel); border: 3px solid var(--line); }
+.card { background: var(--panel); border: 2px solid var(--line); }
 .row { border: 2px solid var(--line); }
-.pop { background: var(--panel); border: 3px solid var(--frame); box-shadow: 0 0 0 3px var(--bg); }
-#toast { background: var(--dialog); color: var(--ink); border: 3px solid var(--frame); }
-.sprite, .zoo { border-radius: 0; border: 3px solid var(--line); background: var(--bg); }
+.pop { background: var(--panel); border: 2px solid var(--frame); box-shadow: 0 0 0 2px var(--bg); }
+#toast { background: var(--dialog); color: var(--ink); border: 2px solid var(--frame); }
+.sprite, .zoo { border-radius: 0; border: 2px solid var(--line); background: var(--bg); }
 .event-img { border-radius: 0; background: var(--bg); }
 .muted, small.muted { color: var(--muted); }
 a { color: var(--cyan); }
@@ -184,22 +184,23 @@ a { color: var(--cyan); }
 .tabs button.on::before { content: "▶"; position: absolute; left: 0; color: var(--accent); }
 .dot::after { background: var(--bad); border-radius: 0; }
 #view.book { padding: 0 0 14px; }
-#view.book > .event-img { display: block; width: 100%; height: clamp(220px, calc(100vh - 460px), 560px); object-fit: contain; border-bottom: 3px solid var(--line); }
+#view.book > .event-img { display: block; width: 100%; height: clamp(220px, calc(100vh - 460px), 560px); object-fit: contain; border-bottom: 2px solid var(--line); }
 #view .event-img { margin-inline: auto; }
-.dialog, .result { background: var(--dialog); border: 4px solid var(--frame); box-shadow: 0 0 0 4px var(--bg), 0 0 0 8px var(--ring);
-  margin: 20px 12px 6px; padding: 12px 12px 10px; border-radius: 0; white-space: normal; }
+.dialog, .result { background: var(--dialog); border: 3px solid var(--frame); box-shadow: 0 0 0 3px var(--bg), 0 0 0 6px var(--ring);
+  margin: 16px 10px 6px; padding: 12px 12px 10px; border-radius: 0; white-space: normal; }
 .result { white-space: pre-wrap; }
 .dialog > p { margin: 6px 0 10px; font-size: 17px; line-height: 1.55; }
 .story-head { font-size: 14px; color: var(--cyan); margin: 0; }
 .story-head b { color: var(--cyan); font-weight: 600; }
 .prev { color: var(--muted); font-size: 14.5px; margin-top: 6px; }
-.choices { gap: 2px; margin-top: 4px; }
-.choices button, .choices button.ghost { background: none; border: 0; box-shadow: none; margin: 0; padding: 8px 8px 8px 26px;
-  position: relative; text-align: left; font: 500 16px/1.4 var(--ui); color: var(--ink); }
-.choices button::before { content: "▶"; position: absolute; left: 8px; top: 8px; color: var(--accent); visibility: hidden; }
-.choices button:is(:hover, :focus-visible, :active) { background: var(--ring); outline: 0; }
-.choices button:is(:hover, :focus-visible, :active)::before { visibility: visible; }
-.choices button.ghost { color: var(--muted); font-size: 14.5px; }
+.choices { gap: 6px; margin-top: 6px; }
+.choices button, .choices button.ghost { background: var(--bg); border: 2px solid var(--line); box-shadow: inset 0 -2px 0 #0006; margin: 0;
+  padding: 9px 10px 9px 28px; position: relative; text-align: left; font: 500 16px/1.4 var(--ui); color: var(--ink); cursor: pointer; }
+.choices button::before { content: "▶"; position: absolute; left: 9px; top: 10px; color: var(--muted); font-size: 13px; }
+.choices button:is(:hover, :focus-visible) { background: var(--ring); border-color: var(--frame); outline: 0; }
+.choices button:is(:hover, :focus-visible)::before { color: var(--accent); }
+.choices button:active:not(:disabled) { background: var(--ring); box-shadow: inset 0 2px 0 #0006; }
+.choices button.ghost { color: var(--muted); font-size: 14.5px; border-style: dashed; box-shadow: none; }
 .choices small { color: var(--good); font-size: 13px; }
 .empty { text-align: left; padding: 14px 12px 0; }
 .empty .primary { width: calc(100% - 6px); }
@@ -208,7 +209,7 @@ a { color: var(--cyan); }
 .recap { padding-left: 22px; }
 .journal div { border-bottom: 2px dotted var(--line); }
 .journal time { color: var(--cyan); }
-.dock { border-top: 3px solid var(--line); background: var(--bg); }
+.dock { border-top: 2px solid var(--line); background: var(--bg); }
 #loader .paw { filter: none; }
 /* big monitors (1600 px and wider): a wider layout and larger text instead of a small island in the middle */
 @media (min-width: 1600px) {
