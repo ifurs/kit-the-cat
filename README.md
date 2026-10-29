@@ -56,4 +56,4 @@ uv run python scripts/balance.py              # симуляція району 
 uv run python scripts/preview.py --items cap  # аркуш спрайтів для малювання
 ```
 
-Сторонні компоненти браузерної збірки: [Pyodide](https://github.com/pyodide/pyodide) (MPL-2.0), завантажується з npm при збірці.
+Сторонні компоненти браузерної збірки: [Pyodide](https://github.com/pyodide/pyodide) (MPL-2.0), завантажується з npm при збірці. Шрифт [Pixelify Sans](https://github.com/eifetx/Pixelify-Sans) (SIL OFL 1.1, [web/fonts/OFL-PixelifySans.txt](web/fonts/OFL-PixelifySans.txt)) вбудовано у сторінку.

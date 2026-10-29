@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Changed
+- **The browser game looks like a pixel RPG**: one night palette, the Pixelify Sans pixel typeface everywhere
+  (bundled in `web/fonts/`, embedded in the page — the game still works offline and contacts no font server), the
+  scene on a stage at the top and the story in a dialog box with a ▶ cursor on the choice, health and mood as
+  segmented pixel meters (blinking when low), bevelled pixel buttons, the tab menu with a ▶ marker. Replaces the
+  exercise-book look from 0.10.0.
+
 ## [0.10.0] — 2026-10-29
 
 ### Added
