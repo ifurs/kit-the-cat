@@ -16,7 +16,7 @@ from kit_the_cat import engine as E
 from kit_the_cat.content.dsl import Event
 from kit_the_cat.content.economy import JOBS
 
-MODULES = ["life", "daily", "chains", "jobs", "species", "social", "twists", "status", "consequences", "arcs", "arcs_adult", "arcs_soul", "dreams", "health", "arcs_week_20261029", "ages"]
+MODULES = ["life", "daily", "chains", "jobs", "species", "social", "twists", "status", "consequences", "arcs", "arcs_adult", "arcs_soul", "dreams", "health", "arcs_week_20261029", "ages", "youth"]
 # typical pet per stage: (skill, luck, level) — skills start 3–20 and grow with stages, jobs and events
 TYPICAL = {1: (11, 11, 1), 2: (20, 15, 2), 3: (30, 20, 4), 4: (35, 22, 6)}
 MIN_CHANCE = 0.30

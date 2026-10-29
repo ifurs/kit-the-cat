@@ -125,3 +125,18 @@ def test_card_names_every_stat():
     c = E.card(p, {})
     for word in ("здоров'я", "настрій", "сила", "розум", "харизма", "удача", "слава", "блат"):
         assert word in c
+
+
+def test_youth_events_fit_their_age_and_never_kill_a_child():
+    from kit_the_cat.content.youth import YOUTH
+    kid = [e for e in YOUTH if e.req.get("phase") == "kid"]
+    teen = [e for e in YOUTH if e.req.get("phase") == "teen"]
+    assert len(kid) >= 12 and len(teen) >= 12
+    for e in kid:  # childhood: falls and bumps, never a lethal hit
+        hits = [out.fx.get("health", 0) for c in e.choices for out in c.outs + c.fail]
+        assert min(hits) > -E.LETHAL_HIT, e.id
+    p = _pet()
+    p.years = 8
+    assert p.eligible(E.EVENTS["kid_puddle"], None) and not p.eligible(E.EVENTS["teen_skatepark"], None)
+    p.years = 15
+    assert p.eligible(E.EVENTS["teen_skatepark"], None) and not p.eligible(E.EVENTS["kid_puddle"], None)

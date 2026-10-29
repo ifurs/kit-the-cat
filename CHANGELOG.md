@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **31 childhood and youth events** (`content/youth.py`): St Nicholas night, chickenpox, lessons in the school
+  shelter, the tooth fairy, the icy sledding hill, the first pocket money, the school play «Котигорошко», chess
+  club, fishing with grandpa; for teens — the ID-card photo, a cruel meme in the class chat, the smartwatch cheat,
+  the skatepark, the first concert, school president elections, teaching grandma her smartphone, a fake-news
+  panic, esports, the exchange trip, tutoring, a sleepover, the basketball team.
+- **Childhood echoes**: three choices come back in adulthood — the new kid from Kharkiv offers a job (16 years
+  later), the yard HQ reunites by its old password (20 years), the school president is asked to run for council.
+
+### Changed
+- Events written for the pet's current life phase (`req phase=`) come up twice as often, so kids and teens live
+  kid and teen stories instead of generic ones.
+
 ## [0.7.1] — 2026-10-29
 
 ### Changed
