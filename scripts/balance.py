@@ -31,7 +31,8 @@ TARGETS = {
     "check_success": (0.45, 0.70),           # dice checks: hopeful, not trivial
     "event_coverage": (0.55, 1.0),           # share of content that actually fires in the run
     "money_median": (150, 6000),             # living pets' wallets
-    "event_deaths_share": (0.0, 0.15),       # deaths by events (vs debt/age): rare and dramatic
+    "event_deaths_share": (0.0, 0.25),       # deaths by events and reckless choices (vs debt/age): dramatic
+    "dream_share": (0.25, 0.85),             # lives in which the dream came true: reachable, not guaranteed
 }
 
 
@@ -74,6 +75,7 @@ async def run(pets: int, days: float, neglect: float, seed: int) -> dict:
                     seen_dead.add(p.pid)
                     deaths.append(dict(owner=p.owner_id, age=p.age_days, years=p.years, cause=p.cause,
                                        neglected=p.owner_id in neglected,
+                                       dream=bool(p.flags.get("dream_done")), step=p.goal_step(),
                                        tier2=any(p.counters.get(f"tier_{k}", 0) >= 2 for k in E.LIFE),
                                        event=not any(w in p.cause for w in ("борг", "старост", "туг", "сну", "пенсі"))))
             # heirs keep the neighbourhood populated, like real owners pressing "спадкоємець"
@@ -101,6 +103,7 @@ async def run(pets: int, days: float, neglect: float, seed: int) -> dict:
         event_coverage=len(fired) / len(E.EVENTS),
         money_median=statistics.median([p.money for p in alive]) if alive else None,
         event_deaths_share=sum(d["event"] for d in deaths_for_stats) / len(deaths_for_stats) if deaths_for_stats else None,
+        dream_share=sum(d["dream"] for d in deaths_for_stats) / len(deaths_for_stats) if deaths_for_stats else None,
     )
     return dict(
         params=dict(pets=pets, days=days, neglect=neglect, seed=seed), seconds=round(time.time() - t0, 1),

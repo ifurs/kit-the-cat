@@ -177,3 +177,24 @@ async def test_dead_pet_has_life_summary(client):
     assert p["state"] == "dead"
     s = p["summary"]
     assert s["title"] and s["cause"] and s["facts"]
+
+
+async def test_no_time_button_hatch_once_and_actions_move_time(client):
+    page = await (await client.get("/")).text()
+    assert "ffBtn" not in page and "⏩" not in page
+    await do(client, "create", "bird")
+    s = await state(client)
+    assert s["pet"]["state"] == "egg" and s["pet"]["persona"]["dream"]
+    assert "🐣" in (await do(client, "hatch"))["message"]
+    assert "Нема" in (await do(client, "hatch"))["message"]           # one time only
+    s = await state(client)
+    assert s["pet"]["state"] == "alive" and s["pet"]["perk"] and set(s["pet"]["power"]) == set(E.SKILLS)
+    clock, years = s["clock"], s["pet"]["years"]
+    for _ in range(12):
+        await do(client, "adventure")
+        r = (await do(client, "choose", None))["result"]
+        assert "time" not in r                                          # the cost stays hidden
+        if r["died"]:
+            break
+    s = await state(client)
+    assert s["clock"] != clock and s["pet"]["years"] > years            # the world and the pet moved on

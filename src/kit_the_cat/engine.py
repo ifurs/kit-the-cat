@@ -22,7 +22,7 @@ from .content.dsl import years as parse_years
 from .content.dsl import KNOWN_REQ, Choice, Event, Out, ch, ev, o
 from .content.economy import (BACKGROUND_PRICES, EDUCATION, FOOD, HOME_UPKEEP, JOBS, MYSTERY_BOX, PENSION, POCKET,
                               POTION, PRICES, ROLE_FOOD, WEALTH_TAX, WELFARE)
-from .content.persona import DREAMS, EPITAPHS, FEARS, FOODS, NAME_SUFFIX, NAMES, QUIRKS, TEMPERAMENTS
+from .content.persona import EPITAPHS, FEARS, FOODS, GOALS, NAME_SUFFIX, NAMES, PERKS, QUIRKS, TEMPERAMENTS
 
 SPEED = 1.0          # >1 = game time runs faster (set from PET_SPEED)
 DAY = 86400
@@ -73,8 +73,15 @@ SPECIES_NAME = {"pig": "Свинка", "cat": "Котик", "dog": "Песик",
 FALLBACK_NAMES = ["Бублик", "Пончик", "Шпротик", "Кексик", "Пиріжок", "Ґудзик", "Мармелад", "Чіпс", "Тефтелька",
                   "Пельмешка", "Галушка", "Сирник", "Кавунчик", "Буряк", "Шкварка"]
 EGG_HOURS = 1.0
-# life: upkeep is automatic, age is in years (the clock), life stats have tiers
-YEARS_PER_DAY = {1: 8.0, 2: 2.6, 3: 2.8, 4: 2.8}     # the clock: a life of ~80 years takes ~30 real days     # passive ageing per game day, by stage
+# life: upkeep is automatic, age is in years, life stats have tiers. Every decision costs hidden life time
+# (content/events.py), the clock adds a slow drift on top: a life of ~80 years takes ~30 real days in the bot.
+YEARS_PER_DAY = {1: 7.0, 2: 2.0, 3: 1.4, 4: 1.4}   # passive ageing per game day, by stage
+GOAL_BY_DREAM = {v: k for k, v in GOALS.items()}
+LEAN_BONUS = 8           # skill bonus for a choice in the pet's character (temperament lean)
+LEAN_OUT = 1.6           # weight × for outcomes that feed the pet's lean trait
+HEAL_PER_H = 0.3         # natural recovery per game hour (hospital: 3): damage from choices lasts
+HEAL_PRICE = 150         # 💊 a doctor's visit
+DONE_ACH = "Мрія збулася"  # content/dreams.py gives it when a dream comes true
 STAGE_YEARS = {2: 12, 3: 18, 4: 60}
 LIFESPAN_YEARS = (74, 92)
 LIFE = {  # key: (icon, name, tier titles at LIFE_STEPS)
@@ -360,6 +367,7 @@ class Result:
     tail_notes: list = field(default_factory=list)
     died: bool = False
     label: str = ""
+    time: float = 0.0            # years the decision cost (hidden from players; hosts use it to pace the world)
 
 
 @dataclass
@@ -436,6 +444,10 @@ class Pet:
         p = cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
         if isinstance(p.partner, int):  # old drafts stored the owner id
             p.partner = ""
+        if p.persona and "goal" not in p.persona:  # ≤ 0.5: dreams were flavour; now every pet has a goal
+            goal = GOAL_BY_DREAM.get(p.persona.get("dream", "")) or \
+                random.Random(f"{p.chat_id}:{p.owner_id}:{p.gen}").choice(sorted(GOALS))
+            p.persona.update(goal=goal, dream=GOALS[goal])
         if "years" not in d:  # documents from ≤ 0.2 counted real days; convert to years and seed life stats
             p.years, p.lifespan = days_to_years(p.age_days), max(days_to_years(p.lifespan), 74.0)
             p.life = seed_life(p)
@@ -525,7 +537,7 @@ class Pet:
 
     def skill(self, s: str) -> float:
         """Effective skill: base + role bonuses (+ night bonuses, alien chaos)."""
-        v = self.skills.get(s, 10)
+        v = self.skills.get(s, 10) + self.perk().get(s, 0)
         r = ROLES.get(self.role)
         if r:
             v += r.get("bonus", {}).get(s, 0)
@@ -538,6 +550,13 @@ class Pet:
         if self.mood > 80:
             v += 5
         return v
+
+    def perk(self) -> dict:
+        """Temperament base-stat modifiers (content/persona.PERKS): they count in every check of the pet's life."""
+        return PERKS.get(self.persona.get("temper", ""), {})
+
+    def in_character(self, c: Choice) -> bool:
+        return bool(c.auto) and c.auto == self.persona.get("lean")
 
     def mood_face(self) -> str:
         if self.state == "dead":
@@ -692,7 +711,8 @@ class Pet:
         elif self.mood < 10:
             self.health -= 0.5 * h
         elif role != "zombie":
-            self.health = min(100.0, self.health + 1.0 * h * (1.5 if role == "angel" else 1) * (0.5 if self.stage == 4 else 1))
+            self.health = min(100.0, self.health + HEAL_PER_H * h * (1.5 if role == "angel" else 1)
+                              * (0.5 if self.stage == 4 else 1) * (1.5 if self.mood > 70 else 1))
         if self.health <= 0:
             self.die("не витримав боргів і дзвінків колекторів" if broke else "згас від туги й самотності", rng)
             return
@@ -922,9 +942,7 @@ class Pet:
                 if fid in EVENTS and all(f[0] != fid for f in self.followups):
                     self.followups = (self.followups + [[fid, self.years + parse_years(after)]])[-8:]
             elif k == "time":
-                y = parse_years(v)
-                self.years += y
-                notes.append(f"⏳ +{time_label(y)}")
+                self.years += parse_years(v)  # hidden: the player sees only the age
             elif k == "money_mult":
                 if self.money > 0:
                     lost = self.money * (1 - v)
@@ -986,6 +1004,7 @@ class Pet:
                     notes.append(f"🏠 {bg_name(v)}")
             elif k == "jail":
                 self.jail_until = max(self.jail_until, now()) + v * hour()
+                self.years += v / 48  # a sentence eats years of life (48 h behind bars ≈ a year)
                 self.flags["jailed_times"] = self.flags.get("jailed_times", 0) + 1
                 notes.append(f"⛓ {v} год. за ґратами")
                 self.note("jail", f"⛓ {self.name} сів на {v} год.")
@@ -993,6 +1012,7 @@ class Pet:
                     self.ach("Рецидивіст")
             elif k == "hospital":
                 self.hospital_until = max(self.hospital_until, now()) + v * hour()
+                self.years += v / 24 / 12
                 notes.append(f"🏥 {v} год. у лікарні")
             elif k == "free":
                 if v and self.jail_until:
@@ -1029,7 +1049,8 @@ class Pet:
             elif k == "reroll_persona":
                 if v:
                     t, lean = rng.choice(TEMPERAMENTS)
-                    self.persona.update(temper=t, lean=lean, dream=rng.choice(DREAMS), fear=rng.choice(FEARS),
+                    goal = rng.choice(sorted(GOALS))
+                    self.persona.update(temper=t, lean=lean, goal=goal, dream=GOALS[goal], fear=rng.choice(FEARS),
                                         quirk=rng.choice(QUIRKS))
                     notes.append(f"🌀 новий характер: {t}")
             elif k == "twist":
@@ -1156,6 +1177,8 @@ class Pet:
                 return False
             elif k == "trait" and any(self.traits.get(t, 0) < n for t, n in v.items()):
                 return False
+            elif k == "goal" and self.persona.get("goal") != v:
+                return False
             elif k == "skill" and any(self.skill(s) < n for s, n in v.items()):
                 return False
             elif k == "money" and self.money < v:
@@ -1269,6 +1292,8 @@ class Pet:
             w = e.w * (1 + sum(self.traits.get(t, 0) for t in e.aff) / 15) * REPEAT_DECAY ** self.seen.get(e.id, 0)
             # personality: situations where the pet can act in character come up more often
             w *= 1 + sum(self.traits.get(c.auto, 0) for c in e.choices if c.auto) / len(e.choices) / 40
+            if any(self.in_character(c) for c in e.choices):
+                w *= 1.3  # the temperament seeks out its own kind of trouble
             if "flag" in e.req:
                 w *= 3.0    # storylines move forward
             elif any(k in e.req for k in ("job", "jail", "role", "season")):
@@ -1311,6 +1336,7 @@ class Pet:
         luck = self.skill("luck") if skill != "luck" else 0
         scale = {0: 0.6, 1: 0.6, 2: 0.8}.get(self.stage, 1.0)   # content difficulty is written for adults
         v = self.skill(skill) + luck * 0.15 + (self.level - 1) * 1.5 - diff * scale
+        v += LEAN_BONUS if self.in_character(c) else 0
         return max(0.2, min(0.95, 0.5 + v / 50))
 
     def start(self, e: Event, other: "Pet | None", mode: str = "auto") -> None:
@@ -1360,7 +1386,8 @@ class Pet:
                 res.ok = rng.random() < res.chance
             if not res.ok:
                 outs = c.fail or [o("Не вийшло. {name} лише змарнував час і нерви.", mood=-6)]
-        weights = [max(0.0, x.w) for x in outs]
+        lean = self.persona.get("lean", "")
+        weights = [max(0.0, x.w) * (LEAN_OUT if lean and x.fx.get(lean, 0) > 0 else 1) for x in outs]
         out: Out = rng.choices(outs, weights)[0] if sum(weights) else outs[0]
         res.rare = len(outs) > 1 and out.w / sum(weights) < 0.2
         fx = dict(out.fx)
@@ -1373,7 +1400,15 @@ class Pet:
             fx["health"] = fx.get("health", 0) - 10
             fx["mood"] = fx.get("mood", 0) - 10
         res.text = self.fmt(out.text, other)
+        y0 = self.years
+        res.time = self.choice_time(e, c)
+        self.years += res.time
         res.notes = self.apply(fx, other, rng)
+        self.counters["dec_years"] = round(self.counters.get("dec_years", 0) + self.years - y0, 3)
+        if self.in_character(c):
+            res.notes.insert(0, f"🎭 {self.persona.get('temper', '')}: у своїй стихії")
+        if self.alive and self.health <= 0:
+            self.die(f"не пережив пригоду «{res.label}»", rng)
         if self.alive:
             self._age_checks(rng)
         res.twist = bool(fx.get("twist")) or e.id.startswith("twist_")
@@ -1406,9 +1441,27 @@ class Pet:
         self.note(kind, line)
         return res
 
+    def choice_time(self, e: Event, c: Choice) -> float:
+        """Years of life this decision costs (never shown to the player)."""
+        return parse_years(c.time or e.time or "2w")
+
+    def spend(self, t: str | float, rng: random.Random | None = None) -> float:
+        """Hidden life time for actions outside events (casino night, job interview, doctor). Returns years."""
+        y = parse_years(t)
+        self.years += y
+        self.counters["dec_years"] = round(self.counters.get("dec_years", 0) + y, 3)
+        if self.alive:
+            self._age_checks(rng or random.Random())
+        return y
+
     def button(self, e: Event, idx: int, other: "Pet | None" = None) -> str:
-        """Choice label for a button (placeholders filled)."""
-        return self.fmt(e.choices[idx].label, other)
+        """Choice label for a button (placeholders filled); 🎭 marks the choice in the pet's character."""
+        c = e.choices[idx]
+        return ("🎭 " if self.in_character(c) else "") + self.fmt(c.label, other)
+
+    def goal_step(self) -> int:
+        """How far the pet got toward its dream: 0..3 (3 = fulfilled or given up)."""
+        return int(self.flags.get(f"dr_{self.persona.get('goal', '')}", 0))
 
     def lived(self, eid: str) -> None:
         self.recent = (self.recent + [eid])[-RECENT:]
@@ -1493,11 +1546,12 @@ def new_pet(chat_id: int, owner_id: int, owner_name: str, species: str, others: 
     temper, lean = rng.choice(TEMPERAMENTS)
     p = Pet(chat_id=chat_id, owner_id=owner_id, owner_name=owner_name, genes=g.to_dict(),
             name=make_name(g.species, {x.name for x in others}, rng),
-            skills={s: rng.randint(3, 20) for s in SKILLS},
+            skills={s: rng.randint(5, 16) for s in SKILLS},
             lifespan=rng.uniform(*LIFESPAN_YEARS),
             life=dict(fame=rng.randint(0, 5), auth=0, blat=rng.randint(0, 5), fin=rng.randint(3, 15),
                       attr=rng.randint(8, 22)),
-            persona=dict(temper=temper, lean=lean, dream=rng.choice(DREAMS), fear=rng.choice(FEARS),
+            persona=dict(temper=temper, lean=lean, goal=(goal := rng.choice(sorted(GOALS))), dream=GOALS[goal],
+                         fear=rng.choice(FEARS),
                          quirk=rng.choice(QUIRKS), food=rng.choice(FOODS)))
     p.traits = {lean: 3} if lean else {}
     p.born = p.last_tick = now()
@@ -1634,6 +1688,12 @@ def care(p: Pet, action: str, rng: random.Random, actor: Pet | None = None, by_o
     """Owner or anyone else interacts with the pet. Non-owners change the relationship between the two pets."""
     _, fx, _ = CARE[action]
     fx = dict(fx)
+    if action == "heal" and by_owner:
+        if p.stage >= 3 and p.money < HEAL_PRICE:
+            return f"На лікаря треба {HEAL_PRICE} ₴. Спершу заробити.", []
+        if p.stage >= 3:
+            fx["money"] = -HEAL_PRICE
+        p.spend("1w", rng)
     if action == "wash" and p.species == "cat":
         fx["mood"] = -15
     if action == "wash" and p.species == "axolotl":
@@ -1716,6 +1776,7 @@ def job_offers(p: Pet) -> list[str]:
 
 def apply_job(p: Pet, jid: str, rng: random.Random) -> tuple[bool, str, list[str]]:
     j = JOBS[jid]
+    p.spend("2w", rng)  # CV, interviews, test task
     diff = 15 + max(j["pay"], sum(j.get("pay_range", (0, 0))) // 2) / 20
     c = max(0.1, min(0.95, 0.5 + (p.skill("cha") * 0.6 + p.skill("int") * 0.4 + p.skill("luck") * 0.2 - diff) / 40))
     roll = rng.random()
@@ -1810,6 +1871,7 @@ CASINO = {
     "bukovel": ("🎲 Казино в Буковелі", 2, 300, 5000, "bukovel", 20),
     "private": ("🃏 Закритий покер олігархів", 4, 5000, 50000, "casino", 8),
 }
+CASINO_TIME = {"underpass": "1d", "bukovel": "3d", "private": "1w"}   # hidden, like every action's time
 
 
 def casino_venues(p: Pet) -> list[str]:
@@ -1829,6 +1891,7 @@ def casino(p: Pet, venue: str, stake: int, rng: random.Random) -> tuple[str, lis
     if not isinstance(stake, int) or isinstance(stake, bool) or not lo <= stake <= min(hi, int(p.money)):
         return f"Ставка від {lo} до {min(hi, max(lo, int(p.money)))} ₴"
     p.counters["casino"] = p.counters.get("casino", 0) + 1
+    p.spend(CASINO_TIME[venue], rng)
     p._add("gambler", 1)
     fin = p.life.get("fin", 0)
     roll = rng.random()
@@ -2078,6 +2141,7 @@ def bar(v: float) -> str:
 
 # life summary titles: (test, title) — first match wins; trait titles are the fallback
 LIFE_TITLES = [
+    (lambda p, c: p.flags.get("dream_done"), "Той, хто здійснив свою мрію"),
     (lambda p, c: p.role in ("vampire", "demon") and c.get("natural"), "Безсмертне зло, яке таки здолала старість"),
     (lambda p, c: c.get("dodged", 0) >= 2, "Кіт Шредінгера: помирав частіше, ніж обідав"),
     (lambda p, c: p.flags.get("jailed_times", 0) >= 2, "Кримінальний авторитет району"),
@@ -2130,6 +2194,10 @@ def life_summary(p: Pet, names: dict[str, str] | None = None) -> dict:
     career = [JOBS[p.job]["name"] if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else ""]
     money = f"💰 найбільше мав {c.get('money_max', int(p.money)):,} ₴".replace(",", " ")
     facts.append(" · ".join(x for x in career + [money] if x))
+    dream = p.persona.get("dream", "")
+    if dream:
+        facts.append(f"🌟 здійснив мрію: {dream}" if p.flags.get("dream_done") else
+                     f"🎯 мріяв {dream}" + (f" (дійшов до кроку {p.goal_step()} з 3)" if 0 < p.goal_step() < 3 else ""))
     roles = [ROLES[k[5:]]["name"] for k in c if k.startswith("role_") and k[5:] in ROLES]
     if roles or p.flags.get("jailed_times"):
         facts.append(" · ".join(roles + ([f"⛓ відсидок: {p.flags['jailed_times']}"] if p.flags.get("jailed_times") else [])))
@@ -2170,6 +2238,24 @@ def obituary(p: Pet, names: dict[str, str] | None = None, limit: int = 1000, foo
     return build()[:limit]
 
 
+def perk_text(p: Pet) -> str:
+    """«🧠+10 💪−4 · 🔮 у своїй стихії»: what the temperament gives in every adventure."""
+    mods = " ".join(f"{SKILLS[s]}{v:+d}".replace("-", "−") for s, v in p.perk().items())
+    lean = p.persona.get("lean", "")
+    return " · ".join(x for x in (mods, f"{TRAITS[lean].split()[0]} у своїй стихії" if lean else "") if x)
+
+
+def goal_text(p: Pet) -> str:
+    """«🎯 Мрія: побачити море в Одесі ▰▰▱»."""
+    n = p.goal_step()
+    dream = _esc(p.persona.get("dream", ""))
+    if p.flags.get("dream_done"):
+        return f"🌟 Мрія збулася: {dream}"
+    if n >= 3:
+        return f"🎯 Мрія лишилася мрією: {dream}"
+    return f"🎯 Мрія: {dream} {'▰' * n}{'▱' * (3 - n)}"
+
+
 def card(p: Pet, names: dict[str, str]) -> str:
     """Status caption (<1024 chars). names: pid -> pet name for relations."""
     _, tier = p.rarity
@@ -2192,14 +2278,15 @@ def card(p: Pet, names: dict[str, str]) -> str:
         f"💰 {int(p.money)} ₴ · {p.tier_name('money')}",
         " ".join(f"{LIFE[k][0]}{int(p.life.get(k, 0))}" for k in LIFE)
         + "".join(f" · {p.tier_name(k)}" for k in sorted(LIFE, key=lambda k: -p.life.get(k, 0))[:2] if p.tier(k) >= 1),
-        " ".join(f"{SKILLS[s]}{int(p.skills.get(s, 0))}" for s in SKILLS)
+        " ".join(f"{SKILLS[s]}{int(p.skill(s))}" for s in SKILLS)
         + (" · " + " ".join(TRAITS[t].split()[0] + str(int(p.traits[t])) for t in p.top_traits()) if p.top_traits() else ""),
     ]
     work = [JOBS[p.job]["name"] if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else "",
             bg_name(p.home)]
     lines.append(" · ".join(x for x in work if x))
     pr = p.persona
-    lines.append(f"🎭 {_esc(pr.get('temper'))}, мріє {_esc(pr.get('dream'))}, боїться {_esc(pr.get('fear'))}")
+    lines.append(f"🎭 {_esc(pr.get('temper'))} ({perk_text(p)}), боїться {_esc(pr.get('fear'))}")
+    lines.append(goal_text(p))
     rels = []
     if p.partner:
         rels.append(f"💍 {_esc(names.get(p.partner, '?'))}")

@@ -24,7 +24,7 @@ one gap from the report (an underused personality, a thin stage, a job or role w
 
 Pick the module: `life.py` (stages), `daily.py` (everyday, seasons), `chains.py` (quests), `jobs.py`, `species.py`,
 `social.py`, `twists.py` (roles, supernatural), `status.py` (life stats & tiers, big life decisions, casino),
-`arcs.py` / `arcs_adult.py` / `arcs_soul.py` (branching life arcs), `consequences.py` (follow-ups of older events). Read 2–3 neighbouring events first and match their rhythm.
+`arcs.py` / `arcs_adult.py` / `arcs_soul.py` (branching life arcs), `dreams.py` (dream quests), `health.py`, `consequences.py` (follow-ups of older events). Read 2–3 neighbouring events first and match their rhythm.
 
 ## 2. Write
 
@@ -33,8 +33,11 @@ different characters, each with `auto="<trait>"`; several weighted outcomes, one
 visible change: `item=`, `gene=`, a tier); checks `check=("skill", diff)` with a funny `fail=[...]`; `req=` that
 matches the story.
 
-Decisions cost no life time (the clock ages pets); only a story outcome may skip years
-(`o(..., time="5y")` for a coma or a sentence).
+Every decision costs hidden life time — logical, never shown on buttons: give `time="4y"` / `"1d"` when the
+story makes it obvious, otherwise the engine infers it; an outcome may cost extra (`o(..., time="5y")`).
+Temperaments give perks in every check and make in-character choices easier (🎭), so every choice needs `auto=`.
+Dreams are goals with three-step paths in `dreams.py` (`req=dict(goal=…)`); health matters — risky choices can
+kill a pet with low ❤️, healing choices live in `health.py`.
 
 **Earlier choices must come back — this is the main rule.** Prefer *arcs* (`arcs*.py`): a root event where
 each choice schedules its own follow-up, and follow-ups sometimes lead further. When a choice would plausibly

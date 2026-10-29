@@ -14,12 +14,15 @@ def _adult() -> E.Pet:
     return p
 
 
-def test_decisions_cost_no_time_but_story_skips_do():
+def test_decisions_cost_hidden_time():
     p, rng = _adult(), random.Random(0)
-    p.resolve(E.EVENTS["teen_uni"], 0, None, rng)
-    assert p.years == 30.0 and p.button(E.EVENTS["teen_uni"], 0) == "КПІ"
-    p.resolve(E.EVENTS["st_coma"], 0, None, random.Random(0))  # waiting out a coma: the story skips years
-    assert p.years > 30.0
+    res = p.resolve(E.EVENTS["teen_uni"], 0, None, rng)
+    assert res.time == 4.0 and p.years >= 34.0           # university takes four years of life…
+    assert p.button(E.EVENTS["teen_uni"], 0) == "КПІ"     # …but the button never says so
+    assert not any("⏳" in n for n in res.notes)
+    y = p.years
+    p.resolve(E.EVENTS["daily_lost_keys"], 0, None, rng)
+    assert 0 < p.years - y < 0.05                          # looking for keys is a matter of days
 
 
 def test_followups_are_never_random_and_always_scheduled():

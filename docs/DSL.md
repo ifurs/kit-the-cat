@@ -2,7 +2,7 @@
 
 > Згенеровано `scripts/gen_dsl_docs.py` з коду — не редагуй вручну. Як писати гарні пригоди: [CONTENT_GUIDE.md](CONTENT_GUIDE.md).
 
-Контракт: **53 ефектів**, **30 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
+Контракт: **53 ефектів**, **31 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
 
 ## Синтаксис (з `content/dsl.py`)
 
@@ -16,15 +16,19 @@ Tiny DSL for writing life events.
           fail=[o("Нічого не виграв.", money=-50)], auto="gambler"),
        req=dict(stage=2))
 
-Time: a pet ages by the clock (engine.YEARS_PER_DAY); decisions themselves cost no time. A story outcome may
-skip years: o("Прокинувся через п'ять років…", time="5y"). Durations: "3d", "2w", "6m", "4y" or years.
+Time: every decision costs some of the pet's life, and the player never sees how much (no time on buttons).
+A choice costs `time` if it has one, else `infer_time(choice, base)` — the event's / module's base plus what the
+choice does (studying, settling into a job, moving, a serious relationship, a story step, skills learned, money
+earned). Give `time=` to the choices whose cost is obvious from the story: «Вступити в КПІ» → "4y", «Купити
+хліб» → "1d". An outcome may cost extra: o("Прокинувся через п'ять років…", time="5y"). Jail and hospital eat
+life too. Durations: "3d", "2w", "6m", "4y" or a number of years. On top of that the clock ages pets slowly.
 
 Effects (o(..., **fx)):
   hunger mood clean health energy      stat deltas (0..100); hunger/clean/energy are automatic upkeep — use
                                        mood and health in new content
   fame auth blat fin attr              life stats 0..100 with tiers (engine.LIFE): популярність, авторитет, блат,
                                        фінграмотність, привабливість (style and charm, never mocking looks)
-  time="5y"                            the story skips that much of the pet's life (coma, a sentence, cryosleep)
+  time="5y"                            extra life time this outcome costs (coma, a sentence, cryosleep)
   str int cha luck                     skill deltas
   toxic gambler dark party patriot glutton love mystic   trait deltas
   money xp lifespan                    ₴, experience, years of life
@@ -61,7 +65,7 @@ Requirements (req=dict(...)):
   debt=500 (money <= -500)   low={"health": 40}   role="vampire" | role="any" | norole=True
   other_role="vampire"   nostatus=[...]   other_partner=False   other_stage_max=2
   life={"fame": 40} (life stat at least)   tier={"fame": 2, "money": 3} (tier at least; money tiers too)
-  tier_max={"auth": 0}   years=(18, 60) (age in years)
+  tier_max={"auth": 0}   years=(18, 60) (age in years)   goal="mayor" (the pet's dream, persona.GOALS)
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence) | list of those | month numbers (real Kyiv date)
 ```

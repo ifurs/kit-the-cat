@@ -1,8 +1,9 @@
-"""Sandbox: the pet game without Telegram. Same engine, content and sprites; plus a time machine and NPCs.
+"""Sandbox: the pet game without Telegram. Same engine, content and sprites; plus NPCs.
 
 One sandbox "chat" (SANDBOX) holds your pets (owners 1..9, switch between them to play as different people)
-and NPC neighbours (owners ≥ 100) that live on their own. Time is game time: engine.clock = real time + offset,
-so «+1 день» really ages pets, pays salaries, triggers holidays by date and world events.
+and NPC neighbours (owners ≥ 100) that live on their own. Time is game time: engine.clock = real time + offset.
+There is no time button: every action costs hidden life time (engine), and the world moves on by a matching
+amount (`_pass`): salaries, NPC lives, holidays by date, world events. Only the egg has a one-time «🐣 Вилупити».
 """
 import asyncio
 import random
@@ -100,6 +101,8 @@ class Sandbox:
             genes=sprites.describe(p.genome), dna=sprites.dna_code(p.genome), rarity=sprites.rarity(p.genome)[1],
             gen=p.gen, dynasty=p.dynasty, achievements=p.achievements[-12:], heir=bool(p.heir), look=_look_key(p),
             persona={k: p.persona.get(k, "") for k in ("temper", "dream", "fear")}, emoji=E.SPECIES_EMOJI.get(p.species, "🐾"),
+            perk=E.perk_text(p), goal_step=p.goal_step(), dream_done=bool(p.flags.get("dream_done")),
+            power={k: round(p.skill(k)) for k in E.SKILLS},
             egg_left=max(0, round((E.EGG_HOURS * E.hour() - (E.now() - p.born)) / 60)) if p.state == "egg" else 0,
             cause=p.cause,
             summary=E.life_summary(p, {x.pid: x.name for x in pets}) if p.state == "dead" else None,
@@ -130,7 +133,30 @@ class Sandbox:
             if old:
                 p.gen = old.gen + 1
             await self.save(p)
-        return f"🥚 Яйце знесено! Вилупиться за ~{E.EGG_HOURS:g} год. гри (тисни ⏩ +1 год)."
+        return "🥚 Яйце знесено! Коли будеш готовий, тисни «🐣 Вилупити»."
+
+    async def hatch(self, owner: int) -> str:
+        async with self.lock:
+            p = await self.pet(owner)
+            if not p or p.state != "egg":
+                return "Нема що вилуплювати"
+            p.hatch(E.now())
+            await self.save(p)
+        return f"🐣 Вилупився {p.name}! Характер: {p.persona.get('temper', '')}. Мрія: {p.persona.get('dream', '')}."
+
+    async def _pass(self, years: float) -> None:
+        """The world moves on while your pet lives: a few hours for a small thing, up to a day and a half."""
+        await self.advance(min(36.0, 3 + 12 * years), auto_me=False)
+
+    async def _timed(self, owner: int, coro):
+        """Run an action and let the world move on by the life time it cost the pet (hidden from the player)."""
+        p0 = await self.pet(owner, tick=False)
+        y0 = p0.years if p0 else 0.0
+        out = await coro
+        p1 = await self.pet(owner, tick=False)
+        if p1 and p1.alive and p1.years > y0:
+            await self._pass(p1.years - y0)
+        return out
 
     async def heir(self, owner: int) -> str:
         async with self.lock:
@@ -160,7 +186,7 @@ class Sandbox:
                 return "⛓ Пет за ґратами"
             left = p.cooldown_left(actor_id, action, E.CARE[action][2])
             if left > 0:
-                return f"Зарано: ще {left / 60:.0f} хв. гри (або ⏩)"
+                return "Лікар щойно був. Спробуй трохи згодом." if action == "heal" else "Зарано, дай йому перепочити"
             by_owner = actor_id == owner
             actor = None if by_owner else next((x for x in pets if x.owner_id == actor_id and x.alive), None)
             text, notes = E.care(p, action, self.rng, actor, by_owner, HUMANS.get(actor_id, "Гість"))
@@ -236,7 +262,10 @@ class Sandbox:
             text = p.fmt(e.text, other)
             res = p.resolve(e, idx, other, self.rng)
             await self.save(p, other)
+        if not res.died:
+            await self._pass(res.time)
         r = asdict(res)
+        r.pop("time")  # the player never learns how much of the life a decision took
         r.update(event=text, other=other.name if other else "", name=p.name, cause=p.cause if res.died else "")
         return r
 
@@ -276,6 +305,7 @@ class Sandbox:
                 return "Мертвим знижок нема"
             ok, text = E.buy(p, stock[i], self.rng)
             if ok:
+                p.spend("1d", self.rng)  # a trip to the bazaar
                 await self.save(p)
         return text
 
@@ -289,6 +319,7 @@ class Sandbox:
             if not p or i >= len(p.homes):
                 return "Нема такого дому"
             p.home = p.homes[i]
+            p.spend("2w", self.rng)  # boxes, movers, a new neighbour with a drill
             await self.save(p)
         return f"🚚 Переїзд: {E.bg_name(p.home)}"
 
@@ -302,7 +333,7 @@ class Sandbox:
             if not p or jid not in E.job_offers(p):
                 return "Вакансія закрита"
             if p.flags.get("_jobday") == E.game_day():
-                return "Сьогодні вже була співбесіда. ⏩ Завтра."
+                return "Сьогодні вже була співбесіда. Спробуй після кількох пригод."
             p.flags["_jobday"] = E.game_day()
             ok, text, notes = E.apply_job(p, jid, self.rng)
             await self.save(p)
@@ -413,6 +444,8 @@ class Sandbox:
                         continue
                     if p.owner_id >= NPC_BASE or care_me:
                         self._autocare(p)
+                    if p.owner_id < NPC_BASE and not auto_me:
+                        continue  # your pets only live through you
                     if p.pending and t - p.pending.get("ts", t) > E.BUDGET.decide_hours * 3600:
                         e = E.EVENTS.get(p.pending.get("id", ""))
                         other = next((x for x in pets if x.pid == p.pending.get("other")), None)
@@ -547,7 +580,7 @@ class Sandbox:
                 return "Турнір уже йде"
             pets = [p for p in await self.pets() if B.eligible(p)]
             if len(pets) < 3:
-                return "Потрібно хоча б 3 пети-підлітки й старші (🏘 сусіди + ⏩ час)"
+                return "Потрібно хоча б 3 пети-підлітки й старші (🏘 сусіди дорослішають, поки ти граєш)"
             rounds = B.bracket(pets, self.rng)
             n = sum(1 for r in rounds[0] for o in r if o)
             st["tour"] = dict(id=int(E.now()), status="running", rounds=rounds, results={}, bets={}, strategies={},
