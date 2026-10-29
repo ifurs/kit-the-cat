@@ -109,3 +109,19 @@ def test_life_phases_split_adulthood_and_crises_come_at_their_age():
     p.years = 44
     assert p.eligible(E.EVENTS["mlc_root"], None) and not p.eligible(E.EVENTS["qlc_root"], None)
     assert "Зрілість" in E.card(p, {})
+
+
+def test_only_risky_choices_kill():
+    p = _pet()
+    p.health = 5
+    e = ev("t_series", "?", ch("Ще одну серію", o("Ранок не настав вчасно.", health=-10)))
+    res = p.resolve(e, 0, None, random.Random(0))
+    assert p.alive and p.health == 1 and any("ледь живий" in n for n in res.notes)
+    assert E.LETHAL_HIT <= 40  # a «−40» stunt still can kill (test above)
+
+
+def test_card_names_every_stat():
+    p = _pet()
+    c = E.card(p, {})
+    for word in ("здоров'я", "настрій", "сила", "розум", "харизма", "удача", "слава", "блат"):
+        assert word in c
