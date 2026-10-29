@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-10-29
+
 ### Changed
 - **Only risky choices kill**: a choice that leaves health at 0 kills only if it took at least `LETHAL_HIT = 30`
   health at once; smaller hits (one more episode, a toothache) leave the pet at 1 ❤️ with a warning, and random
@@ -160,7 +162,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/ifurs/kit-the-cat/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/ifurs/kit-the-cat/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/ifurs/kit-the-cat/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/ifurs/kit-the-cat/compare/v0.5.0...v0.6.0
