@@ -5,6 +5,7 @@ Time (hidden from the player): every module has a base cost; a choice without it
 CHOICE_TIME hand-tunes common and big older events. FOLLOWUPS links choices of older events to their consequences (content/consequences.py): an earlier choice comes
 back years later. New content writes `then=` inline instead.
 """
+from .ages import AGES
 from .arcs import ARCS_YOUNG
 from .arcs_adult import ARCS_ADULT
 from .arcs_soul import ARCS_SOUL
@@ -25,7 +26,7 @@ from .twists import TWISTS
 DEFAULT_TIME = [(DAILY, "3d"), (LIFE, "1m"), (CHAINS, "3m"), (JOBS_LIFE, "1m"), (SPECIES, "1w"), (SOCIAL, "1w"),
                 (TWISTS, "1m"), (STATUS, "1m"), (CONSEQUENCES, "2w"), (ARCS_YOUNG, "1m"), (ARCS_ADULT, "1m"),
                 (ARCS_SOUL, "1m"), (DREAMS_CONTENT, "3m"), (HEALTH, "1w"),
-                (ARCS_WEEK_20261029, "1m")]
+                (ARCS_WEEK_20261029, "1m"), (AGES, "1m")]
 ALL = [e for events, _ in DEFAULT_TIME for e in events]
 CHOICE_TIME = {
     "teen_uni": ["4y", "4y", "6y", "3y", "1y"],

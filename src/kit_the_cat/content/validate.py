@@ -42,6 +42,14 @@ def main() -> None:
                 errors.append(f"{e.id}/{c.label}: no outcomes")
         if len(e.text) > 450:
             errors.append(f"{e.id}: text too long for a caption")
+    from .persona import GOALS
+    for e in ALL:
+        for r in [e.req] + [c.req for c in e.choices]:
+            ph = r.get("phase")
+            if ph is not None and not set([ph] if isinstance(ph, str) else ph) <= dsl.PHASES:
+                errors.append(f"{e.id}: unknown phase {ph!r}")
+            if "goal" in r and r["goal"] not in GOALS:
+                errors.append(f"{e.id}: unknown goal {r['goal']!r}")
     by_id = {e.id: e for e in ALL}
     targets = set()
     for e in ALL:

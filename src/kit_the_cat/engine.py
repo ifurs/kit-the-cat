@@ -83,6 +83,10 @@ HEAL_PER_H = 0.3         # natural recovery per game hour (hospital: 3): damage 
 HEAL_PRICE = 150         # 💊 a doctor's visit
 DONE_ACH = "Мрія збулася"  # content/dreams.py gives it when a dream comes true
 STAGE_YEARS = {2: 12, 3: 18, 4: 60}
+# life phases by age in years (req phase=…): finer than stages, so a 22-year-old and a 48-year-old live different lives
+PHASES = {"kid": (0, 12), "teen": (12, 18), "young": (18, 30), "middle": (30, 60), "grand": (60, 999)}
+PHASE_NAMES = {"kid": "👶 Дитинство", "teen": "🧒 Юність", "young": "🧑 Молодість", "middle": "🧔 Зрілість",
+               "grand": "👴 Старість"}
 LIFESPAN_YEARS = (74, 92)
 LIFE = {  # key: (icon, name, tier titles at LIFE_STEPS)
     "fame": ("📈", "популярність", ["Ніхто", "Зірка під'їзду", "Мікроблогер", "Медійна персона", "Зірка Євробачення"]),
@@ -551,6 +555,10 @@ class Pet:
         if self.mood > 80:
             v += 5
         return v
+
+    def phase(self) -> str:
+        """kid / teen / young / middle / grand by age in years (PHASES)."""
+        return next((k for k, (lo, hi) in PHASES.items() if lo <= self.years < hi), "grand")
 
     def perk(self) -> dict:
         """Temperament base-stat modifiers (content/persona.PERKS): they count in every check of the pet's life."""
@@ -1208,6 +1216,8 @@ class Pet:
                 return False
             elif k == "years" and not v[0] <= self.years <= v[1]:
                 return False
+            elif k == "phase" and self.phase() not in ([v] if isinstance(v, str) else v):
+                return False
             elif k == "life" and any(self.life.get(s, 0) < n for s, n in v.items()):
                 return False
             elif k == "tier" and any(self.tier(s) < n for s, n in v.items()):
@@ -1297,6 +1307,8 @@ class Pet:
             w *= 1 + sum(self.traits.get(c.auto, 0) for c in e.choices if c.auto) / len(e.choices) / 40
             if any(self.in_character(c) for c in e.choices):
                 w *= 1.3  # the temperament seeks out its own kind of trouble
+            if e.id.startswith("dr_") and self.flags.get("dream_seed"):
+                w *= 2.0    # a dream nursed since childhood comes calling sooner
             if "flag" in e.req:
                 w *= 3.0    # storylines move forward
             elif any(k in e.req for k in ("job", "jail", "role", "season")):
@@ -2271,7 +2283,7 @@ def card(p: Pet, names: dict[str, str]) -> str:
     if p.state == "dead":
         return obituary(p, names, 1020, f"\n🥚 «Нове яйце» — покоління {p.gen + 1}" + (" (є спадкоємець від пари!)" if p.heir else ""))
     lines = [
-        f"{emoji} <b>{_esc(p.name)}</b> · {STAGES[p.stage]} · {int(p.years)} р. · ур. {p.level}",
+        f"{emoji} <b>{_esc(p.name)}</b> · {PHASE_NAMES[p.phase()]} · {int(p.years)} р. · ур. {p.level}",
         f"👤 {_esc(p.owner_name)} · {tier}" + (f" · 👑 {_esc(p.dynasty)} ({p.gen})" if p.gen > 1 else ""),
     ]
     if p.role:

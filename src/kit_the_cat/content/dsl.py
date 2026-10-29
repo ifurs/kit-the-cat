@@ -57,6 +57,7 @@ Requirements (req=dict(...)):
   other_role="vampire"   nostatus=[...]   other_partner=False   other_stage_max=2
   life={"fame": 40} (life stat at least)   tier={"fame": 2, "money": 3} (tier at least; money tiers too)
   tier_max={"auth": 0}   years=(18, 60) (age in years)   goal="mayor" (the pet's dream, persona.GOALS)
+  phase="young" | ["young", "middle"]   life phase by age: kid 0–12, teen 12–18, young 18–30, middle 30–60, grand 60+
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence) | list of those | month numbers (real Kyiv date)
 """
@@ -76,7 +77,7 @@ KNOWN_FX = STATS | SKILLS | TRAITS | LIFE | {"time", "then",
 KNOWN_REQ = {
     "stage", "species", "flag", "noflag", "trait", "skill", "money", "debt", "job", "edu", "noedu", "has", "partner",
     "night", "jail", "age", "low", "status", "nostatus", "other_stage", "other_partner", "role", "norole", "other_role",
-    "season", "other_stage_max", "life", "tier", "tier_max", "years", "goal",
+    "season", "other_stage_max", "life", "tier", "tier_max", "years", "goal", "phase",
 }
 UNITS = {"d": 1 / 365, "w": 7 / 365, "m": 1 / 12, "y": 1.0}
 
@@ -108,6 +109,7 @@ def infer_time(c: "Choice", base) -> float:
     return round(years(base) + sum(cost(o.fx) for o in outs) / max(1, len(outs)), 4)
 
 
+PHASES = {"kid", "teen", "young", "middle", "grand"}   # engine.PHASES has their age ranges
 ROLES = {"vampire", "werewolf", "zombie", "demon", "angel", "cyborg", "alien", "quantum"}
 
 

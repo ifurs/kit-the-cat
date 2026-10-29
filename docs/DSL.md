@@ -2,7 +2,7 @@
 
 > Згенеровано `scripts/gen_dsl_docs.py` з коду — не редагуй вручну. Як писати гарні пригоди: [CONTENT_GUIDE.md](CONTENT_GUIDE.md).
 
-Контракт: **53 ефектів**, **31 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
+Контракт: **53 ефектів**, **32 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
 
 ## Синтаксис (з `content/dsl.py`)
 
@@ -66,6 +66,7 @@ Requirements (req=dict(...)):
   other_role="vampire"   nostatus=[...]   other_partner=False   other_stage_max=2
   life={"fame": 40} (life stat at least)   tier={"fame": 2, "money": 3} (tier at least; money tiers too)
   tier_max={"auth": 0}   years=(18, 60) (age in years)   goal="mayor" (the pet's dream, persona.GOALS)
+  phase="young" | ["young", "middle"]   life phase by age: kid 0–12, teen 12–18, young 18–30, middle 30–60, grand 60+
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence) | list of those | month numbers (real Kyiv date)
 ```
