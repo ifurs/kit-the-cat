@@ -10,4 +10,4 @@
 Storage is the host's job: pets are plain dicts (Pet.to_dict / Pet.from_dict). `storage.MemoryStore` is a ready
 in-memory store; the Telegram bot keeps the same documents in SQLite.
 """
-__version__ = "0.9.0"
+__version__ = "0.9.1"
