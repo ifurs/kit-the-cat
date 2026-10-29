@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-10-29
+
 ### Changed
 - **The browser game looks like a pixel RPG**: one night palette, the Pixelify Sans pixel typeface everywhere
   (bundled in `web/fonts/`, embedded in the page — the game still works offline and contacts no font server), the
@@ -260,7 +262,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/ifurs/kit-the-cat/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/ifurs/kit-the-cat/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/ifurs/kit-the-cat/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/ifurs/kit-the-cat/compare/v0.8.1...v0.9.0
