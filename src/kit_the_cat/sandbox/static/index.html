@@ -6,19 +6,34 @@
 <title>Kit the Cat · пісочниця</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
 <style>
+/* Layout: one column on phones, pet card + adventure book on wide screens.
+   Look: a squared school exercise book (зошит у клітинку) by day, the school chalkboard by night;
+   hard pixel edges to match the sprites, words instead of emoji in the interface. */
 :root {
-  --bg: #f6f1e7; --panel: #fffdf8; --ink: #2b1a26; --muted: #7a6a72; --line: #e3d8c8;
-  --accent: #e8618c; --accent-ink: #fff; --good: #3f9b5f; --bad: #d0454c; --warn: #e0a030; --chip: #f2e9da;
+  --bg: #eef1f6; --panel: #ffffff; --paper: #fbfcfe; --grid: #dde5f1; --margin: #e06666;
+  --ink: #1d2433; --muted: #5d6a80; --line: #c5cfdf; --chip: #eef2f8;
+  --accent: #2346a8; --accent-deep: #172f73; --accent-ink: #ffffff;
+  --good: #2f7d4f; --bad: #c43d3d; --warn: #c08412;
+  --story: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, "Noto Serif", serif;
+  --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --num: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  --r: 3px;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #1c1720; --panel: #262029; --ink: #f2e9ee; --muted: #a596a0; --line: #3b3240;
-    --accent: #ff7aa4; --accent-ink: #1c1720; --good: #6cc48a; --bad: #ff6f75; --warn: #f0b850; --chip: #322a36;
+    --bg: #161e1b; --panel: #1f2a26; --paper: #22302b; --grid: #2b3a34; --margin: #c9726c;
+    --ink: #e8eee9; --muted: #9fb3a9; --line: #3a4b44; --chip: #283631;
+    --accent: #f0cf68; --accent-deep: #a88a2e; --accent-ink: #1b2420;
+    --good: #82cf9c; --bad: #ff8d84; --warn: #f0c46a;
+    color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #1c1720; --panel: #262029; --ink: #f2e9ee; --muted: #a596a0; --line: #3b3240;
-  --accent: #ff7aa4; --accent-ink: #1c1720; --good: #6cc48a; --bad: #ff6f75; --warn: #f0b850; --chip: #322a36;
+  --bg: #161e1b; --panel: #1f2a26; --paper: #22302b; --grid: #2b3a34; --margin: #c9726c;
+  --ink: #e8eee9; --muted: #9fb3a9; --line: #3a4b44; --chip: #283631;
+  --accent: #f0cf68; --accent-deep: #a88a2e; --accent-ink: #1b2420;
+  --good: #82cf9c; --bad: #ff8d84; --warn: #f0c46a;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -131,6 +146,53 @@ main > * { min-width: 0; }
 .obit-story { margin: 4px 0; padding-left: 18px; font-size: 13px; }
 .obit-story li { margin: 2px 0; }
 .obit-epitaph { font-style: italic; text-align: center; color: var(--muted); }
+/* look: square corners and pressed buttons (pixel edges), notebook tabs, the adventure written on squared paper */
+body { font-family: var(--ui); }
+header { border-bottom: 2px solid var(--ink); }
+header h1 { font-weight: 800; letter-spacing: -.01em; }
+button, select, input[type=text], input[type=number] { border-radius: var(--r); }
+button { background: var(--panel); border: 1.5px solid var(--line); box-shadow: 0 2px 0 var(--line); }
+button:hover { border-color: var(--ink); }
+button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent-deep); box-shadow: 0 3px 0 var(--accent-deep); }
+button.ghost { box-shadow: none; }
+:is(button, select, input, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card, .row, .match, .banner, .champ, .pop, #toast, .species button { border-radius: var(--r); }
+.card { border-width: 1.5px; }
+.pop { box-shadow: 0 4px 0 var(--line); }
+.sprite, .event-img, .zoo { border-radius: 2px; }
+#view .event-img { max-width: min(100%, 420px); }  /* wide screens: the story text stays in view */
+.name { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+.label { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.bars { gap: 6px 10px; }
+.bar { height: 9px; border-radius: 0; background: var(--panel); outline: 1.5px solid var(--line); }
+.life { gap: 4px 14px; }
+.life .stat { border: 0; border-radius: 0; padding: 0; font-size: 13.5px; }
+.life .stat b { font-family: var(--num); font-variant-numeric: tabular-nums; }
+.care button { font-size: 14px; padding: 8px 4px; }
+.tabs { gap: 2px; margin-bottom: 0; border-bottom: 1.5px solid var(--line); }
+.tabs button, .tabs button.on { background: none; border: 0; border-bottom: 3px solid transparent; border-radius: 0; box-shadow: none;
+  color: var(--muted); font-weight: 650; padding: 8px 10px; margin-bottom: -1.5px; }
+.tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
+.dot::after { background: var(--margin); }
+#tabs + .card, #view { border-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
+#view.book { position: relative; padding-left: 44px; background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 18px 18px; }
+#view.book::before { content: ""; position: absolute; top: 0; bottom: 0; left: 30px; width: 2px; background: var(--margin); opacity: .8; }
+#view.book > p, .result, .prev { font-family: var(--story); }
+#view.book > p { font-size: 17px; line-height: 1.55; }
+.empty { text-align: left; padding: 6px 0 2px; }
+.choices button { box-shadow: 0 2px 0 var(--line); font-family: var(--ui); }
+.choices small { font-family: var(--num); font-variant-numeric: tabular-nums; }
+.result { border-left: 0; border-radius: 0; background: none; border-top: 1.5px dashed var(--line); padding: 12px 0 0; margin-top: 14px; font-size: 16px; }
+.result b { font-family: var(--ui); }
+.notes, .result .notes { font-family: var(--num); font-size: 12.5px; }
+.story-head { font-family: var(--ui); font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.story-head b { color: var(--ink); }
+.prev { border-left: 0; padding: 0; font-style: italic; font-size: 14.5px; }
+.recap { font-family: var(--ui); }
+.dock { border-top: 2px solid var(--ink); }
 /* phones: a compact pet header, stats folded away, one row of tabs and the main action in a bottom dock */
 .pet-head > div { min-width: 0; }
 .stats-toggle { display: none; }
@@ -140,12 +202,13 @@ main > * { min-width: 0; }
   .pet-head { display: flex; gap: 12px; align-items: center; }
   .pet-head .sprite { width: 96px; flex: none; }
   .pet-head .name { margin-top: 0; }
+  #view.book { padding-left: 34px; } #view.book::before { left: 22px; }
   .stats-toggle { display: block; width: 100%; text-align: left; padding: 2px 0; color: var(--muted); font-size: 13.5px; }
   .stats-toggle::before { content: "▸ "; } .stats.open .stats-toggle::before { content: "▾ "; }
   .stats:not(.open) .stats-body { display: none; }
   .card .event-img { width: 100%; height: 34vh; object-fit: contain; background: none; }  /* fixed box: no jump when the scene paints; choices fit above the dock */
   .tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
-  .tabs button { padding: 6px 2px; font-size: 13px; }
+  .tabs button, .tabs button.on { padding: 8px 2px; font-size: 13.5px; }
   body.has-dock .dock { display: flex; gap: 8px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
     padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); background: var(--panel); border-top: 1px solid var(--line); }
   .dock button { min-height: 48px; font-size: 16px; }
@@ -158,11 +221,11 @@ main > * { min-width: 0; }
 </head>
 <body>
 <header>
-  <h1>🐾 Kit the Cat</h1>
+  <h1>Kit the Cat</h1>
   <span class="clock muted" id="clock"></span>
   <select id="as" aria-label="Грати за"></select>
   <div class="menu">
-    <button id="setBtn" aria-haspopup="true" title="Пісочниця">⚙️</button>
+    <button id="setBtn" aria-haspopup="true" title="Пісочниця">Меню</button>
     <div class="pop" id="setPop" hidden>
       <button id="npcs">🏘 Заселити 3 сусідів</button>
       <button id="world">🌍 Світова подія</button>
@@ -177,8 +240,8 @@ main > * { min-width: 0; }
   <section>
     <div id="worldBanner"></div>
     <nav class="tabs" id="tabs">
-      <button data-t="adv">🎲 Пригоди</button><button data-t="arena">🏆 Арена</button>
-      <button data-t="nb">🏘 Сусіди</button><button data-t="log">📜 Журнал</button>
+      <button data-t="adv">Пригоди</button><button data-t="arena">Арена</button>
+      <button data-t="nb">Сусіди</button><button data-t="log">Щоденник</button>
     </nav>
     <div class="card" id="view"></div>
   </section>
@@ -230,8 +293,8 @@ function renderDock() {  // phones: the main action is always one thumb away
   const p = S.pet, el = $("#dock"), on = !!p && p.state === "alive";
   document.body.classList.toggle("has-dock", on);
   if (!on) { el.innerHTML = ""; return; }
-  el.innerHTML = `<button class="primary" id="dockGo">${p.pending ? "❗ Вирішити пригоду" : "🎲 Нова пригода"}</button>
-    <button id="dockHeal" title="Лікувати" aria-label="Лікувати">💊</button><button id="dockPet" title="До пета" aria-label="До пета">🐾</button>`;
+  el.innerHTML = `<button class="primary" id="dockGo">${p.pending ? "Вирішити пригоду" : "Нова пригода"}</button>
+    <button id="dockHeal" title="Лікувати">Лікар</button><button id="dockPet" title="До пета">Пет ↑</button>`;
   const toView = () => $("#view").scrollIntoView({block: "end"});  // choices right above the dock
   $("#dockGo").onclick = async () => {
     if (tab !== "adv") { tab = "adv"; store.set("ks-tab", tab); battle = null; renderTabs(); }
@@ -250,23 +313,23 @@ function renderPet() {
   else {
     const tags = [`💰 ${p.money} ₴`, `ур. ${p.level}`, p.rarity, p.role, p.job].filter(Boolean).map(esc).join(" · ");
     let h = `<div class="pet-head"><img class="sprite" src="/img/pet/${S.owner}.gif?k=${p.look}" alt="${esc(p.name)}">
-      <div><div class="name">${p.emoji} ${esc(p.name)}</div><div class="meta">${esc(p.stage)} · ${p.years} р. · ${tags}</div></div></div>`;
+      <div><div class="name">${esc(p.name)}</div><div class="meta">${esc(p.stage)} · ${p.years} р. · ${tags}</div></div></div>`;
     if (p.state === "egg") h += `<p class="muted">🎭 ${esc(p.persona.temper)} · мріє ${esc(p.persona.dream)}</p><button class="primary" id="hatch" style="width:100%">🐣 Вилупити</button>`;
     if (p.state === "dead") h += `${obit(p)}<button class="primary" id="heir" style="width:100%">🥚 Спадкоємець${p.heir ? " (від пари)" : ""}</button>
       <details style="margin-top:8px"><summary class="muted">або новий рід</summary><div class="species">${speciesGrid}</div></details>`;
     if (p.state === "alive") {
       const s = p.stats;
-      const dream = p.dream_done ? `🌟 Мрія збулася: ${esc(p.persona.dream)}` : p.goal_step >= 3 ? `🎯 Мрія лишилася мрією: ${esc(p.persona.dream)}`
-        : `🎯 Мрія: ${esc(p.persona.dream)} <span title="крок ${p.goal_step} з 3">${"▰".repeat(p.goal_step)}${"▱".repeat(3 - p.goal_step)}</span>`;
-      h += `<div class="meta" style="margin-top:6px" title="Риса характеру діє в кожній пригоді">🎭 ${esc(p.persona.temper)} · ${esc(p.perk)}</div>
+      const dream = p.dream_done ? `Мрія збулася: ${esc(p.persona.dream)}` : p.goal_step >= 3 ? `Мрія лишилася мрією: ${esc(p.persona.dream)}`
+        : `Мрія: ${esc(p.persona.dream)} <span title="крок ${p.goal_step} з 3">${"▰".repeat(p.goal_step)}${"▱".repeat(3 - p.goal_step)}</span>`;
+      h += `<div class="meta" style="margin-top:6px" title="Риса характеру діє в кожній пригоді">Характер: ${esc(p.persona.temper)} · ${esc(p.perk)}</div>
         <div class="meta">${dream}</div>
-        <div class="bars">${bar("❤️ здоров'я", s.health)}${bar("😊 настрій", s.mood)}</div>
-        <div class="stats ${statsOpen() ? "open" : ""}"><button class="ghost stats-toggle" aria-expanded="${statsOpen()}">📊 Навички й статус</button><div class="stats-body">
-        <div class="life">${[["💪", "сила", "str"], ["🧠", "розум", "int"], ["😎", "харизма", "cha"], ["🍀", "удача", "luck"]].map(([i, n, k]) => `<span class="stat">${i} ${n} ${p.power[k]}</span>`).join("")}</div>
+        <div class="bars">${bar("здоров'я", s.health)}${bar("настрій", s.mood)}</div>
+        <div class="stats ${statsOpen() ? "open" : ""}"><button class="ghost stats-toggle" aria-expanded="${statsOpen()}">Навички й статус</button><div class="stats-body">
+        <div class="life">${[["сила", "str"], ["розум", "int"], ["харизма", "cha"], ["удача", "luck"]].map(([n, k]) => `<span class="stat">${n} <b>${p.power[k]}</b></span>`).join("")}</div>
         <div class="meta">${esc(p.money_tier)}</div>
-        <div class="life">${p.life.map(l => `<span class="stat" title="${esc(l.tier)}">${l.icon} ${esc(l.name)} ${l.value} <small>${esc(l.tier)}</small></span>`).join("")}</div></div></div>
-        <div class="care"><button data-care="heal" title="Лікувати">💊</button><button data-more="casino" title="Казино">🎰</button>
-          <button data-more="menu" title="Речі, базар, дім, робота…">⋯</button></div>
+        <div class="life">${p.life.map(l => `<span class="stat" title="${esc(l.tier)}">${esc(l.name)} <b>${l.value}</b> <small>${esc(l.tier)}</small></span>`).join("")}</div></div></div>
+        <div class="care"><button data-care="heal" title="Лікувати">Лікар</button><button data-more="casino" title="Казино">Казино</button>
+          <button data-more="menu" title="Речі, базар, дім, робота…">Ще…</button></div>
         <div id="more"></div>`;
     }
     el.innerHTML = h;
@@ -326,6 +389,7 @@ function renderTabs() {
   $("#worldBanner").innerHTML = w ? `<div class="banner"><span>🌍 <b>${esc(w.title)}</b> <small class="muted">${w.claimed}/${w.n}</small></span>
     <button class="primary" id="claim" ${w.mine || !S.pet || S.pet.state !== "alive" ? "disabled" : ""}>${esc(w.button)}</button></div>` : "";
   const c = $("#claim"); if (c) c.onclick = () => act("claim");
+  $("#view").classList.toggle("book", tab === "adv");
   ({adv: renderAdv, arena: renderArena, nb: renderNb, log: renderLog})[tab]();
 }
 
@@ -338,7 +402,7 @@ ${esc(r.text)}${r.tail ? `\n🌀 ${esc(r.tail)}` : ""}${r.died ? `\n⚰️ <b>${
 }
 function recapHtml(st) {  // the end of a multi-step story: every decision and what it all added up to
   if (!st || !st.steps) return "";
-  return `<div class="story-head">📖 <b>${esc(st.title)}</b> — твої рішення:</div><ol class="recap">${st.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ol>${st.notes.length ? `<div class="notes">Разом за історію: ${esc(st.notes.join(" · "))}</div>` : ""}`;
+  return `<div class="story-head"><b>${esc(st.title)}</b> · твої рішення</div><ol class="recap">${st.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ol>${st.notes.length ? `<div class="notes">Разом за історію: ${esc(st.notes.join(" · "))}</div>` : ""}`;
 }
 
 function renderAdv() {
@@ -349,15 +413,15 @@ function renderAdv() {
   }
   if (ev) {
     el.innerHTML = `<img class="event-img" src="/img/event/${S.owner}.png?e=${esc(ev.id)}" alt="">
-      ${ev.story ? `<div class="story-head">📖 <b>${esc(ev.story.title)}</b> · крок ${ev.story.step}</div>` : ""}
+      ${ev.story ? `<div class="story-head"><b>${esc(ev.story.title)}</b> · крок ${ev.story.step}</div>` : ""}
       ${ev.story && lastResult && lastResult.next === ev.id ? `<div class="prev">«${esc(lastResult.label)}» — ${esc(lastResult.text)}</div>` : ""}
       <p>${ev.twist ? "🌀 " : ""}${ev.other ? `👥 <b>${esc(ev.other)}</b> · ` : ""}${esc(ev.text)}</p>
-      <div class="choices">${ev.choices.map(c => `<button data-ch="${c.i}"><span>${esc(c.label)}</span>${c.chance != null ? `<small class="muted">🎲 ${Math.round(c.chance * 100)}%</small>` : ""}</button>`).join("")}
+      <div class="choices">${ev.choices.map(c => `<button data-ch="${c.i}"><span>${esc(c.label)}</span>${c.chance != null ? `<small class="muted">${Math.round(c.chance * 100)}%</small>` : ""}</button>`).join("")}
         <button data-ch="auto" class="ghost muted">Хай вирішить сам</button></div>`;
     el.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => act("choose", b.dataset.ch === "auto" ? null : +b.dataset.ch));
     return;
   }
-  el.innerHTML = `<div class="empty"><button class="primary" id="go">🎲 Нова пригода</button></div>${resultHtml(lastResult)}`;
+  el.innerHTML = `<div class="empty"><button class="primary" id="go">Нова пригода</button></div>${resultHtml(lastResult)}`;
   $("#go").onclick = () => { lastResult = null; act("adventure"); };
 }
 
@@ -389,7 +453,7 @@ function renderArena() {
   } else if (live) {  // e.g. the next pairing is waiting on a walkover: let the game resolve it
     h += `<div class="empty"><button class="primary" id="fight">▶️ Далі</button><p class="muted">Турнір триває</p></div>`;
   } else {
-    h += `<div class="empty"><button class="primary" id="newTour" ${T.eligible < 3 ? "disabled" : ""}>🏆 Почати турнір</button>
+    h += `<div class="empty"><button class="primary" id="newTour" ${T.eligible < 3 ? "disabled" : ""}>Почати турнір</button>
       <p class="muted">${T.eligible < 3 ? "Потрібно щонайменше 3 пети-підлітки (⚙️ → сусіди; вони дорослішають, поки ти граєш)" : `бійців готово: ${T.eligible} · приз 300 ₴ за кожного`}</p></div>`;
     if (S.pet && S.pet.state === "alive" && foes.length)
       h += `<div class="row"><span class="seg">⚔️ Спаринг з <select id="foe">${foes.map(f => `<option value="${f.owner}">${f.emoji} ${esc(f.name)}</option>`).join("")}</select></span>
