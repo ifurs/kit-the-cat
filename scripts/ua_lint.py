@@ -22,8 +22,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src" / "kit_the_cat"
 ALLOW = ROOT / "scripts" / "ua_allow.txt"
+CASE_FORMS = {f"{who}_{c}" for who in ("name", "other") for c in ("gen", "dat", "acc", "ins", "loc", "voc")}
 PLACEHOLDERS = {"name", "owner", "food", "dream", "fear", "quirk", "temper", "money", "role", "other", "other_owner",
-                "w", "l"}  # w/l: battle winner/loser
+                "w", "l"} | CASE_FORMS  # w/l: battle winner/loser
 CYR = re.compile(r"[А-Яа-яЇїІіЄєҐґ]")
 WORD = re.compile(r"[A-Za-zА-Яа-яЇїІіЄєҐґ'’ʼ`´]+")
 L = "а-яїієґ'"  # letters that may continue a word
