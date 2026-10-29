@@ -13,6 +13,7 @@ from dataclasses import asdict
 from .. import battle as B
 from .. import engine as E
 from .. import sprites
+from ..grammar import inflect
 from ..content.economy import FOOD, JOBS
 from ..storage import MemoryStore
 
@@ -631,7 +632,7 @@ class Sandbox:
             t["bets"].setdefault(key, {})[str(owner)] = [side, amount, odds]
             await self.save(me)
             await self._save_state(st)
-        return f"🎰 Ставка {amount} ₴ на {[fa.name, fb.name][side]} (×{odds})"
+        return f"🎰 Ставка {amount} ₴ на {inflect([fa.name, fb.name][side], "acc")} (×{odds})"
 
     def _skip_byes(self, t: dict, by: dict) -> None:
         """Resolve byes and walkovers until the next match has two fighters (or the bracket is done),

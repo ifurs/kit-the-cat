@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Fixed
+- **Pet names are declined**: «Під дверима Крилатий з Троєщини пищить кошеня» is now «Під дверима Крилатого з
+  Троєщини…». New `grammar.py` (`decline`, `inflect`) gives all seven cases of a name (adjectives, nouns on a
+  consonant / «-ь» / «-й» / «-о» / «-а» / «-я»; a tail after «з», «із», «від», «№» stays as it is; indeclinable and
+  foreign words stay put). Texts use `{name_gen}`, `{name_dat}`, `{name_acc}`, `{name_ins}`, `{name_loc}`,
+  `{name_voc}` and the same `{other_*}`; `{name}` is still the nominative, so old content and hosts keep working.
+  About 300 texts and the engine's notes were moved to the right case; `scripts/case_scan.py` lists the doubtful
+  ones and its `--strict` check (a preposition right before `{name}`) is part of `content_gate.py`.
+
 ## [0.11.3] — 2026-10-29
 
 ### Changed

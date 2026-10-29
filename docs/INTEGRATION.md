@@ -46,7 +46,8 @@ res = p.resolve(E.EVENTS[p.pending["id"]], idx, other, rng)
 await store.save_pets([p.to_dict()] + ([other.to_dict()] if other else []))
 ```
 
-Text from the engine (`Result`, `p.fmt(...)`) is plain Ukrainian with user-controlled pieces (pet and owner names) substituted.
+Text from the engine (`Result`, `p.fmt(...)`) is plain Ukrainian with user-controlled pieces (pet and owner names) substituted. Pet names are declined by `grammar.py` (`p.name_in("gen")`, `grammar.inflect(name, case)`); to put a name into your own
+text use these instead of the bare `p.name` after a preposition or as an object.
 **Escape it for your output format** (the bot uses HTML parse mode and escapes everything). Never use player
 input as a format template — `Pet.fmt` only formats trusted content templates.
 

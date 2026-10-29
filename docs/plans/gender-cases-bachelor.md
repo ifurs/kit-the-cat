@@ -1,6 +1,6 @@
 # Plan: name cases, pet gender, «Холостяк / Холостячка»
 
-Status: not started · written 2026-10-29 · executor: Claude Sonnet, one phase per session.
+Status: phase 1 done on `feat/gender-cases` (not pushed) · written 2026-10-29 · executor: Claude Sonnet, one phase per session.
 
 Three user-visible problems, in the order they are fixed:
 
@@ -38,7 +38,7 @@ Numbers to keep in mind (2026-10-29): 698 events in 25 content modules, 606 `{na
 
 ## Phase 1 — name declension (the bug)  · 1 session
 
-- [ ] New pure module `src/kit_the_cat/grammar.py`:
+- [x] New pure module `src/kit_the_cat/grammar.py`:
   - `CASES = ("nom", "gen", "dat", "acc", "ins", "loc", "voc")`
   - `decline(name: str, gender: str = "m") -> dict[str, str]` — all seven forms.
   - Split the name into a **declinable head** and an **indeclinable tail**: tails start at a preposition
@@ -52,20 +52,20 @@ Numbers to keep in mind (2026-10-29): 698 events in 25 content modules, 606 `{na
   - `EXCEPTIONS: dict[str, dict]` for names the rules get wrong; indeclinables (Ферарі, Цок-Цок, Гуппі-Бос, Аксель?) —
     decide each one and test it. Unknown words (user names via the bot's `/pet_name`) fall back to the rules; if a
     word does not match any rule (Latin letters, digits, emoji), leave it in the nominative.
-- [ ] `Pet.fmt` gets `name_gen`, `name_dat`, `name_acc`, `name_ins`, `name_loc`, `name_voc` and the same for
+- [x] `Pet.fmt` gets `name_gen`, `name_dat`, `name_acc`, `name_ins`, `name_loc`, `name_voc` and the same for
   `other_*` (cached per name). `{name}` stays the nominative. Add the keys to whatever list the validator uses for
   allowed placeholders and to `docs/DSL.md` (regenerate with `scripts/gen_dsl_docs.py`).
-- [ ] `tests/test_grammar.py`: a table of ≥ 60 hand-checked forms including **every** base name in
+- [x] `tests/test_grammar.py`: a table of ≥ 60 hand-checked forms including **every** base name in
   `content/persona.py` `NAMES` (gen, dat, ins at least), names with suffixes («Крилатий з Троєщини», «Бублик
   Грозний», «Лис Микита», «Пуголовок Іван», «Мурка Велика» after phase 2), and fallbacks. This table is the spec —
   verify each form yourself, do not generate it from the code under test.
-- [ ] Fix the content: find every `{name}` / `{other}` that is not a subject and switch it to the right case. Write
+- [x] Fix the content: find every `{name}` / `{other}` that is not a subject and switch it to the right case. Write
   `scripts/case_scan.py` that lists candidates: after a preposition (у, в, до, від, для, без, біля, про, на, за, над,
   під, перед, між, з, із, з-за, у дворі, під дверима…), before an impersonal plural verb («{name} запросили /
   покликали / відправили / забрали / вигнали / кличуть / пропонує»), after «Відео/пости/мама/двері + {name}»
   (genitive), vocative in quoted speech («Ей, {name}!» → `{name_voc}`). Review every hit by hand — the scan is a
   helper, not the judge. Add a content-gate check that fails on the obvious patterns (preposition + `{name}`).
-- [ ] Engine f-strings (`self.name` in `engine.py`, ~35) and `sandbox/game.py`: same review.
+- [x] Engine f-strings (`self.name` in `engine.py`, ~35) and `sandbox/game.py`: same review.
 - Done when: the gate check is green, `grep -rn "з {name}\|у {name}\|до {name}" src` is empty, and a sandbox pet
   renamed «Крилатий з Троєщини» reads correctly in 20 random events (write it as a test that formats every event text
   and every outcome text with that name and asserts no `{` is left).

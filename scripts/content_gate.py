@@ -4,6 +4,7 @@
     uv run python scripts/content_gate.py --quick    # skip the balance simulation
 
 Gates: DSL contract (validate), Ukrainian lint (errors fail; warnings are listed for a human/agent to judge),
+a name in the wrong case (case_scan: a preposition right before {name}),
 story dead ends and hard checks (content_stats), generated DSL reference fresh, content tests, balance targets.
 """
 import subprocess
@@ -13,10 +14,11 @@ import time
 GATES = [
     ("DSL contract", ["python", "-m", "kit_the_cat.content.validate"]),
     ("Ukrainian lint", ["python", "scripts/ua_lint.py", "--strict", "--warnings"]),
+    ("Name cases", ["python", "scripts/case_scan.py", "--strict"]),
     ("Dead ends & hard checks", ["python", "scripts/content_stats.py", "--strict", "--gaps"]),
     ("DSL reference fresh", ["python", "scripts/gen_dsl_docs.py", "--check"]),
     ("Content tests", ["python", "-m", "pytest", "-q", "tests/test_dsl_contract.py", "tests/test_ua_lint.py",
-                       "tests/test_consequences.py", "tests/test_tooling.py"]),
+                       "tests/test_consequences.py", "tests/test_tooling.py", "tests/test_grammar.py"]),
     ("Balance", ["python", "scripts/balance.py", "--pets", "24", "--days", "50"]),
 ]
 

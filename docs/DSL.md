@@ -16,6 +16,12 @@ Tiny DSL for writing life events.
           fail=[o("Нічого не виграв.", money=-50)], auto="gambler"),
        req=dict(stage=2))
 
+Names are declined, not pasted: «{name}» is the nominative («Крилатий з Троєщини» is the subject), every other
+role takes its own case — {name_gen} «Крилатого з Троєщини» (нема кого?, у/до/від/для/без/біля/про…), {name_dat}
+(кому?), {name_acc} (кого?), {name_ins} (з ким? — «з {name_ins}»), {name_loc} (на/у/при кому?), {name_voc}
+(«Ей, {name_voc}!»); the same for {other_gen} … {other_voc}. «До {name} прийшов кур'єр» is a bug, «До {name_gen}
+прийшов кур'єр» is right; scripts/case_scan.py lists the suspicious ones. The rules live in grammar.py.
+
 Time: every decision costs some of the pet's life, and the player never sees how much (no time on buttons).
 A choice costs `time` if it has one, else `infer_time(choice, base)` — the event's / module's base plus what the
 choice does (studying, settling into a job, moving, a serious relationship, a story step, skills learned, money
@@ -91,6 +97,13 @@ Requirements (req=dict(...)):
 | `{role}` | назва ролі (🧛 Вампір…) |
 | `{other}` | ім'я іншого пета (лише social) |
 | `{other_owner}` | власник іншого пета (лише social) |
+| `{name_gen}` | ім'я пета в родовому відмінку (немає кого? — «Мурки») |
+| `{name_dat}` | давальний (кому? — «Мурці») |
+| `{name_acc}` | знахідний (кого? — «Мурку») |
+| `{name_ins}` | орудний (з ким? — «Муркою») |
+| `{name_loc}` | місцевий, без прийменника (на кому? — «Мурці») |
+| `{name_voc}` | кличний (Ей, «Мурко»!) |
+| `{other_gen}…{other_voc}` | ті самі відмінки для імені іншого пета (лише social) |
 
 ## Стати, навички, риси
 

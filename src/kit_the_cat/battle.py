@@ -12,6 +12,7 @@ import random
 from dataclasses import dataclass, field
 
 from . import engine as E
+from .grammar import inflect
 
 STRATEGIES = {
     "aggressive": ("⚔️ Агресивно", "більше шкоди, менше захисту"),
@@ -163,7 +164,7 @@ def fight(a: Fighter, b: Fighter, rng: random.Random, max_rounds: int = 25) -> B
         log.append(dict(r=rnd, side=side, text=text, hp=[round(max(0, a.hp)), round(max(0, b.hp))]))
 
     rnd = 0
-    say(-1, f"🔔 {a.name} ({STRATEGIES[a.strategy][0]}) проти {b.name} ({STRATEGIES[b.strategy][0]})!")
+    say(-1, f"🔔 {a.name} ({STRATEGIES[a.strategy][0]}) проти {inflect(b.name, "gen")} ({STRATEGIES[b.strategy][0]})!")
     order = [0, 1] if a.spd + rng.random() * 3 >= b.spd + rng.random() * 3 else [1, 0]
     winner = None
     for rnd in range(1, max_rounds + 1):
@@ -174,7 +175,7 @@ def fight(a: Fighter, b: Fighter, rng: random.Random, max_rounds: int = 25) -> B
             # start of turn: damage over time, regeneration, timers
             for dot in me.dot:
                 me.hp -= dot[0]
-                say(i, f"💀 Прокляття гризе {me.name}: −{dot[0]:.0f}")
+                say(i, f"💀 Прокляття гризе {inflect(me.name, "acc")}: −{dot[0]:.0f}")
             me.dot = [(d, t - 1) for d, t in me.dot if t > 1]
             if me.species == "axolotl" and me.hp > 0:
                 heal = me.max_hp * 0.03
@@ -256,7 +257,7 @@ def _special(me: Fighter, foe: Fighter, i: int, trait: str, name: str, rng: rand
             say(i, f"{name} — казино завжди виграє. {me.name} −{d:.0f}")
     elif trait == "dark":
         foe.dot.append((max(3.0, me.atk * 0.35), 3))
-        say(i, f"{name}: на {foe.name} падає тінь (шкода 3 ходи)")
+        say(i, f"{name}: на {inflect(foe.name, "acc")} падає тінь (шкода 3 ходи)")
     elif trait == "party":
         if rng.random() < 0.6:
             foe.stun = 1
@@ -290,7 +291,7 @@ def _special(me: Fighter, foe: Fighter, i: int, trait: str, name: str, rng: rand
         elif card == "tower":
             d, _ = _dmg(me, foe, rng, 2.0, pierce=True, sure=True)
             foe.hp -= d
-            say(i, f"{name}: Вежа! На {foe.name} падає цегла. −{d:.0f}")
+            say(i, f"{name}: Вежа! На {inflect(foe.name, "acc")} падає цегла. −{d:.0f}")
         elif card == "death":
             foe.dot.append((max(4.0, me.atk * 0.5), 2))
             say(i, f"{name}: Смерть! {foe.name} відчуває холод (шкода 2 ходи)")
@@ -349,8 +350,8 @@ def aftermath(win: "E.Pet", lose: "E.Pet", rng: random.Random) -> tuple[list[str
     delta = update_elo(win, lose)
     wn = win.apply(dict(mood=10, xp=8, str=0.5), None, rng)
     ln = lose.apply(dict(mood=-10, health=-8, xp=3), None, rng)
-    win.note("battle", f"🥊 {win.name} переміг {lose.name} (рейтинг +{delta})")
-    lose.note("battle", f"🥊 {lose.name} програв {win.name} (рейтинг −{delta})")
+    win.note("battle", f"🥊 {win.name} переміг {inflect(lose.name, "acc")} (рейтинг +{delta})")
+    lose.note("battle", f"🥊 {lose.name} програв {inflect(win.name, "dat")} (рейтинг −{delta})")
     if win.flags["wins"] in (5, 20, 50):
         win.ach({5: "Бійцівський клуб", 20: "Гроза району", 50: "Непереможний"}[win.flags["wins"]])
     return wn + [f"🏅 +{delta}"], ln + [f"🏅 −{delta}"]
