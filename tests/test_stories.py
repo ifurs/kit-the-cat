@@ -71,3 +71,11 @@ def test_a_plain_event_or_death_clears_a_broken_story():
     p.resolve(E.EVENTS["st_cnap"], 0, None, rng)
     p.die("тест", rng)
     assert not p.tale and not p.pending
+
+
+def test_a_story_survives_growing_up_in_the_middle_of_a_step():
+    p, rng = _pet(stage=2), random.Random(4)
+    p.years = 17.999                                            # a teen on a first date turns 18 during the step
+    p.start(E.EVENTS["st_date"], None, "manual")
+    r = p.resolve(E.EVENTS["st_date"], 0, None, rng)
+    assert r.next == "st_date_2" and p.tale and p.pending["id"] == "st_date_2"
