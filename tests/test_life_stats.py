@@ -103,3 +103,12 @@ def test_old_documents_migrate_to_years_and_life_stats():
     assert 18 < p.years < 60 and p.lifespan >= 74
     assert p.life["fame"] >= 45 and set(p.life) == set(E.LIFE)
     assert not any(k == "tier" for _, k, _ in p.log)  # no fake "new tier" announcements for migrated pets
+
+
+def test_a_small_debt_stops_healing_but_does_not_kill():
+    small, deep = _adult(-500), _adult(-2000)
+    for p in (small, deep):
+        p.health = 30.0
+        p.tick(E.now() + 48 * E.hour())
+    assert small.alive and small.health == 30.0       # no healing while in debt, no harm either
+    assert deep.health < 30.0                          # real debt: collectors call
