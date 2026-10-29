@@ -11,6 +11,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   scene on a stage at the top and the story in a dialog box with a ▶ cursor on the choice, health and mood as
   segmented pixel meters (blinking when low), bevelled pixel buttons, the tab menu with a ▶ marker. Replaces the
   exercise-book look from 0.10.0.
+- **Fits every common screen**: the scene's height follows the screen height, so the story and all choices fit
+  without scrolling from 1280×720 up; on monitors 1600 px and wider the layout is wider (1360 px) with larger text;
+  tablets in portrait (up to 900 px) get the phone layout with the bottom dock. Checked at 1280×720, 1366×768,
+  1440×900, 1536×864, 1920×1080, 2560×1440, 1024×768, 768×1024, 375×812, 390×844 and 412×915.
+- The menu lost its emoji and the theme toggle (the game has one deliberate night theme).
+
+### Added
+- **MIT licence** (`LICENSE`, also in the package metadata): free to use, change and share, provided as is; no
+  support is promised. The README and the game menu say so.
 
 ## [0.10.0] — 2026-10-29
 

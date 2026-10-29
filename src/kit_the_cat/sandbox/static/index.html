@@ -50,11 +50,11 @@ header h1 { font-size: 16px; margin: 0; margin-right: auto; }
 }
 
 main { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; padding: 16px; max-width: 1100px; margin: 0 auto; }
-@media (max-width: 760px) { main { grid-template-columns: minmax(0, 1fr); } }  /* never wider than the screen */
+@media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } }  /* never wider than the screen */
 main > * { min-width: 0; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
 .side { align-self: start; position: sticky; top: 12px; }
-@media (max-width: 760px) { .side { position: static; } }
+@media (max-width: 900px) { .side { position: static; } }
 
 .sprite { width: 100%; aspect-ratio: 1; image-rendering: pixelated; border-radius: 12px; display: block; background: var(--chip); }
 .name { font-size: 18px; font-weight: 700; margin: 10px 0 0; }
@@ -157,6 +157,7 @@ button.ghost { background: none; box-shadow: none; border-color: transparent; ma
 .sprite, .zoo { border-radius: 0; border: 3px solid var(--line); background: var(--bg); }
 .event-img { border-radius: 0; background: var(--bg); }
 .muted, small.muted { color: var(--muted); }
+a { color: var(--cyan); }
 .name { font-size: 22px; font-weight: 700; letter-spacing: .02em; color: var(--accent); margin-top: 6px; }
 .meta { color: var(--muted); font-size: 13.5px; }
 .bars { gap: 6px 10px; }
@@ -182,7 +183,7 @@ button.ghost { background: none; box-shadow: none; border-color: transparent; ma
 .tabs button.on::before { content: "▶"; position: absolute; left: 0; color: var(--accent); }
 .dot::after { background: var(--bad); border-radius: 0; }
 #view.book { padding: 0 0 14px; }
-#view.book > .event-img { display: block; width: 100%; height: min(48vh, 400px); object-fit: contain; border-bottom: 3px solid var(--line); }
+#view.book > .event-img { display: block; width: 100%; height: clamp(220px, calc(100vh - 460px), 560px); object-fit: contain; border-bottom: 3px solid var(--line); }
 #view .event-img { margin-inline: auto; }
 .dialog, .result { background: var(--dialog); border: 4px solid var(--frame); box-shadow: 0 0 0 4px var(--bg), 0 0 0 8px var(--ring);
   margin: 20px 12px 6px; padding: 12px 12px 10px; border-radius: 0; white-space: normal; }
@@ -208,11 +209,17 @@ button.ghost { background: none; box-shadow: none; border-color: transparent; ma
 .journal time { color: var(--cyan); }
 .dock { border-top: 3px solid var(--line); background: var(--bg); }
 #loader .paw { filter: none; }
+/* big monitors (1600 px and wider): a wider layout and larger text instead of a small island in the middle */
+@media (min-width: 1600px) {
+  main { max-width: 1360px; grid-template-columns: 380px minmax(0, 1fr); }
+  body { font-size: 16px; }
+  .dialog > p { font-size: 18px; } .choices button { font-size: 17px; } .name { font-size: 24px; }
+}
 /* phones: a compact pet header, stats folded away, one row of tabs and the main action in a bottom dock */
 .pet-head > div { min-width: 0; }
 .stats-toggle { display: none; }
 .dock { display: none; }
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   main { padding: 12px 16px; gap: 12px; }
   .pet-head { display: flex; gap: 12px; align-items: center; }
   .pet-head .sprite { width: 96px; flex: none; }
@@ -241,10 +248,10 @@ button.ghost { background: none; box-shadow: none; border-color: transparent; ma
   <div class="menu">
     <button id="setBtn" aria-haspopup="true" title="Пісочниця">Меню</button>
     <div class="pop" id="setPop" hidden>
-      <button id="npcs">🏘 Заселити 3 сусідів</button>
-      <button id="world">🌍 Світова подія</button>
-      <button id="theme">🌓 Тема</button>
-      <button id="reset">🧹 Почати спочатку</button>
+      <button id="npcs">Заселити 3 сусідів</button>
+      <button id="world">Світова подія</button>
+      <button id="reset">Почати спочатку</button>
+      <small class="muted" style="padding:2px">Вільна гра: <a href="https://github.com/ifurs/kit-the-cat/blob/main/LICENSE" target="_blank" rel="noopener">ліцензія MIT</a>, без гарантій і без підтримки.</small>
     </div>
   </div>
 </header>
@@ -302,7 +309,7 @@ function obit(p) {
     ${s.family ? `<div class="meta">${esc(s.family)}</div>` : ""}${s.epitaph ? `<p class="obit-epitaph">«${esc(s.epitaph)}»</p>` : ""}</div>`;
 }
 
-const wide = matchMedia("(min-width: 761px)");
+const wide = matchMedia("(min-width: 901px)");
 function renderDock() {  // phones: the main action is always one thumb away
   const p = S.pet, el = $("#dock"), on = !!p && p.state === "alive";
   document.body.classList.toggle("has-dock", on);
@@ -529,7 +536,7 @@ function renderNb() {
   const st = {friend: "🤝 друг", bestie: "💛 бестік", rival: "😤 суперник", enemy: "⚔️ ворог", crush: "😳 закоханість", partner: "💍 пара", ex: "💔 колишній"};
   const others = S.players.filter(x => x.owner !== S.owner);
   if (!others.length) {
-    el.innerHTML = `<div class="empty muted">Поруч нікого.<br><br><button id="addNb">🏘 Заселити 3 сусідів</button></div>`;
+    el.innerHTML = `<div class="empty muted">Поруч нікого.<br><br><button id="addNb">Заселити 3 сусідів</button></div>`;
     $("#addNb").onclick = () => act("npcs", 3);
     return;
   }
@@ -584,7 +591,6 @@ document.addEventListener("click", e => { if (!e.target.closest(".menu")) docume
 $("#tabs").querySelectorAll("button").forEach(b => b.onclick = () => { tab = b.dataset.t; store.set("ks-tab", tab); if (tab !== "arena") battle = null; renderTabs(); });
 $("#npcs").onclick = () => { $("#setPop").hidden = true; act("npcs", 3); };
 $("#world").onclick = () => { $("#setPop").hidden = true; act("world", ""); };
-$("#theme").onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === "dark" ? "light" : "dark"; };
 $("#reset").onclick = () => { if (confirm("Стерти всю пісочницю?")) { $("#setPop").hidden = true; lastResult = null; battle = null; act("reset"); } };
 $("#as").onchange = () => { lastResult = null; battle = null; more = ""; openNb = 0; refresh(); };
 refresh().catch(e => toast("Сервер не відповідає: " + e.message));
