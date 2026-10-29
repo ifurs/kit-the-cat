@@ -5,6 +5,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **10 more stories** (`content/stories_more.py`): «Дванадцять годин без світла», «Застряг у ліфті», «Перший
+  тиждень» (new job), «Говерла», «Ремонт у ванній», «Бабусин ювілей» and «Пропав пес» (kids too), «Перше
+  побачення» (teens), «Черга на кордоні», «Кава з собою». 18 stories in all; new achievements «Підкорив Говерлу»,
+  «Знайшов Барона», «Своя кав'ярня». Pricey choices are hidden from pets who can't afford them.
+
+### Changed
+- **The browser game has its own look instead of a generic app style**: a squared school exercise book by day
+  (ballpoint-blue ink, the red margin line, the adventure written on squared paper in a book serif) and the school
+  chalkboard by night (chalk text, chalk-yellow accent); square corners and pressed buttons to match the pixel
+  sprites; notebook-style tabs; words instead of emoji in the interface («Лікар», «Казино», «Ще…», «Меню»); stats as
+  plain text with tabular numbers instead of pills; no accent bars on rounded cards; the journal tab is «Щоденник».
+  On wide screens the scene picture is capped so the story text stays in view.
+
+### Fixed
+- A story no longer breaks when a choice's hidden time makes the pet grow up in the middle of a step (the answered
+  event was still pending while the age checks ran).
+
 ## [0.9.1] — 2026-10-29
 
 ### Changed
