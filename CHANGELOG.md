@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-10-29
+
 ### Changed
 - **Stories cost less and never push a broke pet into debt**: the car story starts only with 2 500 ₴ of savings and
   its sums are roughly halved (deposit 200, prepayment 800, the car 1 200), rent commission 500, the first donation
@@ -222,7 +224,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/ifurs/kit-the-cat/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/ifurs/kit-the-cat/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/ifurs/kit-the-cat/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/ifurs/kit-the-cat/compare/v0.7.1...v0.8.0

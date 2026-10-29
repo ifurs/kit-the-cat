@@ -1,6 +1,6 @@
 [project]
 name = "kit-the-cat"
-version = "0.9.0"
+version = "0.9.1"
 description = "Kit the Cat: pet life-sim engine — genomes & pixel art, 313 life events, roles, battles"
 readme = "README.md"
 requires-python = ">=3.12"
