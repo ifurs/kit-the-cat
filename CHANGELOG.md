@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-10-29
+
 ### Changed
 - **Childhood lasts longer**: a kid ages 4 years per game day instead of 7 — about three real days and twice as many
   childhood adventures (≈16 instead of ≈8); a whole life still takes 35–39 real days.
@@ -189,7 +191,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/ifurs/kit-the-cat/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/ifurs/kit-the-cat/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/ifurs/kit-the-cat/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/ifurs/kit-the-cat/compare/v0.6.1...v0.7.0
