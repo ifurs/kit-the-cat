@@ -54,7 +54,7 @@ main > * { min-width: 0; }
 
 .sprite { width: 100%; aspect-ratio: 1; image-rendering: pixelated; border-radius: 12px; display: block; background: var(--chip); }
 .name { font-size: 18px; font-weight: 700; margin: 10px 0 0; }
-.meta { color: var(--muted); font-size: 13.5px; }
+.meta { color: var(--muted); font-size: 14px; }
 .bars { display: grid; grid-template-columns: auto 1fr auto; gap: 5px 8px; align-items: center; margin: 12px 0; }
 .bar { height: 8px; background: var(--chip); border-radius: 6px; overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--good); transition: width .3s; }
@@ -140,7 +140,8 @@ canvas.sprite, canvas.event-img, canvas.zoo { max-width: 100%; height: auto; }
 .obit-story li { margin: 2px 0; }
 .obit-epitaph { font-style: italic; text-align: center; color: var(--muted); }
 /* look: pixel RPG — square panels, bevelled buttons, dialog boxes, ▶ cursor */
-body { font-family: var(--pixel); font-size: 15px; line-height: 1.35; }
+body { font-family: var(--ui); font-size: 15.5px; line-height: 1.5; }  /* running text stays easy to read */
+header h1, .name, button, .tabs button, .story-head, .bars > span, .life .stat b, .champ, .vs b, #loader b { font-family: var(--pixel); }
 header { border-bottom: 3px solid var(--line); background: var(--bg); }
 header h1 { font-size: 17px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
 .clock { color: var(--muted); }
@@ -159,13 +160,13 @@ button.ghost { background: none; box-shadow: none; border-color: transparent; ma
 .card { background: var(--panel); border: 3px solid var(--line); }
 .row { border: 2px solid var(--line); }
 .pop { background: var(--panel); border: 3px solid var(--frame); box-shadow: 0 0 0 3px var(--bg); }
-#toast { background: var(--dialog); color: var(--ink); border: 3px solid var(--frame); font-family: var(--pixel); }
+#toast { background: var(--dialog); color: var(--ink); border: 3px solid var(--frame); }
 .sprite, .zoo { border-radius: 0; border: 3px solid var(--line); background: var(--bg); }
 .event-img { border-radius: 0; background: var(--bg); }
 .muted, small.muted { color: var(--muted); }
 a { color: var(--cyan); }
 .name { font-size: 22px; font-weight: 700; letter-spacing: .02em; color: var(--accent); margin-top: 6px; }
-.meta { color: var(--muted); font-size: 13.5px; }
+.meta { color: var(--muted); font-size: 14px; }
 .bars { gap: 6px 10px; }
 .bar { height: 12px; border-radius: 0; position: relative; background: color-mix(in srgb, var(--hp) 25%, var(--bg)); }
 .bar > i, .bar.mid > i, .bar.low > i { background: var(--hp); transition: none; }
@@ -194,22 +195,22 @@ a { color: var(--cyan); }
 .dialog, .result { background: var(--dialog); border: 4px solid var(--frame); box-shadow: 0 0 0 4px var(--bg), 0 0 0 8px var(--ring);
   margin: 20px 12px 6px; padding: 12px 12px 10px; border-radius: 0; white-space: normal; }
 .result { white-space: pre-wrap; }
-.dialog > p { margin: 6px 0 10px; font-size: 16.5px; line-height: 1.4; }
+.dialog > p { margin: 6px 0 10px; font-size: 17px; line-height: 1.55; }
 .story-head { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--cyan); margin: 0; }
 .story-head b { color: var(--cyan); font-weight: 600; }
-.prev { color: var(--muted); font-size: 14px; margin-top: 6px; }
+.prev { color: var(--muted); font-size: 14.5px; margin-top: 6px; }
 .choices { gap: 2px; margin-top: 4px; }
 .choices button, .choices button.ghost { background: none; border: 0; box-shadow: none; margin: 0; padding: 8px 8px 8px 26px;
-  position: relative; text-align: left; font-size: 16px; color: var(--ink); }
+  position: relative; text-align: left; font: 500 16px/1.4 var(--ui); color: var(--ink); }
 .choices button::before { content: "▶"; position: absolute; left: 8px; top: 8px; color: var(--accent); visibility: hidden; }
 .choices button:is(:hover, :focus-visible, :active) { background: var(--ring); outline: 0; }
 .choices button:is(:hover, :focus-visible, :active)::before { visibility: visible; }
-.choices button.ghost { color: var(--muted); font-size: 14px; }
+.choices button.ghost { color: var(--muted); font-size: 14.5px; }
 .choices small { color: var(--good); font-size: 13px; }
 .empty { text-align: left; padding: 14px 12px 0; }
 .empty .primary { width: calc(100% - 6px); }
 .result b { color: var(--accent); }
-.notes, .result .notes { font-family: var(--pixel); font-size: 13px; color: var(--warn); }
+.notes, .result .notes { font-family: var(--ui); font-size: 13.5px; color: var(--warn); }
 .recap { padding-left: 22px; }
 .journal div { border-bottom: 2px dotted var(--line); }
 .journal time { color: var(--cyan); }
