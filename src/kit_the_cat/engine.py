@@ -107,6 +107,7 @@ LIFE_ECHO = {"party": (("fame", 1.0),), "cha": (("fame", 0.5), ("attr", 0.4), ("
 MONEY_TIERS = [(-1e12, "🕳 У боргах"), (0, "🥫 Бідний студент"), (1000, "🧾 Середній клас"), (5000, "🚗 Мажор"),
                (20000, "🛥 Олігарх")]
 UPKEEP = [10, 20, 60, 180, 600]   # ₴/day cost of living by money tier (food, bills, «статус»); adults only
+DEBT_SOFT = 1000                   # a small debt only stops healing; collectors start hurting below this
 DEBT_HARD = 3000                   # deeper debt hurts health faster
 EVENT_ENERGY = 0          # energy is automatic (kept for hosts that still check it); pace adventures with cooldowns
 FOLLOWUP_MAX = 3         # a follow-up (e.g. a dream step after a failure) is scheduled at most this often per life
@@ -728,8 +729,10 @@ class Pet:
         if self.in_hospital:
             self.health = min(100.0, self.health + 3 * h)
         self.energy = 100.0  # automatic, like food and sleep
-        if broke:
+        if broke and self.money < -DEBT_SOFT:
             self.health -= (0.8 if self.money < -DEBT_HARD else 0.3) * h * (0.25 if role == "zombie" else 1)
+        elif broke:
+            pass  # a small debt: no healing until it is paid off, but it doesn't kill
         elif self.mood < 10:
             self.health -= 0.5 * h
         elif role != "zombie":

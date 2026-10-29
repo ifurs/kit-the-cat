@@ -9,8 +9,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 - **Stories cost less and never push a broke pet into debt**: the car story starts only with 2 500 ₴ of savings and
   its sums are roughly halved (deposit 200, prepayment 800, the car 1 200), rent commission 500, the first donation
   300; pricey choices (prepayment, buying the car, paying the commission, donating) are hidden when the pet can't
-  afford them. Debt deaths are back to the level without stories (balance: 11 of 130 deaths over 4 seeds, was 17 of
-  136).
+  afford them.
+- **A small debt no longer kills**: below 0 ₴ a pet stops healing, but debt collectors hurt its health only below
+  −1 000 ₴ (`DEBT_SOFT`), and faster below −3 000 ₴ as before. Weak pets used to die from a short dip under zero
+  because they could neither heal nor pay the doctor. Debt deaths: balance 7 of 129 over 4 seeds (was 17 of 136),
+  the bot's simulation 4 of 20 over 3 seeds (was 11 of 20).
 
 ### Fixed
 - `test_health_recovers_slowly_and_the_doctor_costs_money` failed after 14:00 (ten ticked hours crossed midnight
