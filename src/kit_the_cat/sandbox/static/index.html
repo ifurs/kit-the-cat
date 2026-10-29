@@ -19,7 +19,7 @@
   --good: #a7f070; --bad: #e43b44; --warn: #feae34; --hp: #e43b44; --mp: #feae34;
   --pixel: "Pixelify Sans", ui-monospace, monospace;
   --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --num: "Pixelify Sans", ui-monospace, monospace;
+  --num: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -135,11 +135,11 @@ main > * { min-width: 0; }
 .obit-epitaph { font-style: italic; text-align: center; color: var(--muted); }
 /* look: pixel RPG — square panels, bevelled buttons, dialog boxes, ▶ cursor */
 body { font-family: var(--ui); font-size: 15.5px; line-height: 1.5; }  /* running text stays easy to read */
-header h1, .name, button, .tabs button, .story-head, .bars > span, .life .stat b, .champ, .vs b, #loader b { font-family: var(--pixel); }
+header h1 { font-family: var(--pixel); }  /* only the logo is pixel type: everything you read is in the system font */
 header { border-bottom: 3px solid var(--line); background: var(--bg); }
 header h1 { font-size: 17px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
 .clock { color: var(--muted); }
-button, select, input[type=text], input[type=number] { border-radius: 0; font-family: var(--pixel); }
+button, select, input[type=text], input[type=number] { border-radius: 0; }
 select, input[type=text], input[type=number] { background: var(--bg); border: 3px solid var(--line); }
 button { background: var(--chip); color: var(--ink); border: 3px solid var(--bg); outline: 0;
   box-shadow: inset -3px -3px 0 #0006, inset 3px 3px 0 #ffffff1f, 0 0 0 3px var(--line); margin: 3px; }
@@ -179,7 +179,7 @@ a { color: var(--cyan); }
 .care button { font-size: 14px; padding: 7px 2px; }
 .tabs { gap: 4px 14px; margin-bottom: 10px; border: 0; }
 .tabs button, .tabs button.on { background: none; border: 0; box-shadow: none; margin: 0; padding: 6px 2px 6px 16px; position: relative;
-  color: var(--muted); font-size: 15px; letter-spacing: .04em; text-transform: uppercase; }
+  color: var(--muted); font-size: 15px; font-weight: 600; }
 .tabs button.on { color: var(--accent); }
 .tabs button.on::before { content: "▶"; position: absolute; left: 0; color: var(--accent); }
 .dot::after { background: var(--bad); border-radius: 0; }
@@ -190,7 +190,7 @@ a { color: var(--cyan); }
   margin: 20px 12px 6px; padding: 12px 12px 10px; border-radius: 0; white-space: normal; }
 .result { white-space: pre-wrap; }
 .dialog > p { margin: 6px 0 10px; font-size: 17px; line-height: 1.55; }
-.story-head { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--cyan); margin: 0; }
+.story-head { font-size: 14px; color: var(--cyan); margin: 0; }
 .story-head b { color: var(--cyan); font-weight: 600; }
 .prev { color: var(--muted); font-size: 14.5px; margin-top: 6px; }
 .choices { gap: 2px; margin-top: 4px; }
