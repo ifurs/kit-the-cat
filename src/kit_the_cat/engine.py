@@ -75,7 +75,7 @@ FALLBACK_NAMES = ["Бублик", "Пончик", "Шпротик", "Кекси�
 EGG_HOURS = 1.0
 # life: upkeep is automatic, age is in years, life stats have tiers. Every decision costs hidden life time
 # (content/events.py), the clock adds a slow drift on top: a life of ~80 years takes ~30 real days in the bot.
-YEARS_PER_DAY = {1: 7.0, 2: 2.0, 3: 1.4, 4: 1.4}   # passive ageing per game day, by stage
+YEARS_PER_DAY = {1: 4.0, 2: 2.0, 3: 1.4, 4: 1.4}   # passive ageing per game day, by stage (childhood ≈ 3 days)
 GOAL_BY_DREAM = {v: k for k, v in GOALS.items()}
 LEAN_BONUS = 8           # skill bonus for a choice in the pet's character (temperament lean)
 LEAN_OUT = 1.6           # weight × for outcomes that feed the pet's lean trait
@@ -765,6 +765,8 @@ class Pet:
                 self.note("grew", f"{STAGES[st]}: {self.name} подорослішав (навички підросли)")
                 if st == 4 and "cane" not in self.items:
                     self.items.append("cane")
+        if self.pending and not self.age_fits(EVENTS.get(self.pending.get("id", ""))):
+            self.pending = {}  # outgrown while nobody answered: a teen no longer teethes
         return True
 
     def _daily(self, rng: random.Random) -> None:
@@ -1268,6 +1270,11 @@ class Pet:
         return True
 
     # --- events ------------------------------------------------------------------------------
+    def age_fits(self, e: Event | None) -> bool:
+        """The event's age requirements (stage, phase, years) still hold — the rest may have changed meanwhile."""
+        req = {k: v for k, v in e.req.items() if k in ("stage", "phase", "years")} if e else {}
+        return bool(e) and self.meets(req | {"jail": self.jailed}, None)  # jail state is not an age matter
+
     def eligible(self, e: Event, other: "Pet | None", fresh: bool = True) -> bool:
         if e.social != bool(other) or (fresh and e.id in self.recent):
             return False
