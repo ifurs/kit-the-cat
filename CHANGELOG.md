@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Changed
+- **No pixel type in anything you read**: buttons, the menu, the pet's name, story titles and numbers use the system
+  font too (sentence case instead of capitals); only the «Kit the Cat» logo keeps the pixel typeface. The pixel look
+  stays in the graphics: sprites, dialog frames, segmented meters, the ▶ cursor and bevelled buttons.
+
 ## [0.11.1] — 2026-10-29
 
 ### Changed
