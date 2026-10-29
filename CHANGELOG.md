@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-10-29
+
 ### Added
 - **31 childhood and youth events** (`content/youth.py`): St Nicholas night, chickenpox, lessons in the school
   shelter, the tooth fairy, the icy sledding hill, the first pocket money, the school play «Котигорошко», chess
@@ -175,7 +177,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/ifurs/kit-the-cat/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/ifurs/kit-the-cat/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/ifurs/kit-the-cat/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/ifurs/kit-the-cat/compare/v0.6.0...v0.6.1
