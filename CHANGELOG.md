@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.11.3] — 2026-10-29
+
+### Changed
+- **Thinner frames**: buttons, cards, fields, the menu, toasts and the header/dock lines use 2 px borders instead of
+  3 px; the dialog's double frame is 9 px wide instead of 12 px.
+- **Choices look like buttons**: each choice is a framed tile with an always-visible ▶ (before, the cursor showed only
+  on hover, so on a phone the choices read as plain text); hover/focus highlights it, a press sinks it, and «Хай
+  вирішить сам» has a dashed frame.
+
 ## [0.11.2] — 2026-10-29
 
 ### Changed
@@ -276,7 +285,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.11.2...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.11.3...HEAD
+[0.11.3]: https://github.com/ifurs/kit-the-cat/compare/v0.11.2...v0.11.3
 [0.11.2]: https://github.com/ifurs/kit-the-cat/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/ifurs/kit-the-cat/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/ifurs/kit-the-cat/compare/v0.10.0...v0.11.0
