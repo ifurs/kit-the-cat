@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-10-29
+
 ### Added
 - **10 more stories** (`content/stories_more.py`): «Дванадцять годин без світла», «Застряг у ліфті», «Перший
   тиждень» (new job), «Говерла», «Ремонт у ванній», «Бабусин ювілей» and «Пропав пес» (kids too), «Перше
@@ -242,7 +244,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/ifurs/kit-the-cat/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/ifurs/kit-the-cat/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/ifurs/kit-the-cat/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/ifurs/kit-the-cat/compare/v0.8.0...v0.8.1
