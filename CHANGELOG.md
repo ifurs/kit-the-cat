@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Changed
+- **Easier to read**: the pixel typeface stays on the title, the pet's name, buttons, the menu, story titles and
+  numbers; the story text, choices, results, journal and notes use the system font, a little larger (17 px in the
+  dialog) with more line spacing.
+
 ## [0.11.0] — 2026-10-29
 
 ### Changed
