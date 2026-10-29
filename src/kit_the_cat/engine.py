@@ -81,6 +81,7 @@ LEAN_BONUS = 8           # skill bonus for a choice in the pet's character (temp
 LEAN_OUT = 1.6           # weight × for outcomes that feed the pet's lean trait
 HEAL_PER_H = 0.3         # natural recovery per game hour (hospital: 3): damage from choices lasts
 HEAL_PRICE = 150         # 💊 a doctor's visit
+LETHAL_HIT = 30          # a choice kills (health → 0) only if it takes at least this much health at once
 DONE_ACH = "Мрія збулася"  # content/dreams.py gives it when a dream comes true
 STAGE_YEARS = {2: 12, 3: 18, 4: 60}
 # life phases by age in years (req phase=…): finer than stages, so a 22-year-old and a 48-year-old live different lives
@@ -98,6 +99,7 @@ LIFE = {  # key: (icon, name, tier titles at LIFE_STEPS)
     "attr": ("✨", "привабливість", ["Звичайний", "Охайний", "Стильний", "Красунчик району", "Ікона стилю"]),
 }
 LIFE_STEPS = (0, 20, 45, 70, 90)
+LIFE_SHORT = {"fame": "слава", "auth": "авторитет", "blat": "блат", "fin": "фінграм.", "attr": "стиль"}
 # how a lived choice echoes into life stats: personality builds a reputation (positive deltas only)
 LIFE_ECHO = {"party": (("fame", 1.0),), "cha": (("fame", 0.5), ("attr", 0.4), ("blat", 0.3)), "toxic": (("auth", 0.8),),
              "dark": (("auth", 0.5),), "str": (("auth", 0.3),), "int": (("fin", 0.8),), "love": (("attr", 0.4),),
@@ -1423,7 +1425,11 @@ class Pet:
         if self.in_character(c):
             res.notes.insert(0, f"🎭 {self.persona.get('temper', '')}: у своїй стихії")
         if self.alive and self.health <= 0:
-            self.die(f"не пережив пригоду «{res.label}»", rng)
+            if -fx.get("health", 0) >= LETHAL_HIT:  # only a really risky choice kills
+                self.die(f"не пережив пригоду «{res.label}»", rng)
+            else:
+                self.health = 1.0
+                res.notes.append("❤️ ледь живий: ще один ризик — і кінець")
         if self.alive:
             self._age_checks(rng)
         res.twist = bool(fx.get("twist")) or e.id.startswith("twist_")
@@ -1438,6 +1444,8 @@ class Pet:
             tt, tfx, _ = rng.choices(TAILS, [x[2] for x in TAILS])[0]
             res.tail = self.fmt(tt)
             res.tail_notes = self.apply(tfx, None, rng)
+            if self.alive and self.health <= 0:
+                self.health = 1.0  # a random tail never kills
             res.twist = res.twist or bool(tfx.get("twist"))
         res.died = not self.alive
         c = self.counters
@@ -2289,12 +2297,12 @@ def card(p: Pet, names: dict[str, str]) -> str:
     if p.role:
         lines.append(f"{ROLES[p.role]['name']} — <i>{ROLES[p.role]['desc']}</i>")
     lines += [
-        f"❤️{bar(p.health)} 😊{bar(p.mood)}",
+        f"❤️ здоров'я {bar(p.health)} {int(p.health)} · 😊 настрій {bar(p.mood)} {int(p.mood)}",
         f"💰 {int(p.money)} ₴ · {p.tier_name('money')}",
-        " ".join(f"{LIFE[k][0]}{int(p.life.get(k, 0))}" for k in LIFE)
+        " ".join(f"{LIFE[k][0]}{LIFE_SHORT[k]} {int(p.life.get(k, 0))}" for k in LIFE)
         + "".join(f" · {p.tier_name(k)}" for k in sorted(LIFE, key=lambda k: -p.life.get(k, 0))[:2] if p.tier(k) >= 1),
-        " ".join(f"{SKILLS[s]}{int(p.skill(s))}" for s in SKILLS)
-        + (" · " + " ".join(TRAITS[t].split()[0] + str(int(p.traits[t])) for t in p.top_traits()) if p.top_traits() else ""),
+        " ".join(f"{SKILLS[s]}{SKILL_NAMES[s]} {int(p.skill(s))}" for s in SKILLS)
+        + (" · " + " ".join(f"{TRAITS[t]} {int(p.traits[t])}" for t in p.top_traits()) if p.top_traits() else ""),
     ]
     work = [JOBS[p.job]["name"] if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else "",
             bg_name(p.home)]

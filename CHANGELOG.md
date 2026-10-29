@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Changed
+- **Only risky choices kill**: a choice that leaves health at 0 kills only if it took at least `LETHAL_HIT = 30`
+  health at once; smaller hits (one more episode, a toothache) leave the pet at 1 ❤️ with a warning, and random
+  tails never kill.
+- **Every stat is named**: the card shows «❤️ здоров'я 80 · 😊 настрій 65», «💪сила 13 🧠розум 12…», life stats and
+  traits with their names; the browser game labels the bars and stat chips too (and the bar grid fits the numbers).
+
 ## [0.7.0] — 2026-10-29
 
 ### Added
