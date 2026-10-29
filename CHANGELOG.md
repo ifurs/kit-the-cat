@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-10-29
+
 ### Added
 - **Life phases** (`engine.PHASES`, `Pet.phase()`, `req=dict(phase=…)`): childhood 0–12, youth 12–18, young
   adulthood 18–30, maturity 30–60, old age 60+. The card shows the phase instead of the stage.
@@ -151,7 +153,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/ifurs/kit-the-cat/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/ifurs/kit-the-cat/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/ifurs/kit-the-cat/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ifurs/kit-the-cat/compare/v0.4.0...v0.5.0
