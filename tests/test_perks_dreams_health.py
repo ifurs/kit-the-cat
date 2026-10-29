@@ -72,7 +72,7 @@ def test_health_recovers_slowly_and_the_doctor_costs_money():
     p.health, p.money = 40, 1000
     p.tick(E.now() + 10 * E.hour())
     assert p.health < 50                     # ten hours heal only a few points
-    y = p.years
+    y, p.money = p.years, 1000               # after the tick: daily upkeep may have run past midnight
     E.care(p, "heal", random.Random(0))
     assert p.money == 1000 - E.HEAL_PRICE and p.years > y
     p.money = 0
