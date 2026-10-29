@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-10-29
+
 ### Changed
 - **Decisions cost life time again, hidden from the player**: `Choice.time` / `Event.time`, `dsl.infer_time`,
   module bases and `CHOICE_TIME` are back, but `Pet.button()` shows no time and outcomes add no «⏳» note.
@@ -25,6 +27,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   title and a summary line. Old pets get a goal on load.
 - **11 health events** (`health.py`): tooth, check-up, gym, Truskavets, a roof at sunset, an e-scooter, running,
   sleep, blood pressure, blood donation, appendicitis.
+- 12 пригод у трьох арках: тривога в коридорі й сусіди, грибний ліс (лісовик, луна), різдвяні колядники
+  (`arcs_week_20261029.py`, перший тижневий PR).
 - Balance: `dream_share` target (25–85% of lives fulfil the dream); event deaths up to 25%.
 
 ## [0.5.0] — 2026-10-28
@@ -123,7 +127,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/ifurs/kit-the-cat/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ifurs/kit-the-cat/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/ifurs/kit-the-cat/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/ifurs/kit-the-cat/compare/v0.2.0...v0.3.0
