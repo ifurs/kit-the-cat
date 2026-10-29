@@ -5,6 +5,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- 12 пригод у трьох арках: тривога в коридорі й сусіди, грибний ліс (лісовик, луна), різдвяні колядники.
+
 ## [0.5.0] — 2026-10-28
 
 ### Changed
