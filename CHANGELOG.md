@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.11.1] — 2026-10-29
+
 ### Changed
 - **Easier to read**: the pixel typeface stays on the title, the pet's name, buttons, the menu, story titles and
   numbers; the story text, choices, results, journal and notes use the system font, a little larger (17 px in the
@@ -267,7 +269,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.11.1...HEAD
+[0.11.1]: https://github.com/ifurs/kit-the-cat/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/ifurs/kit-the-cat/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/ifurs/kit-the-cat/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/ifurs/kit-the-cat/compare/v0.9.0...v0.9.1
