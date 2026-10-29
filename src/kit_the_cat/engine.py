@@ -1469,6 +1469,7 @@ class Pet:
             else:
                 self.health = 1.0
                 res.notes.append("❤️ ледь живий: ще один ризик — і кінець")
+        prev, self.pending = self.pending, {}  # answered: the age checks must not drop it (or its story)
         if self.alive:
             self._age_checks(rng)
         res.twist = bool(fx.get("twist")) or e.id.startswith("twist_")
@@ -1477,7 +1478,6 @@ class Pet:
         self.lived(e.id)
         if e.once:
             self.flags[f"seen_{e.id}"] = 1
-        prev, self.pending = self.pending, {}
         self.next_ev = now() + rng.uniform(*BUDGET.every) * hour()
         if self.tale:
             nxt = self.next_step(fx.get("step")) if self.alive and not self.jailed and not self.in_hospital else None
