@@ -103,6 +103,7 @@ MONEY_TIERS = [(-1e12, "🕳 У боргах"), (0, "🥫 Бідний студ�
 UPKEEP = [10, 20, 60, 180, 600]   # ₴/day cost of living by money tier (food, bills, «статус»); adults only
 DEBT_HARD = 3000                   # deeper debt hurts health faster
 EVENT_ENERGY = 0          # energy is automatic (kept for hosts that still check it); pace adventures with cooldowns
+FOLLOWUP_MAX = 3         # a follow-up (e.g. a dream step after a failure) is scheduled at most this often per life
 RECENT = 40              # last N events of a pet are not offered again (unless nothing else fits)
 REPEAT_DECAY = 0.3       # weight × this per earlier time the pet lived the event: fresh content first
 STORY_MAX = 10           # highlights kept for the life summary
@@ -939,7 +940,9 @@ class Pet:
                 notes.append(f"{'+' if v > 0 else ''}{v:g} ₴")
             elif k == "then":
                 fid, after = v
-                if fid in EVENTS and all(f[0] != fid for f in self.followups):
+                n = self.counters.get(f"then_{fid}", 0)
+                if fid in EVENTS and n < FOLLOWUP_MAX and all(f[0] != fid for f in self.followups):
+                    self.counters[f"then_{fid}"] = n + 1  # retries end: no event comes back forever
                     self.followups = (self.followups + [[fid, self.years + parse_years(after)]])[-8:]
             elif k == "time":
                 self.years += parse_years(v)  # hidden: the player sees only the age
@@ -1943,7 +1946,7 @@ WORLD = {
                      claim=[("запалив свічку і розповідав страшилки", dict(mood=15, mystic=2), 3),
                             ("підпалив штори", dict(clean=-30, health=-10), 1),
                             ("знайшов павербанк і став королем під'їзду", dict(cha=3, money=150), 2)]),
-    "fair": dict(title="🎪 Ярмарок на площі!", text="Сорочинський ярмарок приїхав у наш чат: каруселі, мед, цигани з картами.",
+    "fair": dict(title="🎪 Ярмарок на площі!", text="Сорочинський ярмарок приїхав у наш чат: каруселі, мед і ворожка з картами.",
                  button="🎡 Бігти на ярмарок", n=6, global_fx={},
                  claim=[("виграв у тирі", dict(item_slot="held", mood=10), 3), ("об'ївся медом", dict(hunger=50, glutton=2), 3),
                         ("ворожка обдурила на 200 ₴", dict(money=-200, mystic=1), 2),

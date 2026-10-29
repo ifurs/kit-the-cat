@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.6.1] — 2026-10-29
+
+### Fixed
+- A failed dream step could come back after every few adventures (a weak pet repeated `dr_drone_2` endlessly):
+  every follow-up is scheduled at most `FOLLOWUP_MAX = 3` times per life, and dream retries wait ≥ 2 years.
+- The fair world event no longer uses an ethnic stereotype («ворожка з картами»).
+
 ## [0.6.0] — 2026-10-29
 
 ### Changed
@@ -127,7 +134,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/ifurs/kit-the-cat/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/ifurs/kit-the-cat/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ifurs/kit-the-cat/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/ifurs/kit-the-cat/compare/v0.3.0...v0.4.0

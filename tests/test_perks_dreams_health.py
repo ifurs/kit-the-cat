@@ -78,3 +78,21 @@ def test_health_recovers_slowly_and_the_doctor_costs_money():
     p.money = 0
     text, notes = E.care(p, "heal", random.Random(0))
     assert notes == [] and "₴" in text
+
+
+def test_a_failed_dream_step_comes_back_only_a_few_times():
+    p, rng = _pet(goal="drone"), random.Random(0)
+    p.flags["dr_drone"] = 1
+    p.followups = [["dr_drone_2", p.years]]
+    seen = 0
+    for _ in range(40):
+        e, _ = p.pick_event([p], rng)
+        if e and e.id == "dr_drone_2":
+            seen += 1
+            p.resolve(e, 2, None, rng)  # quarrels in the comments: always a retry
+        elif e:
+            p.resolve(e, 0, None, rng)
+        p.years += 1
+        if not p.alive:
+            break
+    assert 1 <= seen <= E.FOLLOWUP_MAX + 1
