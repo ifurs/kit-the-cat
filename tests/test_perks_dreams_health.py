@@ -140,3 +140,15 @@ def test_youth_events_fit_their_age_and_never_kill_a_child():
     assert p.eligible(E.EVENTS["kid_puddle"], None) and not p.eligible(E.EVENTS["teen_skatepark"], None)
     p.years = 15
     assert p.eligible(E.EVENTS["teen_skatepark"], None) and not p.eligible(E.EVENTS["kid_puddle"], None)
+
+
+def test_outgrown_pending_event_is_dropped_and_childhood_lasts():
+    p = _pet()
+    p.years, p.stage = 11.9, 1
+    p.start(E.EVENTS["kid_yard_hq"], None, "manual")
+    p.jail_until = E.now() + 3600 * 999          # jail is not an age matter: the check must not trip on it
+    assert p.age_fits(E.EVENTS["kid_yard_hq"])
+    p.jail_until = 0.0
+    p._step(24.0, E.now(), random.Random(0))       # a day later the kid is a teen
+    assert p.phase() == "teen" and not p.pending
+    assert 2.5 <= E.STAGE_YEARS[2] / E.YEARS_PER_DAY[1] <= 4  # childhood: about three real days

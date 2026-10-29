@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Changed
+- **Childhood lasts longer**: a kid ages 4 years per game day instead of 7 — about three real days and twice as many
+  childhood adventures (≈16 instead of ≈8); a whole life still takes 35–39 real days.
+- **Phone layout of the browser game**: a compact pet header (small sprite beside the name), skills and life stats
+  folded under «📊 Навички й статус», the four tabs in one row, and a bottom dock with «🎲 Нова пригода» /
+  «❗ Вирішити пригоду», 💊 and 🐾 that jumps straight to the adventure; the scene picture has a fixed height so
+  every choice fits above the dock. Desktop is unchanged.
+
+### Fixed
+- An unanswered adventure the pet has outgrown is dropped (a 17-year-old no longer gets «ріжуться зуби» from the
+  baby days): `Pet.age_fits()` re-checks stage, phase and years as the pet ages.
+
 ## [0.8.0] — 2026-10-29
 
 ### Added
