@@ -5,6 +5,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Changed
+- **Decisions cost life time again, hidden from the player**: `Choice.time` / `Event.time`, `dsl.infer_time`,
+  module bases and `CHOICE_TIME` are back, but `Pet.button()` shows no time and outcomes add no «⏳» note.
+  `Result.time` tells hosts how many years a decision took (to pace their world); `Pet.spend()` charges hidden
+  time for actions — casino (1d/3d/1w), job interview (2w), doctor (1w). Jail and hospital eat years again.
+  The clock is slower (`YEARS_PER_DAY` 7/2/1.4/1.4): a life is ~86 years ≈ 38 days in the bot.
+- **Health matters**: natural recovery is slow (`HEAL_PER_H = 0.3`, faster in a good mood); health at 0 after a
+  choice kills («не пережив пригоду «…»»); the doctor (💊) costs `HEAL_PRICE` 150 ₴ for adults.
+- **Sandbox / browser game: no time button.** The egg has a one-time «🐣 Вилупити» (`hatch` action); every action
+  moves the world on by the life time it cost (`Sandbox._pass`); your own pets never live without you.
+
+### Added
+- **Temperament perks** (`persona.PERKS`, `Pet.perk()`, `perk_text()`): base-stat modifiers for all 36
+  temperaments, counted in every check; in-character choices get +8, come up more often, feed the lean trait more
+  and are marked 🎭 on buttons («🎭 конспіролог: у своїй стихії» in the result).
+- **Dreams are goals** (`persona.GOALS`, `req=dict(goal=…)`, `Pet.goal_step()`, `goal_text()`): 12 dreams, each
+  with a three-step quest (36 events in `dreams.py`), retries after failures, «Мрія збулася» achievement, a life
+  title and a summary line. Old pets get a goal on load.
+- **11 health events** (`health.py`): tooth, check-up, gym, Truskavets, a roof at sunset, an e-scooter, running,
+  sleep, blood pressure, blood donation, appendicitis.
+- Balance: `dream_share` target (25–85% of lives fulfil the dream); event deaths up to 25%.
+
 ## [0.5.0] — 2026-10-28
 
 ### Changed

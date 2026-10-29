@@ -7,15 +7,19 @@
           fail=[o("Нічого не виграв.", money=-50)], auto="gambler"),
        req=dict(stage=2))
 
-Time: a pet ages by the clock (engine.YEARS_PER_DAY); decisions themselves cost no time. A story outcome may
-skip years: o("Прокинувся через п'ять років…", time="5y"). Durations: "3d", "2w", "6m", "4y" or years.
+Time: every decision costs some of the pet's life, and the player never sees how much (no time on buttons).
+A choice costs `time` if it has one, else `infer_time(choice, base)` — the event's / module's base plus what the
+choice does (studying, settling into a job, moving, a serious relationship, a story step, skills learned, money
+earned). Give `time=` to the choices whose cost is obvious from the story: «Вступити в КПІ» → "4y", «Купити
+хліб» → "1d". An outcome may cost extra: o("Прокинувся через п'ять років…", time="5y"). Jail and hospital eat
+life too. Durations: "3d", "2w", "6m", "4y" or a number of years. On top of that the clock ages pets slowly.
 
 Effects (o(..., **fx)):
   hunger mood clean health energy      stat deltas (0..100); hunger/clean/energy are automatic upkeep — use
                                        mood and health in new content
   fame auth blat fin attr              life stats 0..100 with tiers (engine.LIFE): популярність, авторитет, блат,
                                        фінграмотність, привабливість (style and charm, never mocking looks)
-  time="5y"                            the story skips that much of the pet's life (coma, a sentence, cryosleep)
+  time="5y"                            extra life time this outcome costs (coma, a sentence, cryosleep)
   str int cha luck                     skill deltas
   toxic gambler dark party patriot glutton love mystic   trait deltas
   money xp lifespan                    ₴, experience, years of life
@@ -52,7 +56,7 @@ Requirements (req=dict(...)):
   debt=500 (money <= -500)   low={"health": 40}   role="vampire" | role="any" | norole=True
   other_role="vampire"   nostatus=[...]   other_partner=False   other_stage_max=2
   life={"fame": 40} (life stat at least)   tier={"fame": 2, "money": 3} (tier at least; money tiers too)
-  tier_max={"auth": 0}   years=(18, 60) (age in years)
+  tier_max={"auth": 0}   years=(18, 60) (age in years)   goal="mayor" (the pet's dream, persona.GOALS)
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence) | list of those | month numbers (real Kyiv date)
 """
@@ -72,7 +76,7 @@ KNOWN_FX = STATS | SKILLS | TRAITS | LIFE | {"time", "then",
 KNOWN_REQ = {
     "stage", "species", "flag", "noflag", "trait", "skill", "money", "debt", "job", "edu", "noedu", "has", "partner",
     "night", "jail", "age", "low", "status", "nostatus", "other_stage", "other_partner", "role", "norole", "other_role",
-    "season", "other_stage_max", "life", "tier", "tier_max", "years",
+    "season", "other_stage_max", "life", "tier", "tier_max", "years", "goal",
 }
 UNITS = {"d": 1 / 365, "w": 7 / 365, "m": 1 / 12, "y": 1.0}
 
@@ -84,6 +88,24 @@ def years(v) -> float:
     if isinstance(v, str) and len(v) > 1 and v[-1] in UNITS:
         return float(v[:-1]) * UNITS[v[-1]]
     raise ValueError(f"bad duration {v!r}")
+
+
+def infer_time(c: "Choice", base) -> float:
+    """Years a choice costs: the base plus what it does — studying, a new job, moving, a romance, a story step,
+    skills learned and money earned (averaged over its outcomes, so choices of one event differ)."""
+    outs = (c.outs + c.fail) or c.outs
+    num = lambda v: v if isinstance(v, (int, float)) and not isinstance(v, bool) else 0  # noqa: E731
+
+    def cost(fx: dict) -> float:
+        y = 3.0 if fx.get("edu") else 0.0
+        y += 1.0 if fx.get("job") else 0.0
+        y += 0.5 if fx.get("home") else 0.0
+        y += 0.3 if fx.get("flag") else 0.0
+        y += 1.0 if fx.get("baby") or fx.get("status") == "partner" else 0.0
+        y += 0.15 * max(0.0, sum(num(v) for k, v in fx.items() if k in SKILLS)) / 3
+        y += 0.25 * max(0.0, num(fx.get("money", 0))) / 1000
+        return y
+    return round(years(base) + sum(cost(o.fx) for o in outs) / max(1, len(outs)), 4)
 
 
 ROLES = {"vampire", "werewolf", "zombie", "demon", "angel", "cyborg", "alien", "quantum"}
@@ -104,6 +126,7 @@ class Choice:
     fail: list[Out] = field(default_factory=list)
     req: dict = field(default_factory=dict)
     auto: str = ""          # trait this choice expresses (used when the pet decides on its own)
+    time: str | float = ""  # life time this decision costs, hidden from the player ("" → infer_time)
 
 
 @dataclass
@@ -117,6 +140,7 @@ class Event:
     bg: str = ""
     once: bool = False
     aff: tuple = ()         # traits that make this event more likely
+    time: str | float = ""  # base cost of its choices ("" → the module's base)
     followup: bool = False  # only comes as a consequence (`then=`), never at random
 
 
@@ -124,10 +148,10 @@ def o(text: str, w: float = 1.0, **fx) -> Out:
     return Out(text, fx, w)
 
 
-def ch(label: str, *outs: Out, check=None, fail=None, req=None, auto: str = "") -> Choice:
-    return Choice(label, list(outs), check, list(fail or []), dict(req or {}), auto)
+def ch(label: str, *outs: Out, check=None, fail=None, req=None, auto: str = "", time: str | float = "") -> Choice:
+    return Choice(label, list(outs), check, list(fail or []), dict(req or {}), auto, time)
 
 
 def ev(id: str, text: str, *choices: Choice, req=None, w: float = 1.0, social: bool = False, bg: str = "",
-       once: bool = False, aff: tuple = (), followup: bool = False) -> Event:
-    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), followup)
+       once: bool = False, aff: tuple = (), time: str | float = "", followup: bool = False) -> Event:
+    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), time, followup)

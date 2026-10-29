@@ -19,14 +19,16 @@ async def dispatch(sb: Sandbox, o: int, b: dict) -> dict:
     x = b.get("x")
     if a == "create":
         msg = await sb.create(o, str(x))
+    elif a == "hatch":
+        msg = await sb.hatch(o)
     elif a == "heir":
         msg = await sb.heir(o)
     elif a == "care":
-        msg = await sb.care(int(b.get("owner") or o), str(x), actor_id=o)
+        msg = await sb._timed(o, sb.care(int(b.get("owner") or o), str(x), actor_id=o))
     elif a == "feed":
         msg = await sb.feed(o, str(x))
     elif a == "casino":
-        msg = await sb.casino(o, str(x), int(b.get("stake") or 0))
+        msg = await sb._timed(o, sb.casino(o, str(x), int(b.get("stake") or 0)))
     elif a == "adventure":
         msg = await sb.adventure(o, str(b.get("kind", "")), int(b.get("with") or 0))
     elif a == "choose":
@@ -34,11 +36,11 @@ async def dispatch(sb: Sandbox, o: int, b: dict) -> dict:
     elif a == "equip":
         msg = await sb.equip(o, int(x))
     elif a == "buy":
-        msg = await sb.buy(o, int(x))
+        msg = await sb._timed(o, sb.buy(o, int(x)))
     elif a == "move":
-        msg = await sb.move(o, int(x))
+        msg = await sb._timed(o, sb.move(o, int(x)))
     elif a == "job":
-        msg = await sb.apply_job(o, str(x))
+        msg = await sb._timed(o, sb.apply_job(o, str(x)))
     elif a == "quit":
         msg = await sb.quit_job(o)
     elif a == "rename":
