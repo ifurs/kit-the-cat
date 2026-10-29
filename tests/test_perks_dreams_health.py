@@ -96,3 +96,16 @@ def test_a_failed_dream_step_comes_back_only_a_few_times():
         if not p.alive:
             break
     assert 1 <= seen <= E.FOLLOWUP_MAX + 1
+
+
+def test_life_phases_split_adulthood_and_crises_come_at_their_age():
+    p = _pet()
+    for yrs, ph in ((8, "kid"), (15, "teen"), (25, "young"), (45, "middle"), (70, "grand")):
+        p.years = yrs
+        assert p.phase() == ph
+    p.years = 27
+    assert p.eligible(E.EVENTS["qlc_root"], None) and not p.eligible(E.EVENTS["mlc_root"], None)
+    assert not p.eligible(E.EVENTS["adult_midlife"], None)       # no midlife crisis at 27 any more
+    p.years = 44
+    assert p.eligible(E.EVENTS["mlc_root"], None) and not p.eligible(E.EVENTS["qlc_root"], None)
+    assert "Зрілість" in E.card(p, {})

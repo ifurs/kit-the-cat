@@ -87,7 +87,8 @@ class Sandbox:
         if not p:
             return out
         out["pet"] = dict(
-            name=p.name, state=p.state, stage=E.STAGES.get(p.stage, ""), card=E.card(p, names),
+            name=p.name, state=p.state, stage=E.PHASE_NAMES[p.phase()] if p.alive else E.STAGES.get(p.stage, ""),
+            card=E.card(p, names),
             stats={k: round(getattr(p, k)) for k in E.STATS}, money=int(p.money), level=p.level,
             age=round(p.age_days, 1), years=int(p.years),
             life=[dict(key=k, icon=v[0], name=v[1], value=round(p.life.get(k, 0)), tier=p.tier_name(k)[2:])

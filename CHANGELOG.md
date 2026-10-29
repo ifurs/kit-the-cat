@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **Life phases** (`engine.PHASES`, `Pet.phase()`, `req=dict(phase=…)`): childhood 0–12, youth 12–18, young
+  adulthood 18–30, maturity 30–60, old age 60+. The card shows the phase instead of the stage.
+- **33 events by age** (`ages.py`): a childhood dream (`dream_seed` makes the dream's quest come sooner), the
+  first class, a summer in the village, selling apples; driving school, camouflage nets, a hackathon, streaming;
+  roommates, the wedding summer, **the quarter-life crisis (24–30)** with four branches (travel, therapy, IT
+  courses, back to the parents); the parents' chat, a bad back, **the midlife crisis (40–50)** with four branches
+  (motorbike, garage band, Ironman, garlic in the village); a smartphone that turns a grandparent into a blogger,
+  the university of the third age, romance in a sanatorium, nets with the neighbours.
+
+### Changed
+- The old «Криза середнього віку» event comes only at 38–55, not to every adult.
+
+### Fixed
+- The card game with Death and the genie's «eternal youth» said «днів» but added 20–38 years (left over from
+  day-based ages): now +10 / +15 / −5 / +8 years, as the text says.
+
 ## [0.6.1] — 2026-10-29
 
 ### Fixed
