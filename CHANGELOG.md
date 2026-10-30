@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-10-30
+
 ### Added
 - **The story «Холостяк / Холостячка»** (phase 4): a TV dating show with the pet as its star, five decisions in a row
   (casting, limousine and the first rose, a group date in the Carpathians, a leaked-chat scandal, meeting the
@@ -327,7 +329,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.11.3...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/ifurs/kit-the-cat/compare/v0.11.3...v0.12.0
 [0.11.3]: https://github.com/ifurs/kit-the-cat/compare/v0.11.2...v0.11.3
 [0.11.2]: https://github.com/ifurs/kit-the-cat/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/ifurs/kit-the-cat/compare/v0.11.0...v0.11.1
