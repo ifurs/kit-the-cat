@@ -18,7 +18,7 @@ async def dispatch(sb: Sandbox, o: int, b: dict) -> dict:
     a = b.get("action", "")
     x = b.get("x")
     if a == "create":
-        msg = await sb.create(o, str(x))
+        msg = await sb.create(o, str(x), str(b.get("gender") or "") or None)
     elif a == "hatch":
         msg = await sb.hatch(o)
     elif a == "heir":

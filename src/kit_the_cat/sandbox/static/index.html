@@ -79,6 +79,8 @@ main > * { min-width: 0; }
 .row > * { min-width: 0; }
 .species { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .species button { padding: 14px 4px; }
+.sexpick { margin-top: 10px; justify-content: center; }
+.sex { font-size: .8em; font-weight: 400; color: var(--muted); margin-left: 4px; }
 
 .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
 .tabs button { position: relative; }
@@ -329,17 +331,20 @@ function renderDock() {  // phones: the main action is always one thumb away
 }
 const statsOpen = () => store.get("ks-stats") === "1";
 
+let adoptGender = "";  // "" = coin flip
 function renderPet() {
   const el = $("#pet"), p = S.pet;
-  const speciesGrid = S.species.map(([id, e, n]) => `<button data-sp="${id}">${e}<br><small>${esc(n)}</small></button>`).join("");
-  if (!p) el.innerHTML = `<div class="name">Заведи пета</div><p class="muted">Гени, характер і доля випадуть випадково.</p><div class="species">${speciesGrid}</div>`;
+  const speciesGrid = `<div class="seg sexpick" role="group" aria-label="Стать">${[["", "🎲 Будь-яка"], ["m", "♂ Хлопчик"], ["f", "♀ Дівчинка"]]
+    .map(([g, n]) => `<button data-g="${g}" class="${adoptGender === g ? "on" : ""}" aria-pressed="${adoptGender === g}">${n}</button>`).join("")}</div>`
+    + `<div class="species">${S.species.map(([id, e, n]) => `<button data-sp="${id}">${e}<br><small>${esc(n)}</small></button>`).join("")}</div>`;
+  if (!p) el.innerHTML = `<div class="name">Заведи пета</div><p class="muted">Гени, характер і доля випадуть випадково. Стать можна обрати.</p>${speciesGrid}`;
   else {
     const tags = [`💰 ${p.money} ₴`, `ур. ${p.level}`, p.rarity, p.role, p.job].filter(Boolean).map(esc).join(" · ");
     let h = `<div class="pet-head"><img class="sprite" src="/img/pet/${S.owner}.gif?k=${p.look}" alt="${esc(p.name)}">
-      <div><div class="name">${esc(p.name)}</div><div class="meta">${esc(p.stage)} · ${p.years} р. · ${tags}</div></div></div>`;
+      <div><div class="name">${esc(p.name)}<span class="sex" title="${p.gender === "f" ? "дівчинка" : "хлопчик"}">${p.gender === "f" ? "♀" : "♂"}</span></div><div class="meta">${esc(p.stage)} · ${p.years} р. · ${tags}</div></div></div>`;
     if (p.state === "egg") h += `<p class="muted">🎭 ${esc(p.persona.temper)} · мріє ${esc(p.persona.dream)}</p><button class="primary" id="hatch" style="width:100%">🐣 Вилупити</button>`;
     if (p.state === "dead") h += `${obit(p)}<button class="primary" id="heir" style="width:100%">🥚 Спадкоємець${p.heir ? " (від пари)" : ""}</button>
-      <details style="margin-top:8px"><summary class="muted">або новий рід</summary><div class="species">${speciesGrid}</div></details>`;
+      <details style="margin-top:8px"><summary class="muted">або новий рід</summary>${speciesGrid}</details>`;
     if (p.state === "alive") {
       const s = p.stats;
       const dream = p.dream_done ? `Мрія збулася: ${esc(p.persona.dream)}` : p.goal_step >= 3 ? `Мрія лишилася мрією: ${esc(p.persona.dream)}`
@@ -359,7 +364,11 @@ function renderPet() {
   }
   const st = el.querySelector(".stats-toggle");  // phones only: wider screens always show the stats (CSS)
   if (st) st.onclick = () => { const on = st.parentElement.classList.toggle("open"); st.ariaExpanded = on; store.set("ks-stats", on ? "1" : ""); };
-  el.querySelectorAll("[data-sp]").forEach(b => b.onclick = () => act("create", b.dataset.sp));
+  el.querySelectorAll("[data-g]").forEach(b => b.onclick = () => {
+    adoptGender = b.dataset.g;  // no re-render: the «new line» <details> stays open
+    el.querySelectorAll("[data-g]").forEach(x => { const on = x.dataset.g === adoptGender; x.classList.toggle("on", on); x.ariaPressed = on; });
+  });
+  el.querySelectorAll("[data-sp]").forEach(b => b.onclick = () => act("create", b.dataset.sp, { gender: adoptGender }));
   el.querySelectorAll("[data-care]").forEach(b => b.onclick = () => act("care", b.dataset.care));
   el.querySelectorAll("[data-more]").forEach(b => b.onclick = () => {
     if (b.dataset.more === "casino") more = more === "casino" ? "" : "casino";
