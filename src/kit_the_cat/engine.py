@@ -25,6 +25,7 @@ from .content.economy import (BACKGROUND_PRICES, EDUCATION, FOOD, HOME_UPKEEP, J
                               POTION, PRICES, ROLE_FOOD, WEALTH_TAX, WELFARE)
 from .content.persona import EPITAPHS, FEARS, FOODS, GOALS, NAME_SUFFIX, NAMES, PERKS, QUIRKS, TEMPERAMENTS
 
+NOBODY = dict(gen="когось", dat="комусь", acc="когось", ins="кимось", loc="кимось", voc="хтосю")  # no second pet
 SPEED = 1.0          # >1 = game time runs faster (set from PET_SPEED)
 DAY = 86400
 clock = time.time    # replaced by the simulator
@@ -639,7 +640,7 @@ class Pet:
                 other=other.name if other else "хтось", other_owner=other.owner_name if other else "хтось",
                 money=f"{int(self.money)}", role=ROLES.get(self.role, {}).get("name", ""),
                 **{f"name_{c}": self.name_in(c) for c in CASES[1:]},
-                **{f"other_{c}": other.name_in(c) if other else "хтось" for c in CASES[1:]},
+                **{f"other_{c}": other.name_in(c) if other else NOBODY[c] for c in CASES[1:]},
             ))
         except (ValueError, IndexError, AttributeError):
             return text

@@ -196,7 +196,7 @@ ARCS_SOUL = [
                                           glutton=1, then=("arc_drone_thanks_jar", "3m")), auto="glutton"),
        req=dict(stage=GROWN), once=True, bg="khrushchovka"),
     ev("arc_drone_thanks_jar", "Син сусідки передав фото: дрон з написом «Від нашого під'їзду» вже працює. "
-       "А на звороті — «Дякую, {name}».",
+       "А на звороті — «Дякую, {name_voc}».",
        ch("Повісити фото в під'їзді", o("Тепер це найважливіше фото будинку.", patriot=3, love=3)),
        ch("Відкрити нову банку", o("Будинок знову об'єднався. Наступна мета — тепловізор.", patriot=4, blat=2,
                                    love=2)),

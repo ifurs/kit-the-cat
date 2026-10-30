@@ -207,7 +207,8 @@ def test_fmt_substitutes_every_case_for_the_pet_and_for_the_other():
                  "Крилатим з Троєщини»")
     assert p.fmt("Привіт, {name}!") == "Привіт, Крилатий з Троєщини!"
     assert p.name_in("gen") == "Крилатого з Троєщини"
-    assert p.fmt("З {other_ins}") == "З хтось"  # no other pet: the stand-in word, never a placeholder
+    # no other pet: a stand-in word in the right case, never a placeholder
+    assert p.fmt("З {other_ins}, для {other_gen}, {other}") == "З кимось, для когось, хтось"
 
 
 def test_a_user_name_with_braces_is_a_value_not_a_template():
