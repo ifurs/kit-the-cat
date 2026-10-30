@@ -22,6 +22,11 @@ role takes its own case — {name_gen} «Крилатого з Троєщини�
 («Ей, {name_voc}!»); the same for {other_gen} … {other_voc}. «До {name} прийшов кур'єр» is a bug, «До {name_gen}
 прийшов кур'єр» is right; scripts/case_scan.py lists the suspicious ones. The rules live in grammar.py.
 
+Pets are boys or girls (Pet.gender "m" | "f"), and a text speaks about both: a word that changes with the gender is a
+pair, «{вилупився|вилупилася}» (the first for a boy, the second for a girl), «{other:відмовив|відмовила}» for the other
+pet of a social event. Exactly two alternatives, no braces, colons or bars inside them; the validator checks it.
+Rephrasing into something gender-neutral is often nicer than a pair. Do not put pairs in a name or a {placeholder}.
+
 Time: every decision costs some of the pet's life, and the player never sees how much (no time on buttons).
 A choice costs `time` if it has one, else `infer_time(choice, base)` — the event's / module's base plus what the
 choice does (studying, settling into a job, moving, a serious relationship, a story step, skills learned, money
@@ -94,7 +99,7 @@ Requirements (req=dict(...)):
 | `{quirk}` | дивна звичка |
 | `{temper}` | темперамент |
 | `{money}` | гроші пета (число) |
-| `{role}` | назва ролі (🧛 Вампір…) |
+| `{role}` | назва ролі за статтю пета (🧛 Вампір / 🧛 Вампірка…) |
 | `{other}` | ім'я іншого пета (лише social) |
 | `{other_owner}` | власник іншого пета (лише social) |
 | `{name_gen}` | ім'я пета в родовому відмінку (немає кого? — «Мурки») |
@@ -104,6 +109,8 @@ Requirements (req=dict(...)):
 | `{name_loc}` | місцевий, без прийменника (на кому? — «Мурці») |
 | `{name_voc}` | кличний (Ей, «Мурко»!) |
 | `{other_gen}…{other_voc}` | ті самі відмінки для імені іншого пета (лише social) |
+| `{він\|вона}` | слово за статтю пета: перша частина для хлопчика, друга для дівчинки («{вилупився\|вилупилася}») |
+| `{other:він\|вона}` | те саме за статтю іншого пета (лише social; без іншого пета — перша частина) |
 
 ## Стати, навички, риси
 
@@ -168,28 +175,28 @@ Requirements (req=dict(...)):
 
 ## Ролі (`role=`)
 
-| role | Назва | Пасивка |
-|---|---|---|
-| `vampire` | 🧛 Вампір | голод майже не мучить, вдень депресує, вночі — король. Кусає ворогів. |
-| `werewolf` | 🐺 Перевертень | сильний, а вночі злий і ще сильніший. |
-| `zombie` | 🧟 Зомбі | не лікується сам, зате майже не вмирає з голоду й живе довше. |
-| `demon` | 😈 Демон | токсичнішає щодня, але гроші до нього липнуть. |
-| `angel` | 😇 Ангел | лікує друзів, ніжнішає, приносить удачу в любові. |
-| `cyborg` | 🤖 Кіборг | не старіє, розумніший, їсть менше. Боїться відключень світла. |
-| `alien` | 👽 Іншопланетянин | з ним щодня трапляється щось дивне. |
-| `quantum` | ⚛️ Квантовий | існує в суперпозиції: 50% пережити будь-яку смерть. |
+| role | Назва | Назва (дівчинка) | Пасивка |
+|---|---|---|---|
+| `vampire` | 🧛 Вампір | 🧛 Вампірка | голод майже не мучить, вдень депресує, вночі — король. Кусає ворогів. |
+| `werewolf` | 🐺 Перевертень | 🐺 Перевертниця | сильний, а вночі злий і ще сильніший. |
+| `zombie` | 🧟 Зомбі | 🧟 Зомбі | не лікується сам, зате майже не вмирає з голоду й живе довше. |
+| `demon` | 😈 Демон | 😈 Демониця | токсичнішає щодня, але гроші до нього липнуть. |
+| `angel` | 😇 Ангел | 😇 Ангел | лікує друзів, ніжнішає, приносить удачу в любові. |
+| `cyborg` | 🤖 Кіборг | 🤖 Кіборг | не старіє, розумніший, їсть менше. Боїться відключень світла. |
+| `alien` | 👽 Іншопланетянин | 👽 Іншопланетянка | з ним щодня трапляється щось дивне. |
+| `quantum` | ⚛️ Квантовий | ⚛️ Квантова | існує в суперпозиції: 50% пережити будь-яку смерть. |
 
 ## Стосунки (`status=`)
 
-| status | Назва |
-|---|---|
-| `friend` | 🤝 друг |
-| `bestie` | 💛 найкращий друг |
-| `rival` | 😤 суперник |
-| `enemy` | ⚔️ ворог |
-| `crush` | 😳 закоханість |
-| `partner` | 💍 партнер |
-| `ex` | 💔 колишній |
+| status | Назва | Назва (дівчинка) |
+|---|---|---|
+| `friend` | 🤝 друг | 🤝 подруга |
+| `bestie` | 💛 найкращий друг | 💛 найкраща подруга |
+| `rival` | 😤 суперник | 😤 суперниця |
+| `enemy` | ⚔️ ворог | ⚔️ ворогиня |
+| `crush` | 😳 закоханість | 😳 закоханість |
+| `partner` | 💍 партнер | 💍 партнерка |
+| `ex` | 💔 колишній | 💔 колишня |
 
 ## Сезони й свята (`season=`)
 

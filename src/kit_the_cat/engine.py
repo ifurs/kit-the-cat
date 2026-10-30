@@ -17,7 +17,7 @@ from datetime import datetime
 
 from .tz import TZ
 from . import sprites
-from .grammar import CASES, inflect
+from .grammar import CASES, GENDERS, inflect, pick
 from .content import events as event_content
 from .content.dsl import years as parse_years
 from .content.dsl import KNOWN_REQ, Choice, Event, Out, ch, ev, o
@@ -72,8 +72,10 @@ STAGES = {0: "🥚 Яйце", 1: "👶 Малюк", 2: "🧒 Підліток", 
 SPECIES_EMOJI = {"pig": "🐷", "cat": "🐱", "dog": "🐶", "fox": "🦊", "horse": "🐴", "axolotl": "🦎", "bird": "🐦"}
 SPECIES_NAME = {"pig": "Свинка", "cat": "Котик", "dog": "Песик", "fox": "Лисичка", "horse": "Конячка",
                 "axolotl": "Аксолотль", "bird": "Пташка"}
-FALLBACK_NAMES = ["Бублик", "Пончик", "Шпротик", "Кексик", "Пиріжок", "Ґудзик", "Мармелад", "Чіпс", "Тефтелька",
-                  "Пельмешка", "Галушка", "Сирник", "Кавунчик", "Буряк", "Шкварка"]
+SPECIES_NAME_F = {**SPECIES_NAME, "cat": "Кішечка", "dog": "Собачка"}   # the rest sound the same for a girl
+FALLBACK_NAMES = {"m": ["Бублик", "Пончик", "Шпротик", "Кексик", "Пиріжок", "Ґудзик", "Мармелад", "Чіпс", "Сирник",
+                        "Кавунчик", "Буряк", "Крендель"],
+                  "f": ["Тефтелька", "Пельмешка", "Галушка", "Шкварка", "Цукерка", "Булочка", "Пампушка", "Смаколик"]}
 EGG_HOURS = 1.0
 # life: upkeep is automatic, age is in years, life stats have tiers. Every decision costs hidden life time
 # (content/events.py), the clock adds a slow drift on top: a life of ~80 years takes ~30 real days in the bot.
@@ -123,6 +125,8 @@ ROMANTIC = {"crush", "partner", "ex"}
 ROMANCE_MIN_STAGE = {"crush": 2, "partner": 3}  # crushes from teen age, couples and children only for adults
 STATUS_NAMES = {"friend": "🤝 друг", "bestie": "💛 найкращий друг", "rival": "😤 суперник", "enemy": "⚔️ ворог",
                 "crush": "😳 закоханість", "partner": "💍 партнер", "ex": "💔 колишній"}
+STATUS_NAMES_F = {**STATUS_NAMES, "friend": "🤝 подруга", "bestie": "💛 найкраща подруга", "rival": "😤 суперниця",
+                  "enemy": "⚔️ ворогиня", "partner": "💍 партнерка", "ex": "💔 колишня"}  # of the pet it is about
 # journal kinds worth a place in the chronicle / notices (importance 1..3)
 IMPORTANCE = {"died": 3, "twist": 3, "role": 3, "heir": 2, "ach": 2, "love": 2, "jail": 2, "tier": 2, "world": 1, "job": 1,
               "casino": 1,
@@ -133,32 +137,92 @@ IMPORTANCE = {"died": 3, "twist": 3, "role": 3, "heir": 2, "ach": 2, "love": 2, 
 # role overlays itself (Look.role), the engine skips its own overrides.
 ROLES = {
     "vampire": dict(name="🧛 Вампір", desc="голод майже не мучить, вдень депресує, вночі — король. Кусає ворогів.",
+                    name_f="🧛 Вампірка", desc_f="голод майже не мучить, вдень депресує, вночі — королева. Кусає ворогів.",
                     genes={"extra": "fangs"}, items=["cape@10"], undead=True,
                     bonus={"cha": 10}, night_bonus={"cha": 10, "str": 10},
                     ach=("Сто років без сонця", 3)),
     "werewolf": dict(name="🐺 Перевертень", desc="сильний, а вночі злий і ще сильніший.",
+                     name_f="🐺 Перевертниця", desc_f="сильна, а вночі зла і ще сильніша.",
                      genes={"ears": "dog_pointy", "extra": "fangs"}, items=["scar"],
                      bonus={"str": 5}, night_bonus={"str": 15},
                      ach=("Дитя повні", 2)),
     "zombie": dict(name="🧟 Зомбі", desc="не лікується сам, зате майже не вмирає з голоду й живе довше.",
+                   desc_f="не лікується сама, зате майже не вмирає з голоду й живе довше.",
                    genes={"color": "zombie"}, items=["flies", "plaster"], undead=True,
                    bonus={"str": 10, "cha": -10}, ach=("Живіший за живих", 5)),
     "demon": dict(name="😈 Демон", desc="токсичнішає щодня, але гроші до нього липнуть.",
+                  name_f="😈 Демониця", desc_f="токсичнішає щодня, але гроші до неї липнуть.",
                   genes={"ears": "devil", "tail": "devil_tail"}, items=["horns", "flames"],
                   bonus={"luck": 12}, ach=("Продав душу вигідно", 0)),
     "angel": dict(name="😇 Ангел", desc="лікує друзів, ніжнішає, приносить удачу в любові.",
                   genes={}, items=["halo", "angel_wings"], bonus={"cha": 10},
                   ach=("Ангел-охоронець", 0)),
     "cyborg": dict(name="🤖 Кіборг", desc="не старіє, розумніший, їсть менше. Боїться відключень світла.",
+                   desc_f="не старіє, розумніша, їсть менше. Боїться відключень світла.",
                    genes={"eyes": "button"}, items=["vr@11"], bonus={"int": 15},
                    ach=("Оновлення прошивки", 3)),
     "alien": dict(name="👽 Іншопланетянин", desc="з ним щодня трапляється щось дивне.",
+                  name_f="👽 Іншопланетянка", desc_f="з нею щодня трапляється щось дивне.",
                   genes={"extra": "antennae", "eyes": "three"}, items=["foil"], bonus={"int": 5},
                   rand_bonus=True, ach=("Контакт встановлено", 3)),
     "quantum": dict(name="⚛️ Квантовий", desc="існує в суперпозиції: 50% пережити будь-яку смерть.",
+                    name_f="⚛️ Квантова",
                     genes={}, items=["sparkles"], bonus={"luck": 8}, ach=("Кіт Шредінгера", 0)),
 }
 UNDEAD = {r for r, d in ROLES.items() if d.get("undead")}
+
+
+def role_name(role: str, gender: str = "m") -> str:
+    """«🧛 Вампір» / «🧛 Вампірка»; the masculine name when a role has no feminine one (Ангел, Кіборг, Зомбі)."""
+    r = ROLES.get(role, {})
+    return r.get("name_f", r.get("name", "")) if gender == "f" else r.get("name", "")
+
+
+def role_desc(role: str, gender: str = "m") -> str:
+    r = ROLES.get(role, {})
+    return r.get("desc_f", r.get("desc", "")) if gender == "f" else r.get("desc", "")
+
+
+def status_name(status: str, gender: str = "m") -> str:
+    """The relationship as a word about the pet it is about: «🤝 друг» / «🤝 подруга»."""
+    return (STATUS_NAMES_F if gender == "f" else STATUS_NAMES).get(status, status)
+
+
+def species_name(species: str, gender: str = "m") -> str:
+    return (SPECIES_NAME_F if gender == "f" else SPECIES_NAME).get(species, species)
+
+
+# Achievements are stored under their masculine key (old documents keep working); a girl sees the feminine title.
+# Keys that are the same for both (Династія, Нічна зміна…) are simply not listed.
+ACH_F = {
+    "Антикорупціонер": "Антикорупціонерка", "Багатодітний": "Багатодітна", "Безлімітний": "Безлімітна",
+    "Блогер року": "Блогерка року", "Був там": "Була там", "Ветеран праці": "Ветеранка праці",
+    "Ветеран пригод": "Ветеранка пригод", "Винахідник борщурми": "Винахідниця борщурми",
+    "Власник квартири": "Власниця квартири", "Вовк ОСББ": "Вовчиця ОСББ", "Герой": "Героїня",
+    "Довгожитель": "Довгожителька", "Дуелянт": "Дуелянтка", "Дід-інфлюенсер": "Баба-інфлюенсерка",
+    "Живіший за живих": "Живіша за живих", "Задонатив на дрон": "Задонатила на дрон",
+    "Засновник релігії": "Засновниця релігії", "Захисник сала": "Захисниця сала", "Знайшов Барона": "Знайшла Барона",
+    "Зібрав на пікап": "Зібрала на пікап", "Зірвав джекпот": "Зірвала джекпот",
+    "Козак із майбутнього": "Козачка з майбутнього", "Козацький кінь": "Козацька конячка",
+    "Король Марса": "Королева Марса", "Король помідорів": "Королева помідорів", "Кіт Шредінгера": "Кішка Шредінгера",
+    "Кіт-домушник": "Кішка-домушниця", "Ледь не став зіркою": "Ледь не стала зіркою", "Лис Микита": "Лиса Патрикіївна",
+    "Мер міста": "Мерка міста", "Меценат": "Меценатка", "Мрійник": "Мрійниця", "Мучитель шахраїв": "Мучителька шахраїв",
+    "Мільйонер (майже)": "Мільйонерка (майже)", "Небесний посланець": "Небесна посланниця",
+    "Ні живий, ні мертвий": "Ні жива, ні мертва", "Об'єднувач": "Об'єднувачка", "Обдурив чорта": "Обдурила чорта",
+    "Обраний": "Обрана", "Обіграв Смерть": "Обіграла Смерть", "Одружений": "Одружена", "Олімпіадник": "Олімпіадниця",
+    "Орденоносець": "Орденоносиця", "Пенсіонер-авторитет": "Пенсіонерка-авторитет",
+    "Переможець жука": "Переможниця жука", "Переміг злого двійника": "Перемогла злу двійницю",
+    "Переміг квантову фізику бюрократією": "Перемогла квантову фізику бюрократією",
+    "Перший у стратосфері": "Перша в стратосфері", "Побачив море": "Побачила море",
+    "Повернувся з космосу": "Повернулася з космосу", "Повернувся з того світу": "Повернулася з того світу",
+    "Подвиг онука": "Подвиг онуки", "Президент чату": "Президентка чату", "Продав душу вигідно": "Продала душу вигідно",
+    "Професор-аксолотль": "Професорка-аксолотль", "Підкорив Говерлу": "Підкорила Говерлу", "Пілот FPV": "Пілотка FPV",
+    "Рецидивіст": "Рецидивістка", "Свідок року": "Свідкиня року", "Скандаліст": "Скандалістка",
+    "Скарбошукач": "Скарбошукачка", "Хрещений батько": "Хрещена мати", "Чемпіон крашанок": "Чемпіонка крашанок",
+    "Чемпіон покеру": "Чемпіонка покеру", "Чемпіон породи": "Чемпіонка породи", "Чемпіон турніру": "Чемпіонка турніру",
+    "Щасливчик": "Щасливиця", "Ясновельможний": "Ясновельможна", "Непереможний": "Непереможна",
+    "Олігарх": "Олігархиня",
+}
 
 EVENTS: dict[str, Event] = {e.id: e for e in event_content.ALL}
 
@@ -396,6 +460,7 @@ class Pet:
     owner_id: int
     owner_name: str = ""
     name: str = ""
+    gender: str = "m"                               # "m" | "f": names, texts ({він|вона}), role and status words
     gen: int = 1
     dynasty: str = ""
     ancestors: list = field(default_factory=list)   # "Name (cause)" of previous generations
@@ -463,6 +528,8 @@ class Pet:
     @classmethod
     def from_dict(cls, d: dict) -> "Pet":
         p = cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+        if p.gender not in GENDERS:  # documents from ≤ 0.11 have no gender: every pet was a he
+            p.gender = "m"
         if isinstance(p.partner, int):  # old drafts stored the owner id
             p.partner = ""
         if p.persona and "goal" not in p.persona:  # ≤ 0.5: dreams were flavour; now every pet has a goal
@@ -550,8 +617,12 @@ class Pet:
         if name in self.achievements:
             return None
         self.achievements.append(name)
-        self.note("ach", f"🏆 {self.name}: досягнення «{name}»")
-        return f"🏆 {name}"
+        self.note("ach", f"🏆 {self.name}: досягнення «{self.ach_name(name)}»")
+        return f"🏆 {self.ach_name(name)}"
+
+    def ach_name(self, key: str) -> str:
+        """The title to show for a stored achievement key (a girl gets the feminine form where there is one)."""
+        return ACH_F.get(key, key) if self.gender == "f" else key
 
     def top_traits(self, n: int = 3) -> list[str]:
         return [t for t in sorted(TRAITS, key=lambda t: -self.traits.get(t, 0)) if self.traits.get(t, 0) >= 3][:n]
@@ -634,11 +705,11 @@ class Pet:
     def fmt(self, text: str, other: "Pet | None" = None) -> str:
         p = self.persona
         try:
-            return text.format_map(SafeDict(
+            return pick(text, self.gender, other.gender if other else None).format_map(SafeDict(
                 name=self.name, owner=self.owner_name, food=p.get("food", "борщ"), dream=p.get("dream", ""),
                 fear=p.get("fear", ""), quirk=p.get("quirk", ""), temper=p.get("temper", ""),
                 other=other.name if other else "хтось", other_owner=other.owner_name if other else "хтось",
-                money=f"{int(self.money)}", role=ROLES.get(self.role, {}).get("name", ""),
+                money=f"{int(self.money)}", role=self.role_name(),
                 **{f"name_{c}": self.name_in(c) for c in CASES[1:]},
                 **{f"other_{c}": other.name_in(c) if other else NOBODY[c] for c in CASES[1:]},
             ))
@@ -647,13 +718,23 @@ class Pet:
 
     def name_in(self, case: str) -> str:
         """The name in a grammatical case: "gen" «Мурки», "dat", "acc", "ins", "loc", "voc" (see grammar.py)."""
-        return inflect(self.name, case)
+        return inflect(self.name, case, self.gender)
+
+    def g(self, masculine: str, feminine: str) -> str:
+        """A gendered word for engine notes: p.g("вилупився", "вилупилася")."""
+        return feminine if self.gender == "f" else masculine
+
+    def role_name(self, role: str | None = None) -> str:
+        return role_name(self.role if role is None else role, self.gender)
+
+    def role_desc(self, role: str | None = None) -> str:
+        return role_desc(self.role if role is None else role, self.gender)
 
     # --- lifecycle ---------------------------------------------------------------------------
     def hatch(self, t: float) -> None:
         self.state, self.stage, self.hatched, self.last_tick, self.gday = "alive", 1, t, t, game_day(t)
         self.next_ev = t + random.uniform(1, 3) * hour()
-        self.note("hatched", f"🐣 Вилупився {self.name} ({SPECIES_NAME.get(self.species, self.species)})!")
+        self.note("hatched", f"🐣 {self.g('Вилупився', 'Вилупилася')} {self.name} ({species_name(self.species, self.gender)})!")
 
     def die(self, cause: str, rng: random.Random | None = None, natural: bool = False) -> bool:
         """Returns True if the pet really died (quantum and zombie twists can cancel it)."""
@@ -676,10 +757,10 @@ class Pet:
         self.state, self.cause, self.died = "dead", cause, now()
         if natural:
             self.counters["natural"] = 1
-        self.epitaph = rng.choice(EPITAPHS)
+        self.epitaph = self.fmt(rng.choice(EPITAPHS))
         self.pending, self.tale = {}, {}
         self.jail_until = self.hospital_until = 0.0
-        self.note("died", f"⚰️ {self.name} {cause}. Прожив {int(self.years)} {plural(int(self.years), 'рік', 'роки', 'років')}, рівень {self.level}.")
+        self.note("died", f"⚰️ {self.name} {cause}. {self.g('Прожив', 'Прожила')} {int(self.years)} {plural(int(self.years), 'рік', 'роки', 'років')}, рівень {self.level}.")
         return True
 
     def set_role(self, role: str) -> str | None:
@@ -688,16 +769,15 @@ class Pet:
         old = self.role
         self.role, self.role_since = role, now()
         if role:
-            r = ROLES[role]
             if role == "zombie":
                 self.lifespan += 25
             if role == "cyborg" and self.stage == 4:
                 self.stage = 3
             self.counters[f"role_{role}"] = 1
-            self.note("role", f"🌀 {self.name} тепер {r['name']}! ({r['desc']})")
-            return f"🌀 {r['name']}"
-        self.note("role", f"✨ {self.name} зцілився: більше не {ROLES[old]['name']}")
-        return f"✨ вже не {ROLES[old]['name']}"
+            self.note("role", f"🌀 {self.name} тепер {self.role_name()}! ({self.role_desc()})")
+            return f"🌀 {self.role_name()}"
+        self.note("role", f"✨ {self.name} {self.g('зцілився', 'зцілилася')}: більше не {self.role_name(old)}")
+        return f"✨ вже не {self.role_name(old)}"
 
     def tick(self, t: float | None = None, rng: random.Random | None = None) -> None:
         """Advance time to t in ≤1 game-hour steps. Everything notable lands in self.log."""
@@ -1078,8 +1158,8 @@ class Pet:
                     notes.append("🧬 мутація: " + ", ".join(got))
             elif k == "species":
                 if self.transform(v, rng):
-                    notes.append(f"🧬 тепер {SPECIES_NAME.get(self.species, self.species)}")
-                    self.note("twist", f"🧬 {self.name} перетворився на {SPECIES_NAME.get(self.species, '')}!")
+                    notes.append(f"🧬 тепер {species_name(self.species, self.gender)}")
+                    self.note("twist", f"🧬 {self.name} {self.g('перетворився', 'перетворилася')} на {species_name(self.species, self.gender)}!")
             elif k == "role":
                 n = self.set_role(v)
                 if n:
@@ -1108,7 +1188,7 @@ class Pet:
                 if v in ROMANCE_MIN_STAGE and min(self.stage, other.stage) < ROMANCE_MIN_STAGE[v]:
                     continue  # no romance for kids: relationship points still count, the status doesn't
                 self.set_status(other, v)
-                notes.append(STATUS_NAMES.get(v, v))
+                notes.append(status_name(v, other.gender))
             elif k == "other":
                 sub = other.apply(v, self, rng)
                 if sub:
@@ -1609,18 +1689,22 @@ def seed_life(p: Pet) -> dict:
                 attr=c(15 + sk.get("cha", 10) * 0.3 + tr.get("love", 0) * 0.2 + len(p.equipped) * 2))
 
 
-def make_name(species: str, taken: set[str], rng: random.Random) -> str:
-    pool = NAMES.get(species) or FALLBACK_NAMES
+def make_name(species: str, taken: set[str], rng: random.Random, gender: str = "m") -> str:
+    """A name of the pet's gender: a base name from the species pool plus, often, a tail («Велика», «з Троєщини»)."""
+    pool = (NAMES.get(species) or {}).get(gender) or FALLBACK_NAMES[gender]
+    col = 1 if gender == "f" else 0
     for _ in range(50):
-        n = rng.choice(pool) + rng.choice(NAME_SUFFIX)
+        n = rng.choice(pool) + rng.choice(NAME_SUFFIX)[col]
         if n not in taken:
             return n
     return rng.choice(pool) + f" №{rng.randint(2, 999)}"
 
 
 def new_pet(chat_id: int, owner_id: int, owner_name: str, species: str, others: list[Pet],
-            rng: random.Random, predecessor: Pet | None = None, partner_genes: dict | None = None) -> Pet:
-    """Fresh egg. With a predecessor: heir genes (hybrid if there was a partner), inheritance, dynasty."""
+            rng: random.Random, predecessor: Pet | None = None, partner_genes: dict | None = None,
+            gender: str | None = None) -> Pet:
+    """Fresh egg. With a predecessor: heir genes (hybrid if there was a partner), inheritance, dynasty.
+    `gender` is "m" or "f"; left out, it is a coin flip (an heir does not inherit its predecessor's gender)."""
     others_g = [x.genome for x in others if x.genes and x.state != "dead"]
     g = None
     if predecessor:
@@ -1634,9 +1718,11 @@ def new_pet(chat_id: int, owner_id: int, owner_name: str, species: str, others: 
         if species not in sprites.SPECIES:
             species = rng.choice(sprites.SPECIES)
         g = sprites.unique_genome(species, others_g, rng)
+    if gender not in GENDERS:
+        gender = rng.choice(GENDERS)
     temper, lean = rng.choice(TEMPERAMENTS)
-    p = Pet(chat_id=chat_id, owner_id=owner_id, owner_name=owner_name, genes=g.to_dict(),
-            name=make_name(g.species, {x.name for x in others}, rng),
+    p = Pet(chat_id=chat_id, owner_id=owner_id, owner_name=owner_name, genes=g.to_dict(), gender=gender,
+            name=make_name(g.species, {x.name for x in others}, rng, gender),
             skills={s: rng.randint(5, 16) for s in SKILLS},
             lifespan=rng.uniform(*LIFESPAN_YEARS),
             life=dict(fame=rng.randint(0, 5), auth=0, blat=rng.randint(0, 5), fin=rng.randint(3, 15),
@@ -1745,7 +1831,7 @@ def chat_daily(pets: list[Pet], rng: random.Random) -> list[str]:
             v.note("social", f"🩸 {p.name} вночі {what} {v.name_in('acc')}")
             if rng.random() < 0.15:
                 v.set_role(p.role)
-                line = f"🌀 {p.name} {what} {v.name_in('acc')}, і тепер {v.name} теж {ROLES[p.role]['name']}!"
+                line = f"🌀 {p.name} {what} {v.name_in('acc')}, і тепер {v.name} теж {v.role_name()}!"
                 v.note("twist", line)
                 out.append(line)
     return out
@@ -2100,7 +2186,7 @@ def world_start(key: str, pets: list[Pet], rng: random.Random) -> list[str]:
         rfx = w.get("role_fx", {}).get(p.role)
         if rfx:
             fx.update(rfx)
-            lines.append(f"{p.name} ({ROLES[p.role]['name']})")
+            lines.append(f"{p.name} ({p.role_name()})")
         if w.get("rich_fx") and p.money > 2000:
             fx.update(w["rich_fx"])
         if fx:
@@ -2289,14 +2375,14 @@ def life_summary(p: Pet, names: dict[str, str] | None = None) -> dict:
     if dream:
         facts.append(f"🌟 здійснив мрію: {dream}" if p.flags.get("dream_done") else
                      f"🎯 мріяв {dream}" + (f" (дійшов до кроку {p.goal_step()} з 3)" if 0 < p.goal_step() < 3 else ""))
-    roles = [ROLES[k[5:]]["name"] for k in c if k.startswith("role_") and k[5:] in ROLES]
+    roles = [p.role_name(k[5:]) for k in c if k.startswith("role_") and k[5:] in ROLES]
     if roles or p.flags.get("jailed_times"):
         facts.append(" · ".join(roles + ([f"⛓ відсидок: {p.flags['jailed_times']}"] if p.flags.get("jailed_times") else [])))
     peaks = [p.tier_name(k, c[f"tier_{k}"]) for k in LIFE if c.get(f"tier_{k}", 0) >= 2]
     if peaks:
         facts.append("Досяг: " + " · ".join(peaks))
     if p.achievements:
-        facts.append(f"🏆 {len(p.achievements)}: " + ", ".join(p.achievements[-4:]))
+        facts.append(f"🏆 {len(p.achievements)}: " + ", ".join(p.ach_name(a) for a in p.achievements[-4:]))
     st = list(p.status.values())
     family = [f"💍 {names[p.partner]}" if p.partner in names else "",
               f"🥚 дітей: {p.children}" if p.children else "",
@@ -2363,7 +2449,7 @@ def card(p: Pet, names: dict[str, str]) -> str:
         f"👤 {_esc(p.owner_name)} · {tier}" + (f" · 👑 {_esc(p.dynasty)} ({p.gen})" if p.gen > 1 else ""),
     ]
     if p.role:
-        lines.append(f"{ROLES[p.role]['name']} — <i>{ROLES[p.role]['desc']}</i>")
+        lines.append(f"{p.role_name()} — <i>{p.role_desc()}</i>")
     lines += [
         f"❤️ здоров'я {bar(p.health)} {int(p.health)} · 😊 настрій {bar(p.mood)} {int(p.mood)}",
         f"💰 {int(p.money)} ₴ · {p.tier_name('money')}",
@@ -2395,7 +2481,7 @@ def card(p: Pet, names: dict[str, str]) -> str:
     if rels:
         lines.append(" · ".join(rels))
     if p.achievements:
-        lines.append(f"🏆 {len(p.achievements)}: " + ", ".join(_esc(a) for a in p.achievements[-3:]))
+        lines.append(f"🏆 {len(p.achievements)}: " + ", ".join(_esc(p.ach_name(a)) for a in p.achievements[-3:]))
     if p.jailed:
         lines.append(f"⛓ За ґратами ще {(p.jail_until - now()) / hour():.0f} год.")
     if p.in_hospital:

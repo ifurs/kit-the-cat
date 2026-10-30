@@ -1,6 +1,6 @@
 # Plan: name cases, pet gender, «Холостяк / Холостячка»
 
-Status: phase 1 done on `feat/gender-cases` (not pushed) · written 2026-10-29 · executor: Claude Sonnet, one phase per session.
+Status: phases 1–2 done on `feat/gender-cases` (not pushed) · written 2026-10-29 · executor: Claude Sonnet, one phase per session.
 
 Three user-visible problems, in the order they are fixed:
 
@@ -72,21 +72,21 @@ Numbers to keep in mind (2026-10-29): 698 events in 25 content modules, 606 `{na
 
 ## Phase 2 — gender in the engine  · 1 session
 
-- [ ] `Pet.gender: str = "m"` (`"m"` | `"f"`), saved in the document, default `"m"` in `from_dict`.
-- [ ] `new_pet(..., gender=None)`: random 50/50 when not given; heirs get a fresh random gender.
-- [ ] `content/persona.py`: `NAMES[species]` → `{"m": [...], "f": [...]}`; move the existing girls' names to `"f"` and
+- [x] `Pet.gender: str = "m"` (`"m"` | `"f"`), saved in the document, default `"m"` in `from_dict`.
+- [x] `new_pet(..., gender=None)`: random 50/50 when not given; heirs get a fresh random gender.
+- [x] `content/persona.py`: `NAMES[species]` → `{"m": [...], "f": [...]}`; move the existing girls' names to `"f"` and
   add enough so each list has ≥ 12. `NAME_SUFFIX` → pairs (`(" Великий", " Велика")`, `(" Третій", " Третя")`,
   tails like `" з Троєщини"` are shared). `make_name(species, taken, rng, gender)`.
-- [ ] **Template syntax for gendered words**: `{вилупився|вилупилася}` (the pet) and `{other:відмовив|відмовила}`
+- [x] **Template syntax for gendered words**: `{вилупився|вилупилася}` (the pet) and `{other:відмовив|відмовила}`
   (the other pet). `Pet.fmt` substitutes these with a regex **before** `format_map`
   (`\{(?:(other):)?([^{}|:]*)\|([^{}|]*)\}`), so it never reaches `str.format`. Validator: exactly two alternatives,
   no nested braces, no placeholders inside the alternatives; document it in the DSL docstring + `docs/DSL.md`.
-- [ ] Gendered display data: `STATUS_NAMES` (друг/подруга, найкращий друг/найкраща подруга, суперник/суперниця,
+- [x] Gendered display data: `STATUS_NAMES` (друг/подруга, найкращий друг/найкраща подруга, суперник/суперниця,
   ворог/ворогиня — pick natural words), `PHASE_NAMES` if any are gendered, role names (Вампір/Вампірка?, Ангел — keep
   if a feminine form sounds silly; decide per word), epitaphs (`{|}` inside them), species names if needed.
-- [ ] Achievements: keep the stored key masculine (existing documents), add `ACH_F = {"Підкорив Говерлу":
+- [x] Achievements: keep the stored key masculine (existing documents), add `ACH_F = {"Підкорив Говерлу":
   "Підкорила Говерлу", …}` and `Pet.ach_name(key)` for display; the browser game and the bot show `ach_name`.
-- [ ] Tests: old document → `"m"`; a girl's `fmt` picks the second alternative; achievements display gendered;
+- [x] Tests: old document → `"m"`; a girl's `fmt` picks the second alternative; achievements display gendered;
   validator rejects malformed `{a|b|c}`.
 
 ## Phase 3 — gender in the content  · 3–4 sessions (≈ 6–8 modules each)
