@@ -1,6 +1,6 @@
 # Plan: name cases, pet gender, «Холостяк / Холостячка»
 
-Status: phases 1–3 done on `feat/gender-cases` (not pushed) · written 2026-10-29 · executor: Claude Sonnet, one phase per session.
+Status: phases 1–4 done on `feat/gender-cases` (not pushed) · written 2026-10-29 · executor: Claude Sonnet, one phase per session.
 
 Three user-visible problems, in the order they are fixed:
 
@@ -104,7 +104,7 @@ Numbers to keep in mind (2026-10-29): 698 events in 25 content modules, 606 `{na
 - Suggested split: session A — `life`, `youth`, `daily`, `consequences`; B — `chains`, `arcs`, `arcs_soul`, `social`,
   `status`; C — `jobs`, `dreams`, `stories`, `stories_more`; D — everything left + engine notes + `sandbox/game.py`.
 
-## Phase 4 — the «Холостяк / Холостячка» story  · 1 session
+## Phase 4 — the «Холостяк / Холостячка» story  · 1 session — **done** (`content/stories_tv.py`; the ending is the 6th event, so the final choice lives in the ending events)
 
 Design (write the texts with `kit-event-writer`; follow the «Історії» section of `docs/CONTENT_GUIDE.md`):
 

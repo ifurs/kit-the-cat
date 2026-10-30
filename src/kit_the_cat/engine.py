@@ -1565,8 +1565,9 @@ class Pet:
         """Apply a choice: skill check with natural 1/20, weighted outcomes, crits, twist tail, journal."""
         c = e.choices[idx]
         res = Result("", [], label=self.fmt(c.label, other))
-        if e.story and (not e.followup or self.tale.get("title") != e.story):
-            self.tale = dict(id=e.id, title=e.story, path=[], vars={}, fx={})  # a story begins
+        title = self.fmt(e.story) if e.story else ""  # «{Холостяк|Холостячка}»: the title is gendered like any text
+        if e.story and (not e.followup or self.tale.get("title") != title):
+            self.tale = dict(id=e.id, title=title, path=[], vars={}, fx={})  # a story begins
         elif not e.story:
             self.tale = {}
         outs = c.outs

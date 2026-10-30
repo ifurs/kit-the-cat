@@ -6,6 +6,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 ## [Unreleased]
 
 ### Added
+- **The story «Холостяк / Холостячка»** (phase 4): a TV dating show with the pet as its star, five decisions in a row
+  (casting, limousine and the first rose, a group date in the Carpathians, a leaked-chat scandal, meeting the
+  parents) and six endings picked by hidden scores (heart, show, drama): «Справжнє кохання», «Шоу-зірка», «Скандал
+  сезону», a quiet one, and a secret one that needs the third rose at the very start. A boy's season is «Холостяк»,
+  a girl's is «Холостячка» (the contestants are the other sex). «Піти на Холостяка» in `blog_viral` now sends the pet
+  to the casting (`tv_cast`); a charming pet (cha 60) can be scouted on the street. New achievements «Остання
+  троянда» and «Зірка реаліті». Story titles are now formatted like any text (`Pet.fmt`), which also fixes
+  «{Застряг|Застрягла} у ліфті».
 - **Pets have a gender** (phase 2; texts are not converted yet): `Pet.gender` `"m"` | `"f"` (saved in the document; old
   documents load as `"m"`), `new_pet(..., gender=None)` (a coin flip; an heir gets a fresh one). Name pools are split
   into boys' and girls' (≥ 12 each per species, `make_name(..., gender)`), tails agree with the gender («Мурка
