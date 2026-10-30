@@ -18,7 +18,8 @@ GATES = [
     ("Dead ends & hard checks", ["python", "scripts/content_stats.py", "--strict", "--gaps"]),
     ("DSL reference fresh", ["python", "scripts/gen_dsl_docs.py", "--check"]),
     ("Content tests", ["python", "-m", "pytest", "-q", "tests/test_dsl_contract.py", "tests/test_ua_lint.py",
-                       "tests/test_consequences.py", "tests/test_tooling.py", "tests/test_grammar.py"]),
+                       "tests/test_consequences.py", "tests/test_tooling.py", "tests/test_grammar.py",
+                       "tests/test_gender.py"]),
     ("Balance", ["python", "scripts/balance.py", "--pets", "24", "--days", "50"]),
 ]
 

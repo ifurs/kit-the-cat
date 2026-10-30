@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **Pets have a gender** (phase 2; texts are not converted yet): `Pet.gender` `"m"` | `"f"` (saved in the document; old
+  documents load as `"m"`), `new_pet(..., gender=None)` (a coin flip; an heir gets a fresh one). Name pools are split
+  into boys' and girls' (≥ 12 each per species, `make_name(..., gender)`), tails agree with the gender («Мурка
+  Велика», «Мурчик Великий»), names decline by gender (a feminine name on a consonant stays indeclinable).
+- **Gender pairs in texts**: `{вилупився|вилупилася}` for the pet and `{other:відмовив|відмовила}` for the other pet,
+  resolved by `Pet.fmt` before the name is substituted (`grammar.pick`); `content/validate.py` rejects a malformed
+  pair. Epitaphs, role names/descriptions (Вампірка, Перевертниця…), relationship words (подруга, суперниця…),
+  species words (Кішечка) and 70 achievement titles (`ACH_F`, shown through `Pet.ach_name`) have feminine forms.
+- API: `Pet.g`, `Pet.role_name`, `Pet.role_desc`, `Pet.ach_name`, `engine.role_name/role_desc/status_name/species_name`.
+  Breaking for hosts that read the data directly: `persona.NAMES[species]` is `{"m": …, "f": …}`, `NAME_SUFFIX` holds
+  `(masculine, feminine)` pairs, `FALLBACK_NAMES` is split by gender.
+
 ### Fixed
 - **Pet names are declined**: «Під дверима Крилатий з Троєщини пищить кошеня» is now «Під дверима Крилатого з
   Троєщини…». New `grammar.py` (`decline`, `inflect`) gives all seven cases of a name (adjectives, nouns on a

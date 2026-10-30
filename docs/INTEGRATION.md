@@ -48,6 +48,13 @@ await store.save_pets([p.to_dict()] + ([other.to_dict()] if other else []))
 
 Text from the engine (`Result`, `p.fmt(...)`) is plain Ukrainian with user-controlled pieces (pet and owner names) substituted. Pet names are declined by `grammar.py` (`p.name_in("gen")`, `grammar.inflect(name, case)`); to put a name into your own
 text use these instead of the bare `p.name` after a preposition or as an object.
+Pets have a gender (`p.gender`, `"m"` or `"f"`; `new_pet(..., gender=None)` flips a coin, an heir gets a fresh one,
+documents without the field load as `"m"`). Texts hold gender pairs («{вилупився|вилупилася}») that `p.fmt` resolves;
+for your own words use `p.g("він", "вона")`, `p.role_name()`, `p.role_desc()`, `engine.status_name(status, gender)`,
+`engine.species_name(species, gender)` and **`p.ach_name(key)`** — achievements are stored under their masculine key,
+show the result of `ach_name`, not the key. `ROLES[k]["name"]`, `STATUS_NAMES` and `SPECIES_NAME` stay the masculine
+forms (`name_f` / `desc_f`, `STATUS_NAMES_F`, `SPECIES_NAME_F` hold the feminine). `persona.NAMES[species]` is now
+`{"m": [...], "f": [...]}` and `NAME_SUFFIX` a list of `(masculine, feminine)` tails.
 **Escape it for your output format** (the bot uses HTML parse mode and escapes everything). Never use player
 input as a format template — `Pet.fmt` only formats trusted content templates.
 

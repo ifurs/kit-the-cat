@@ -11,11 +11,17 @@ indeclinable word («Ферарі», «Цок-Цок», a feminine name on a con
 stdlib only, never raise: user-chosen names go through here.
 
     inflect(name, "gen")  is the one-form shortcut for f-strings:  f"До {inflect(p.name, 'gen')} прийшли колектори".
+
+Gendered words in a text are written as a pair, «{вилупився|вилупилася}» for the pet and «{other:відмовив|відмовила}»
+for the other pet; pick(text, gender, other_gender) keeps the first alternative for "m" and the second for "f".
 """
 import re
 from functools import lru_cache
 
 CASES = ("nom", "gen", "dat", "acc", "ins", "loc", "voc")
+GENDERS = ("m", "f")
+# {masculine|feminine} for the pet, {other:masculine|feminine} for the other pet: no braces, colons or bars inside
+GENDER_RX = re.compile(r"\{(?:(other):)?([^{}|:]*)\|([^{}|]*)\}")
 
 # a tail starts at one of these words (compared in lower case) or at «№»
 PREPOSITIONS = {"з", "із", "зі", "від", "з-за", "із-за", "з-під", "до", "біля", "на", "в", "у", "по", "при", "над",
@@ -173,3 +179,23 @@ def decline(name: str, gender: str = "m") -> dict[str, str]:
 def inflect(name: str, case: str, gender: str = "m") -> str:
     """One form of a pet name: inflect("Мурка", "acc") → «Мурку»."""
     return decline(name, gender)[case]
+
+
+def pick(text: str, gender: str = "m", other_gender: str | None = None) -> str:
+    """Resolve the «{він|вона}» pairs of a template: the pet's own, and «{other:…|…}» for the other pet
+    (masculine when there is no other pet). Run it before str.format, so names never pass through it."""
+    def one(m: re.Match) -> str:
+        return m.group(3) if (other_gender if m.group(1) else gender) == "f" else m.group(2)
+    return GENDER_RX.sub(one, text)
+
+
+def template_errors(text: str) -> list[str]:
+    """Problems in the gender pairs of a template: a bar outside a well-formed {a|b}/{other:a|b} (three
+    alternatives, a colon, nested or unclosed braces), or an empty pair."""
+    errors = []
+    rest = GENDER_RX.sub(lambda m: "" if m.group(2) or m.group(3) else "\0", text)
+    if "\0" in rest:
+        errors.append("empty gender pair {|}")
+    if "|" in rest.replace("\0", ""):
+        errors.append("malformed gender pair: use exactly {masculine|feminine} or {other:masculine|feminine}")
+    return errors

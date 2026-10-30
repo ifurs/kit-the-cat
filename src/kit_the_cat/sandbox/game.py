@@ -97,11 +97,11 @@ class Sandbox:
             money_tier=p.tier_name("money"),
             casino=[dict(id=k, name=E.CASINO[k][0], lo=E.CASINO[k][2], hi=min(E.CASINO[k][3], int(p.money)))
                     for k in E.casino_venues(p)],
-            role=E.ROLES[p.role]["name"] if p.role in E.ROLES else "", job=JOBS[p.job]["name"] if p.job in JOBS else "",
+            role=p.role_name() if p.role in E.ROLES else "", job=JOBS[p.job]["name"] if p.job in JOBS else "",
             traits={E.TRAITS[t]: round(p.traits.get(t, 0), 1) for t in p.top_traits()},
             skills={k: round(p.skills.get(k, 0)) for k in E.SKILLS}, jailed=p.jailed, pending=None,
             genes=sprites.describe(p.genome), dna=sprites.dna_code(p.genome), rarity=sprites.rarity(p.genome)[1],
-            gen=p.gen, dynasty=p.dynasty, achievements=p.achievements[-12:], heir=bool(p.heir), look=_look_key(p),
+            gen=p.gen, dynasty=p.dynasty, achievements=[p.ach_name(a) for a in p.achievements[-12:]], heir=bool(p.heir), look=_look_key(p),
             persona={k: p.persona.get(k, "") for k in ("temper", "dream", "fear")}, emoji=E.SPECIES_EMOJI.get(p.species, "🐾"),
             perk=E.perk_text(p), goal_step=p.goal_step(), dream_done=bool(p.flags.get("dream_done")),
             power={k: round(p.skill(k)) for k in E.SKILLS},
