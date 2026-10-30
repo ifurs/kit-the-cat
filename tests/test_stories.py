@@ -79,3 +79,84 @@ def test_a_story_survives_growing_up_in_the_middle_of_a_step():
     p.start(E.EVENTS["st_date"], None, "manual")
     r = p.resolve(E.EVENTS["st_date"], 0, None, rng)
     assert r.next == "st_date_2" and p.tale and p.pending["id"] == "st_date_2"
+
+
+# --- «Холостяк / Холостячка» -------------------------------------------------------------------------------------
+
+def _girl() -> E.Pet:
+    p = _pet()
+    p.name, p.gender = "Мурка", "f"
+    return p
+
+
+def _tv_run(p: E.Pet, root: str, seed: int) -> list[E.Result]:
+    rng = random.Random(seed)
+    p.health, p.money, p.years = 100, 5000, 22
+    p.start(E.EVENTS[root], None, "manual")
+    return _play(p, [rng.randrange(4) for _ in range(6)], rng)
+
+
+def test_story_titles_are_gendered_like_any_text():
+    assert E.EVENTS["st_tv"].story == "{Холостяк|Холостячка}"
+    for p, want in ((_pet(), "Холостяк"), (_girl(), "Холостячка")):
+        rs = _tv_run(p, "st_tv", 1)
+        assert rs[-1].story["title"] == want and all(r.story["title"] == want for r in rs if r.next)
+    p = _girl()
+    p.health = 100
+    p.start(E.EVENTS["st_lift"], None, "manual")
+    rs = _play(p, [0], random.Random(3))
+    assert rs[-1].story["title"] == "Застрягла у ліфті" and "{" not in rs[-1].story["title"]
+
+
+def test_the_tv_story_plays_for_a_boy_and_a_girl_and_every_ending_is_reachable():
+    ends = set()
+    for make in (_pet, _girl):
+        for root in ("st_tv", "st_tv_scout"):
+            for seed in range(120):
+                p = make()
+                rs = _tv_run(p, root, seed)
+                assert 2 <= len(rs) <= 6 and not p.pending and not p.tale
+                steps = rs[-1].story["steps"]
+                assert len(steps) == len(rs) and all("{" not in s and "|" not in s for s in steps)
+                ends.add(rs[-2].next)
+    assert ends == {"st_tv_end_secret", "st_tv_end_love", "st_tv_end_scandal", "st_tv_end_star", "st_tv_end",
+                    "st_tv_end_no"}
+
+
+def test_a_girls_season_has_male_contestants_and_a_boys_season_female_ones():
+    boy, girl = _pet(), _girl()
+    t_boy = boy.fmt(E.EVENTS["st_tv_limo"].text)
+    t_girl = girl.fmt(E.EVENTS["st_tv_limo"].text)
+    assert "Оксана з Полтави" in t_boy and "Тарас" not in t_boy
+    assert "Тарас з Полтави" in t_girl and "Оксана" not in t_girl
+    assert "Холостячка" in girl.fmt(E.EVENTS["st_tv"].text) and "«Холостяк»" in boy.fmt(E.EVENTS["st_tv"].text)
+    assert boy.fmt(E.EVENTS["blog_viral"].choices[2].label) == "Піти на «Холостяка»"
+    assert girl.fmt(E.EVENTS["blog_viral"].choices[2].label) == "Піти на «Холостячку»"
+
+
+def test_blog_viral_casts_the_pet_and_the_story_can_then_fire():
+    p, rng = _girl(), random.Random(5)
+    p.years, p.health, p.stage = 24, 100, 3
+    assert not p.meets(E.EVENTS["st_tv"].req)
+    p.flags["blog"] = 1
+    p.start(E.EVENTS["blog_viral"], None, "manual")
+    res = p.resolve(E.EVENTS["blog_viral"], 2, None, rng)
+    assert p.flags["tv_cast"] == 1 and not res.next
+    assert p.meets(E.EVENTS["st_tv"].req) and p.phase() == "young"
+    _tv_run(p, "st_tv", 9)
+    assert "tv_cast" not in p.flags or not p.flags["tv_cast"]
+    assert not p.meets(E.EVENTS["st_tv"].req) or p.flags.get("seen_st_tv")
+
+
+def test_the_secret_ending_needs_the_quiet_rose_and_a_warm_heart():
+    p, rng = _pet(), random.Random(1)
+    p.health, p.years = 100, 24
+    p.start(E.EVENTS["st_tv"], None, "manual")
+    ids = [p.resolve(E.EVENTS["st_tv"], 0, None, rng).next]                     # honest contract: heart 1
+    ids.append(p.resolve(E.EVENTS["st_tv_limo"], 2, None, rng).next)           # the quiet rose: heart 2
+    ids.append(p.resolve(E.EVENTS["st_tv_date"], 0, None, rng).next)           # keep the peace: heart 3
+    ids.append(p.resolve(E.EVENTS["st_tv_scandal"], 1, None, rng).next)        # silence: heart 4, drama 1
+    ids.append(p.resolve(E.EVENTS["st_tv_parents"], 0, None, rng).next)        # Zhytomyr: heart 6
+    assert ids[-1] == "st_tv_end_secret"
+    end = p.resolve(E.EVENTS["st_tv_end_secret"], 0, None, rng)
+    assert "Остання троянда" in p.achievements and end.story["steps"][0] == "Підписати чесно"

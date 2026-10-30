@@ -5,6 +5,50 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-10-30
+
+### Added
+- **The story «Холостяк / Холостячка»** (phase 4): a TV dating show with the pet as its star, five decisions in a row
+  (casting, limousine and the first rose, a group date in the Carpathians, a leaked-chat scandal, meeting the
+  parents) and six endings picked by hidden scores (heart, show, drama): «Справжнє кохання», «Шоу-зірка», «Скандал
+  сезону», a quiet one, and a secret one that needs the third rose at the very start. A boy's season is «Холостяк»,
+  a girl's is «Холостячка» (the contestants are the other sex). «Піти на Холостяка» in `blog_viral` now sends the pet
+  to the casting (`tv_cast`); a charming pet (cha 60) can be scouted on the street. New achievements «Остання
+  троянда» and «Зірка реаліті». Story titles are now formatted like any text (`Pet.fmt`), which also fixes
+  «{Застряг|Застрягла} у ліфті».
+- **Pets have a gender** (phase 2; texts are not converted yet): `Pet.gender` `"m"` | `"f"` (saved in the document; old
+  documents load as `"m"`), `new_pet(..., gender=None)` (a coin flip; an heir gets a fresh one). Name pools are split
+  into boys' and girls' (≥ 12 each per species, `make_name(..., gender)`), tails agree with the gender («Мурка
+  Велика», «Мурчик Великий»), names decline by gender (a feminine name on a consonant stays indeclinable).
+- **Gender pairs in texts**: `{вилупився|вилупилася}` for the pet and `{other:відмовив|відмовила}` for the other pet,
+  resolved by `Pet.fmt` before the name is substituted (`grammar.pick`); `content/validate.py` rejects a malformed
+  pair. Epitaphs, role names/descriptions (Вампірка, Перевертниця…), relationship words (подруга, суперниця…),
+  species words (Кішечка) and 70 achievement titles (`ACH_F`, shown through `Pet.ach_name`) have feminine forms.
+- **Browser game: choose the gender** (phase 5): under the species buttons — ♂ Хлопчик / ♀ Дівчинка / 🎲 Будь-яка
+  (default 🎲, a coin flip); the card shows a small ♂/♀ next to the name. The sandbox API `create` takes an optional
+  `gender` (`"m"` | `"f"`), the state has `pet.gender`; both pages (`sandbox/static/index.html`, `web/index.html`) updated.
+- API: `Pet.g`, `Pet.role_name`, `Pet.role_desc`, `Pet.ach_name`, `engine.role_name/role_desc/status_name/species_name`.
+  Breaking for hosts that read the data directly: `persona.NAMES[species]` is `{"m": …, "f": …}`, `NAME_SUFFIX` holds
+  `(masculine, feminine)` pairs, `FALLBACK_NAMES` is split by gender.
+
+- **The texts speak about a girl in the feminine** (phase 3): ~1100 masculine words about the pet in 698 events and
+  the engine's notes became `{знайшов|знайшла}` pairs (verbs, predicate adjectives, «Ти — {герой|героїня}»,
+  «{Депутат|Депутатка} {name}», `{other:…|…}` for the other pet); death causes, epitaphs, life-summary titles,
+  casino/world/care/battle texts, temperaments (`TEMPER_F`), tier titles (`TIER_F`), life stages (`STAGES_F`) and job
+  names (`name_f` in `economy.JOBS`, `Pet.job_name`) have feminine forms. New `scripts/gender_scan.py` finds the
+  masculine words that are left; its `--strict` is a gate in `content_gate.py` (`scripts/gender_allow.txt` lists the
+  sentences that are about somebody else). Achievement keys stay masculine; `content/validate.py` measures texts as the
+  player reads them.
+
+### Fixed
+- **Pet names are declined**: «Під дверима Крилатий з Троєщини пищить кошеня» is now «Під дверима Крилатого з
+  Троєщини…». New `grammar.py` (`decline`, `inflect`) gives all seven cases of a name (adjectives, nouns on a
+  consonant / «-ь» / «-й» / «-о» / «-а» / «-я»; a tail after «з», «із», «від», «№» stays as it is; indeclinable and
+  foreign words stay put). Texts use `{name_gen}`, `{name_dat}`, `{name_acc}`, `{name_ins}`, `{name_loc}`,
+  `{name_voc}` and the same `{other_*}`; `{name}` is still the nominative, so old content and hosts keep working.
+  About 300 texts and the engine's notes were moved to the right case; `scripts/case_scan.py` lists the doubtful
+  ones and its `--strict` check (a preposition right before `{name}`) is part of `content_gate.py`.
+
 ## [0.11.3] — 2026-10-29
 
 ### Changed
@@ -285,7 +329,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.11.3...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/ifurs/kit-the-cat/compare/v0.11.3...v0.12.0
 [0.11.3]: https://github.com/ifurs/kit-the-cat/compare/v0.11.2...v0.11.3
 [0.11.2]: https://github.com/ifurs/kit-the-cat/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/ifurs/kit-the-cat/compare/v0.11.0...v0.11.1
