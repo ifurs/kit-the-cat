@@ -12,7 +12,7 @@ import random
 from dataclasses import dataclass, field
 
 from . import engine as E
-from .grammar import inflect
+from .grammar import inflect, pick
 
 STRATEGIES = {
     "aggressive": ("⚔️ Агресивно", "більше шкоди, менше захисту"),
@@ -52,7 +52,7 @@ HITS = {
     "axolotl": ["шльопає плавником", "плює водою", "кусає беззубим ротом"],
     "bird": ["клює в тім'я", "б'є крилом", "пікірує з висоти"],
 }
-WIN_LINES = ["{w} переміг! {l} лежить і рахує зірочки.", "Нокаут! {w} — справжній боєць.",
+WIN_LINES = ["{w} {переміг|перемогла}! {l} лежить і рахує зірочки.", "Нокаут! {w} — справжн{ій боєць|я бійчиня}.",
              "{l} здається й просить шаурму. {w} перемагає.", "Суддя зупиняє бій: {w} забирає перемогу.",
              "{w} виграє. Глядачі кидають на ринг вареники."]
 
@@ -71,6 +71,7 @@ class Fighter:
     crit: float
     dodge: float
     strategy: str = "careful"
+    gender: str = "m"
     specials: list = field(default_factory=list)   # [(trait, name, cooldown)]
     ultimate: str = ""
     elo: float = 1000.0
@@ -83,6 +84,9 @@ class Fighter:
     ult_used: bool = False
     first_hit: bool = True
 
+    def g(self, masculine: str, feminine: str) -> str:
+        return feminine if self.gender == "f" else masculine
+
     @classmethod
     def of(cls, p: "E.Pet", strategy: str = "careful") -> "Fighter":
         sk = p.skill
@@ -94,7 +98,7 @@ class Fighter:
             a, d = ITEM_POWER.get(it.split("@")[0], (0.5, 0.5) if it.startswith("gen:") else (0, 0))
             atk_i, dfn_i = atk_i + a, dfn_i + d
         hp = (70 + sk("str") * 0.5 + lvl * 3 + p.health * 0.3) * (1.25 if p.species == "pig" else 1.0)
-        f = cls(name=p.name, owner=p.owner_id, species=p.species, role=p.role,
+        f = cls(name=p.name, owner=p.owner_id, species=p.species, role=p.role, gender=p.gender,
                 hp=hp * stage_k, max_hp=hp * stage_k,
                 atk=(8 + sk("str") * 0.25 + lvl * 0.8 + atk_i) * stage_k * cond,
                 dfn=(3 + sk("int") * 0.1 + dfn_i) * cond,
@@ -132,9 +136,9 @@ def auto_strategy(p: "E.Pet", rng: random.Random) -> str:
     """NPC / absent owner: tactic by personality."""
     tt = p.top_traits(1)
     t = tt[0] if tt else ""
-    pick = {"toxic": "aggressive", "party": "aggressive", "patriot": "aggressive", "gambler": "lucky",
+    by_trait = {"toxic": "aggressive", "party": "aggressive", "patriot": "aggressive", "gambler": "lucky",
             "mystic": "lucky", "dark": "cunning", "love": "careful", "glutton": "careful"}.get(t)
-    return pick if pick and rng.random() < 0.7 else rng.choice(list(STRATEGIES))
+    return by_trait if by_trait and rng.random() < 0.7 else rng.choice(list(STRATEGIES))
 
 
 def _dmg(att: Fighter, de: Fighter, rng: random.Random, mult: float = 1.0, pierce: bool = False,
@@ -164,7 +168,7 @@ def fight(a: Fighter, b: Fighter, rng: random.Random, max_rounds: int = 25) -> B
         log.append(dict(r=rnd, side=side, text=text, hp=[round(max(0, a.hp)), round(max(0, b.hp))]))
 
     rnd = 0
-    say(-1, f"🔔 {a.name} ({STRATEGIES[a.strategy][0]}) проти {inflect(b.name, "gen")} ({STRATEGIES[b.strategy][0]})!")
+    say(-1, f"🔔 {a.name} ({STRATEGIES[a.strategy][0]}) проти {inflect(b.name, "gen", b.gender)} ({STRATEGIES[b.strategy][0]})!")
     order = [0, 1] if a.spd + rng.random() * 3 >= b.spd + rng.random() * 3 else [1, 0]
     winner = None
     for rnd in range(1, max_rounds + 1):
@@ -175,7 +179,7 @@ def fight(a: Fighter, b: Fighter, rng: random.Random, max_rounds: int = 25) -> B
             # start of turn: damage over time, regeneration, timers
             for dot in me.dot:
                 me.hp -= dot[0]
-                say(i, f"💀 Прокляття гризе {inflect(me.name, "acc")}: −{dot[0]:.0f}")
+                say(i, f"💀 Прокляття гризе {inflect(me.name, "acc", me.gender)}: −{dot[0]:.0f}")
             me.dot = [(d, t - 1) for d, t in me.dot if t > 1]
             if me.species == "axolotl" and me.hp > 0:
                 heal = me.max_hp * 0.03
@@ -202,7 +206,7 @@ def fight(a: Fighter, b: Fighter, rng: random.Random, max_rounds: int = 25) -> B
         winner = 0 if a.hp / a.max_hp >= b.hp / b.max_hp else 1
         say(-1, "⏱ Час вийшов — рішення суддів за відсотком здоров'я")
     w, l = fs[winner], fs[1 - winner]
-    text = rng.choice(WIN_LINES).format(w=w.name, l=l.name)
+    text = pick(rng.choice(WIN_LINES), w.gender, l.gender).format(w=w.name, l=l.name)
     say(winner, f"🏆 {text}")
     info = [dict(name=f.name, max_hp=round(f.max_hp), hp=round(max(0, f.hp)), strategy=STRATEGIES[f.strategy][0],
                  passive=SPECIES_PASSIVE.get(f.species, ("", ""))[0], specials=[s[1] for s in f.specials],
@@ -243,12 +247,12 @@ def _special(me: Fighter, foe: Fighter, i: int, trait: str, name: str, rng: rand
         foe.hp -= d
         foe.weak = 2
         say(i, f"{name}: «{rng.choice(['ти граєш як бот', 'твоя мама — пилосос', 'лох, просто лох'])}». "
-               f"{foe.name} −{d:.0f} і засмучений (−20% атаки)")
+               f"{foe.name} −{d:.0f} і {foe.g('засмучений', 'засмучена')} (−20% атаки)")
     elif trait == "gambler":
         if rng.random() < 0.5:
             d, tag = _dmg(me, foe, rng, 2.5)
             if tag == "dodge":
-                return say(i, f"{name}: ставка зіграла, але {foe.name} ухилився")
+                return say(i, f"{name}: ставка зіграла, але {foe.name} {foe.g('ухилився', 'ухилилася')}")
             foe.hp -= d
             say(i, f"{name} — ДЖЕКПОТ! {foe.name} −{d:.0f}")
         else:
@@ -257,18 +261,18 @@ def _special(me: Fighter, foe: Fighter, i: int, trait: str, name: str, rng: rand
             say(i, f"{name} — казино завжди виграє. {me.name} −{d:.0f}")
     elif trait == "dark":
         foe.dot.append((max(3.0, me.atk * 0.35), 3))
-        say(i, f"{name}: на {inflect(foe.name, "acc")} падає тінь (шкода 3 ходи)")
+        say(i, f"{name}: на {inflect(foe.name, "acc", foe.gender)} падає тінь (шкода 3 ходи)")
     elif trait == "party":
         if rng.random() < 0.6:
             foe.stun = 1
-            say(i, f"{name}: {foe.name} не втримався й танцює замість бою")
+            say(i, f"{name}: {foe.name} {foe.g('не втримався', 'не втрималася')} й танцює замість бою")
         else:
             say(i, f"{name}: {foe.name} не любить техно. Не подіяло")
     elif trait == "patriot":
         d, tag = _dmg(me, foe, rng, 1.4)
         me.buff = min(1.6, me.buff + 0.15)
         if tag == "dodge":
-            return say(i, f"{name}! {foe.name} ухилився, але {me.name} надихається (+15% атаки)")
+            return say(i, f"{name}! {foe.name} {foe.g('ухилився', 'ухилилася')}, але {me.name} надихається (+15% атаки)")
         foe.hp -= d
         say(i, f"{name}! {foe.name} −{d:.0f}, {me.name} надихається (+15% атаки)")
     elif trait == "glutton":
@@ -277,11 +281,11 @@ def _special(me: Fighter, foe: Fighter, i: int, trait: str, name: str, rng: rand
         say(i, f"{name}: {me.name} дістає бутерброд посеред бою. +{heal:.0f}")
     elif trait == "love":
         if rng.random() > 0.7:
-            return say(i, f"{name}: {foe.name} вивернувся з обіймів")
+            return say(i, f"{name}: {foe.name} {foe.g('вивернувся', 'вивернулася')} з обіймів")
         foe.stun = 1
         me.hp = min(me.max_hp, me.hp + 5)
         foe.hp = min(foe.max_hp, foe.hp + 5)
-        say(i, f"{name}: {foe.name} розчулився й забув, що треба битися")
+        say(i, f"{name}: {foe.name} {foe.g('розчулився', 'розчулилася')} й {foe.g('забув', 'забула')}, що треба битися")
     elif trait == "mystic":
         card = rng.choice(["sun", "tower", "death", "fool"])
         if card == "sun":
@@ -291,13 +295,13 @@ def _special(me: Fighter, foe: Fighter, i: int, trait: str, name: str, rng: rand
         elif card == "tower":
             d, _ = _dmg(me, foe, rng, 2.0, pierce=True, sure=True)
             foe.hp -= d
-            say(i, f"{name}: Вежа! На {inflect(foe.name, "acc")} падає цегла. −{d:.0f}")
+            say(i, f"{name}: Вежа! На {inflect(foe.name, "acc", foe.gender)} падає цегла. −{d:.0f}")
         elif card == "death":
             foe.dot.append((max(4.0, me.atk * 0.5), 2))
             say(i, f"{name}: Смерть! {foe.name} відчуває холод (шкода 2 ходи)")
         else:
             me.stun = 1
-            say(i, f"{name}: Блазень. {me.name} заплутався у власних картах")
+            say(i, f"{name}: Блазень. {me.name} {me.g('заплутався', 'заплуталася')} у власних картах")
 
 
 def _ultimate(me: Fighter, foe: Fighter, i: int, rng: random.Random, say) -> None:
@@ -350,8 +354,8 @@ def aftermath(win: "E.Pet", lose: "E.Pet", rng: random.Random) -> tuple[list[str
     delta = update_elo(win, lose)
     wn = win.apply(dict(mood=10, xp=8, str=0.5), None, rng)
     ln = lose.apply(dict(mood=-10, health=-8, xp=3), None, rng)
-    win.note("battle", f"🥊 {win.name} переміг {inflect(lose.name, "acc")} (рейтинг +{delta})")
-    lose.note("battle", f"🥊 {lose.name} програв {inflect(win.name, "dat")} (рейтинг −{delta})")
+    win.note("battle", f"🥊 {win.name} {win.g('переміг', 'перемогла')} {inflect(lose.name, "acc", lose.gender)} (рейтинг +{delta})")
+    lose.note("battle", f"🥊 {lose.name} {lose.g('програв', 'програла')} {inflect(win.name, "dat", win.gender)} (рейтинг −{delta})")
     if win.flags["wins"] in (5, 20, 50):
         win.ach({5: "Бійцівський клуб", 20: "Гроза району", 50: "Непереможний"}[win.flags["wins"]])
     return wn + [f"🏅 +{delta}"], ln + [f"🏅 −{delta}"]

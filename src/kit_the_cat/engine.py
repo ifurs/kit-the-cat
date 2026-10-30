@@ -23,7 +23,8 @@ from .content.dsl import years as parse_years
 from .content.dsl import KNOWN_REQ, Choice, Event, Out, ch, ev, o
 from .content.economy import (BACKGROUND_PRICES, EDUCATION, FOOD, HOME_UPKEEP, JOBS, MYSTERY_BOX, PENSION, POCKET,
                               POTION, PRICES, ROLE_FOOD, WEALTH_TAX, WELFARE)
-from .content.persona import EPITAPHS, FEARS, FOODS, GOALS, NAME_SUFFIX, NAMES, PERKS, QUIRKS, TEMPERAMENTS
+from .content.persona import (EPITAPHS, FEARS, FOODS, GOALS, NAME_SUFFIX, NAMES, PERKS, QUIRKS, TEMPER_F,
+                              TEMPERAMENTS)
 
 NOBODY = dict(gen="когось", dat="комусь", acc="когось", ins="кимось", loc="кимось", voc="хтосю")  # no second pet
 SPEED = 1.0          # >1 = game time runs faster (set from PET_SPEED)
@@ -69,13 +70,14 @@ SKILLS = {"str": "💪", "int": "🧠", "cha": "😎", "luck": "🍀"}
 SKILL_NAMES = {"str": "сила", "int": "розум", "cha": "харизма", "luck": "удача"}
 STATS = {"hunger": "🍖", "mood": "😊", "clean": "🧼", "health": "❤️", "energy": "⚡"}
 STAGES = {0: "🥚 Яйце", 1: "👶 Малюк", 2: "🧒 Підліток", 3: "🧑 Дорослий", 4: "👴 Старий"}
+STAGES_F = {**STAGES, 1: "👶 Малятко", 3: "🧑 Доросла", 4: "👵 Старенька"}
 SPECIES_EMOJI = {"pig": "🐷", "cat": "🐱", "dog": "🐶", "fox": "🦊", "horse": "🐴", "axolotl": "🦎", "bird": "🐦"}
 SPECIES_NAME = {"pig": "Свинка", "cat": "Котик", "dog": "Песик", "fox": "Лисичка", "horse": "Конячка",
                 "axolotl": "Аксолотль", "bird": "Пташка"}
 SPECIES_NAME_F = {**SPECIES_NAME, "cat": "Кішечка", "dog": "Собачка"}   # the rest sound the same for a girl
 FALLBACK_NAMES = {"m": ["Бублик", "Пончик", "Шпротик", "Кексик", "Пиріжок", "Ґудзик", "Мармелад", "Чіпс", "Сирник",
                         "Кавунчик", "Буряк", "Крендель"],
-                  "f": ["Тефтелька", "Пельмешка", "Галушка", "Шкварка", "Цукерка", "Булочка", "Пампушка", "Смаколик"]}
+                  "f": ["Тефтелька", "Пельмінка", "Галушка", "Шкварка", "Цукерка", "Булочка", "Пампушка", "Смаколик"]}
 EGG_HOURS = 1.0
 # life: upkeep is automatic, age is in years, life stats have tiers. Every decision costs hidden life time
 # (content/events.py), the clock adds a slow drift on top: a life of ~80 years takes ~30 real days in the bot.
@@ -92,6 +94,9 @@ STAGE_YEARS = {2: 12, 3: 18, 4: 60}
 PHASES = {"kid": (0, 12), "teen": (12, 18), "young": (18, 30), "middle": (30, 60), "grand": (60, 999)}
 PHASE_NAMES = {"kid": "👶 Дитинство", "teen": "🧒 Юність", "young": "🧑 Молодість", "middle": "🧔 Зрілість",
                "grand": "👴 Старість"}
+PHASE_NAMES_F = {**PHASE_NAMES, "middle": "🧑 Зрілість", "grand": "👵 Старість"}
+# dreams are stored as text (and GOAL_BY_DREAM maps them back); a girl reads these two in the feminine
+DREAM_F = {GOALS["mayor"]: "стати очільницею Конотопа", GOALS["blogger"]: "стати блогеркою-мільйонеркою"}
 LIFESPAN_YEARS = (74, 92)
 LIFE = {  # key: (icon, name, tier titles at LIFE_STEPS)
     "fame": ("📈", "популярність", ["Ніхто", "Зірка під'їзду", "Мікроблогер", "Медійна персона", "Зірка Євробачення"]),
@@ -108,6 +113,12 @@ LIFE_SHORT = {"fame": "слава", "auth": "авторитет", "blat": "бл�
 LIFE_ECHO = {"party": (("fame", 1.0),), "cha": (("fame", 0.5), ("attr", 0.4), ("blat", 0.3)), "toxic": (("auth", 0.8),),
              "dark": (("auth", 0.5),), "str": (("auth", 0.3),), "int": (("fin", 0.8),), "love": (("attr", 0.4),),
              "patriot": (("blat", 0.4),), "gambler": (("fin", -0.3),)}
+# tier titles that differ for a girl (everything else is the same for both)
+TIER_F = {"Бідний студент": "Бідна студентка", "Мажор": "Мажорка", "Олігарх": "Олігархиня", "Мікроблогер": "Мікроблогерка",
+          "Чистий перед законом": "Чиста перед законом", "Хуліган з району": "Хуліганка з району",
+          "Хрещений батько": "Хрещена мати", "Кум у ЦНАПі": "Кума в ЦНАПі", "Свій у міськраді": "Своя в міськраді",
+          "Інвестор": "Інвесторка", "Звичайний": "Звичайна", "Охайний": "Охайна", "Стильний": "Стильна",
+          "Красунчик району": "Красуня району"}
 MONEY_TIERS = [(-1e12, "🕳 У боргах"), (0, "🥫 Бідний студент"), (1000, "🧾 Середній клас"), (5000, "🚗 Мажор"),
                (20000, "🛥 Олігарх")]
 UPKEEP = [10, 20, 60, 180, 600]   # ₴/day cost of living by money tier (food, bills, «статус»); adults only
@@ -188,6 +199,20 @@ def status_name(status: str, gender: str = "m") -> str:
     return (STATUS_NAMES_F if gender == "f" else STATUS_NAMES).get(status, status)
 
 
+def job_name(job: str, gender: str = "m") -> str:
+    """«🛒 Касир АТБ» / «🛒 Касирка АТБ»; the job's id when it is unknown."""
+    j = JOBS.get(job)
+    return (j.get("name_f", j["name"]) if gender == "f" else j["name"]) if j else job
+
+
+def phase_name(phase: str, gender: str = "m") -> str:
+    return (PHASE_NAMES_F if gender == "f" else PHASE_NAMES)[phase]
+
+
+def stage_name(stage: int, gender: str = "m") -> str:
+    return (STAGES_F if gender == "f" else STAGES).get(stage, "")
+
+
 def species_name(species: str, gender: str = "m") -> str:
     return (SPECIES_NAME_F if gender == "f" else SPECIES_NAME).get(species, species)
 
@@ -199,13 +224,13 @@ ACH_F = {
     "Блогер року": "Блогерка року", "Був там": "Була там", "Ветеран праці": "Ветеранка праці",
     "Ветеран пригод": "Ветеранка пригод", "Винахідник борщурми": "Винахідниця борщурми",
     "Власник квартири": "Власниця квартири", "Вовк ОСББ": "Вовчиця ОСББ", "Герой": "Героїня",
-    "Довгожитель": "Довгожителька", "Дуелянт": "Дуелянтка", "Дід-інфлюенсер": "Баба-інфлюенсерка",
+    "Довгожитель": "Довгожителька", "Дуелянт": "Дуелянтка", "Дід-інфлюенсер": "Бабуся-інфлюенсерка", "Інвестор у часі": "Інвесторка у часі",
     "Живіший за живих": "Живіша за живих", "Задонатив на дрон": "Задонатила на дрон",
     "Засновник релігії": "Засновниця релігії", "Захисник сала": "Захисниця сала", "Знайшов Барона": "Знайшла Барона",
     "Зібрав на пікап": "Зібрала на пікап", "Зірвав джекпот": "Зірвала джекпот",
     "Козак із майбутнього": "Козачка з майбутнього", "Козацький кінь": "Козацька конячка",
     "Король Марса": "Королева Марса", "Король помідорів": "Королева помідорів", "Кіт Шредінгера": "Кішка Шредінгера",
-    "Кіт-домушник": "Кішка-домушниця", "Ледь не став зіркою": "Ледь не стала зіркою", "Лис Микита": "Лиса Патрикіївна",
+    "Кіт-домушник": "Кішка-домушниця", "Ледь не став зіркою": "Ледь не стала зіркою", "Лис Микита": "Лисичка Микитівна",
     "Мер міста": "Мерка міста", "Меценат": "Меценатка", "Мрійник": "Мрійниця", "Мучитель шахраїв": "Мучителька шахраїв",
     "Мільйонер (майже)": "Мільйонерка (майже)", "Небесний посланець": "Небесна посланниця",
     "Ні живий, ні мертвий": "Ні жива, ні мертва", "Об'єднувач": "Об'єднувачка", "Обдурив чорта": "Обдурила чорта",
@@ -239,41 +264,48 @@ BUILTIN = [
     ev("_date", "{name} і {other} пішли на побачення в «Пузату хату». Свічки, компот, напруга.",
        ch("Запросити на танець", o("Танцювали до закриття. Між ними іскра! ✨", rel=15, mood=15, love=1,
                                    other=dict(mood=15, love=1)), check=("cha", 30),
-          fail=[o("{name} наступив {other_dat} на лапу. Тричі. Незручно.", rel=-3, mood=-10)], auto="party"),
-       ch("Освідчитися в коханні", o("{other} почервонів і сказав «так»! 💘", status="crush", rel=20, love=3,
+          fail=[o("{name} {наступив|наступила} {other_dat} на лапу. Тричі. "
+                  "Незручно.", rel=-3, mood=-10)], auto="party"),
+       ch("Освідчитися в коханні", o("{other} {other:почервонів|почервоніла} і {other:сказав|сказала} «так»! "
+                                     "💘", status="crush", rel=20, love=3,
                                      other=dict(love=2, mood=20)), check=("cha", 40),
           fail=[o("«Давай залишимось друзями». Це боляче.", rel=-5, mood=-25, dark=1)],
           req=dict(nostatus=["partner", "crush"]), auto="love"),
        ch("Зробити пропозицію 💍", o("{other} плаче і каже «ТАК»! Весілля року!", status="partner", rel=25,
                                     achievement="Весілля року", mood=30, other=dict(mood=30)), check=("cha", 30),
-          fail=[o("{other} сказав, що ще не готовий. Каблучку з'їв офіціант.", rel=-10, mood=-30, money=-300)],
+          fail=[o("{other} {other:сказав|сказала}, що ще не {other:готовий|готова}. Каблучку з'їв "
+                  "офіціант.", rel=-10, mood=-30, money=-300)],
           req=dict(status=["crush"], partner=False, other_partner=False), auto="love"),
        ch("Подумати про дітей 🥚", o("Через кілька днів у гнізді з'явилось яйце. Династія росте!", baby=True, love=3,
                                     mood=20, other=dict(love=3, mood=20)), req=dict(status=["partner"]), auto="love"),
        ch("Втекти через вікно туалету", o("Класика. {other} досі чекає з компотом.", rel=-12, toxic=1), auto="toxic"),
        social=True, bg="love", req=dict(stage=(2, 4), other_stage=2)),
     ev("_fight", "{name} і {other} зустрілися за гаражами. Повітря пахне насінням і бійкою.",
-       ch("Битися до кінця", o("{name} переміг! {other} втік, ображено сопучи.", rel=-10, xp=10, str=2, cha=1,
+       ch("Битися до кінця", o("{name} {переміг|перемогла}! {other} {other:втік|втекла}, ображено "
+                               "сопучи.", rel=-10, xp=10, str=2, cha=1,
                                other=dict(health=-15, mood=-15)), check=("str", 30),
-          fail=[o("{other} надавав {name_dat} по пиці. Принизливо.", rel=-10, health=-15, mood=-15, other=dict(xp=10, str=1))],
+          fail=[o("{other} {other:надавав|надавала} {name_dat} по пиці. "
+                  "Принизливо.", rel=-10, health=-15, mood=-15, other=dict(xp=10, str=1))],
           auto="toxic"),
        ch("Кинути капцем", o("Капець влучив точно в лоб {other_gen}. Легендарно.", rel=-8, luck=1, cha=2,
                              other=dict(health=-8)), check=("luck", 25),
           fail=[o("Капець полетів у вікно сусідки. Тепер воюють утрьох.", rel=-5, mood=-10, money=-100)],
           auto="gambler"),
        ch("Помиритися", o("Обнялися. Тепер найкращі вороги.", rel=18, love=1, other=dict(love=1)), check=("cha", 30),
-          fail=[o("Простягнув лапу — отримав ляпаса.", rel=-5, mood=-10)], auto="love"),
+          fail=[o("{Простягнув|Простягнула} лапу — {отримав|отримала} ляпаса.", rel=-5, mood=-10)], auto="love"),
        ch("Покликати маму", o("Мама прийшла і надавала обом. Справедливо.", rel=5, health=-5, mood=-10,
                               other=dict(health=-5, mood=-10))),
        social=True, bg="kyiv"),
-    ev("_hangout", "{name} випадково зустрів {other_acc} біля кіоску з шаурмою.",
-       ch("Пригостити шаурмою", o("{other} оцінив. Тепер вони кенти.", rel=10, money=-70, love=1,
+    ev("_hangout", "{name} випадково {зустрів|зустріла} {other_acc} біля кіоску з шаурмою.",
+       ch("Пригостити шаурмою", o("{other} {other:оцінив|оцінила}. Тепер вони кенти.", rel=10, money=-70, love=1,
                                   other=dict(hunger=40, mood=10))),
-       ch("Позичити грошей", o("{other} позичив 200 ₴ «до п'ятниці». П'ятниця не настане.", rel=-3, money=200,
+       ch("Позичити грошей", o("{other} {other:позичив|позичила} 200 ₴ «до п'ятниці». П'ятниця не "
+                               "настане.", rel=-3, money=200,
                                other=dict(money=-200)), auto="gambler"),
        ch("Пліткувати про інших", o("Перемили кістки всьому чату. Зблизились.", rel=8, toxic=1, cha=1,
                                     other=dict(toxic=1)), auto="toxic"),
-       ch("Зробити вигляд, що не помітив", o("{other} помітив, що ти не помітив.", rel=-5, dark=1), auto="dark"),
+       ch("Зробити вигляд, що не {помітив|помітила}", o("{other} {other:помітив|помітила}, що ти не "
+                                                        "{помітив|помітила}.", rel=-5, dark=1), auto="dark"),
        social=True, w=0.5),
 ]
 for _e in BUILTIN:
@@ -287,40 +319,44 @@ TAILS = [
     ("Раптом подзвонила податкова. Вона все бачила.", dict(money_mult=0.85), 1),
     ("Сусідський кіт усе бачив і тепер шантажує {name_acc}.", dict(money=-60, dark=1), 1),
     ("На шум прибіг журналіст ТСН. {name} — зірка вечірнього випуску!", dict(cha=3, mood=10), 1),
-    ("Поруч ударила блискавка. {name} тепер трохи інший…", dict(mutate=1, health=-10), 0.6),
+    ("Поруч ударила блискавка. {name} тепер трохи {інший|інша}…", dict(mutate=1, health=-10), 0.6),
     ("Бабця на лавці прокляла {name_acc} просто так, для профілактики.", dict(luck=-3, mystic=1), 1),
     ("Голуб влучив {name_dat} просто в маківку. Кажуть, на гроші.", dict(money=77, clean=-25), 1),
     ("У кишені знайшовся забутий лотерейний квиток — і він виграшний!", dict(money=300, gambler=1), 0.8),
     ("Над головою закружляла зграя ворон. Погана прикмета.", dict(dark=2, mood=-5), 1),
     ("Вночі {name_acc} вкусив дивний блідий кажан…", dict(role="vampire", twist=True), 0.12),
     ("У повню {name_acc} подряпав дуже волохатий «пес»…", dict(role="werewolf", twist=True), 0.12),
-    ("{name} погладив кота Шредінгера. Тепер {name} одночасно є і нема.", dict(role="quantum", twist=True), 0.08),
+    ("{name} {погладив|погладила} кота Шредінгера. Тепер {name} одночасно є і "
+     "нема.", dict(role="quantum", twist=True), 0.08),
     ("Посеред ночі {name_acc} забрали на НЛО і повернули… не зовсім таким.", dict(role="alien", twist=True), 0.08),
-    ("{name} впав у радіоактивну калюжу за гаражами.", dict(mutate=2, health=-15), 0.4),
+    ("{name} {впав|впала} у радіоактивну калюжу за гаражами.", dict(mutate=2, health=-15), 0.4),
     ("Відключили світло. Усе в холодильнику зіпсувалось.", dict(hunger=-20, mood=-5), 1),
-    ("На смітнику {name} знайшов цілком нормальну річ!", dict(item_slot="head"), 0.7),
+    ("На смітнику {name} {знайшов|знайшла} цілком нормальну річ!", dict(item_slot="head"), 0.7),
     ("Подзвонила мама й спитала, коли вже онуки.", dict(love=2, mood=-8), 1),
     ("Хтось з чату вночі лайкнув стару фотку {name_gen}. Підозріло.", dict(cha=1, mood=5), 1),
     ("Злива змила весь бруд. Безкоштовний душ!", dict(clean=100), 1),
-    ("У новинах сказали, що {food} дарує безсмертя. {name} повірив.", dict(lifespan=5, glutton=1), 0.6),
+    ("У новинах сказали, що {food} дарує безсмертя. {name} {повірив|повірила}.", dict(lifespan=5, glutton=1), 0.6),
     ("Чорний кіт перейшов {name_dat} дорогу. Двічі. Туди й назад.", dict(luck=-2), 1),
-    ("Ворожка на базарі прошепотіла: «Ти обраний». Тепер {name} у це вірить.", dict(mystic=3, cha=1), 1),
+    ("Ворожка на базарі прошепотіла: «Ти {обраний|обрана}». Тепер {name} у це вірить.", dict(mystic=3, cha=1), 1),
     ("Сусід віддав {name_dat} старий ноутбук «бо все одно гальмує».", dict(item="laptop"), 0.3),
     ("Невідомий доброчинець задонатив {name_dat} 500 ₴.", dict(money=500, love=1), 0.6),
     ("Блогер зняв {name_acc} у тікток. 2 мільйони переглядів!", dict(cha=3, money=200), 0.7),
     ("Таксист-філософ прочитав {name_dat} лекцію про сенс життя.", dict(int=2, mystic=1), 1),
     ("{name} застряг у ліфті на 4 години. Без вайфаю.", dict(mood=-15, dark=1), 1),
-    ("На городі {name} викопав козацький скарб!", dict(money=1000, patriot=2, item="sabre"), 0.15),
+    ("На городі {name} {викопав|викопала} козацький скарб!", dict(money=1000, patriot=2, item="sabre"), 0.15),
     ("Кум приніс самогон «на пробу».", dict(party=2, health=-6, mood=10), 1),
     ("Сонце, кава і жодного повідомлення від начальника. Ідеальний день.", dict(mood=20), 1),
     ("З'явився двійник {name_gen}. Хто з них справжній — тепер невідомо.", dict(reroll_persona=True, twist=True), 0.12),
-    ("{name} лизнув батарейку. Тепер розуміє фізику.", dict(int=3, health=-8), 0.8),
-    ("{name} прокинувся… іншим видом. Лікарі розводять руками.", dict(species="random", twist=True), 0.06),
+    ("{name} {лизнув|лизнула} батарейку. Тепер розуміє фізику.", dict(int=3, health=-8), 0.8),
+    ("{name} {прокинувся|прокинулася}… іншим видом. Лікарі розводять "
+     "руками.", dict(species="random", twist=True), 0.06),
     ("Священник окропив {name_acc} свяченою водою. Сильно.", dict(role="", clean=30, mood=-5), 0.5),
     ("Зранку на подушці знайшлася пір'їнка. Біла. Світиться.", dict(role="angel", twist=True), 0.06),
-    ("{name} підписав якийсь договір дрібним шрифтом. Червоним чорнилом.", dict(role="demon", twist=True, money=666), 0.06),
+    ("{name} {підписав|підписала} якийсь договір дрібним шрифтом. Червоним "
+     "чорнилом.", dict(role="demon", twist=True, money=666), 0.06),
     ("Сусід-айтішник «трохи поапгрейдив» {name_acc}.", dict(role="cyborg", twist=True), 0.06),
-    ("{name} знайшов на дорозі 50 гривень і не віддав. Карма записала.", dict(money=50, toxic=1), 1),
+    ("{name} {знайшов|знайшла} на дорозі 50 гривень і не {віддав|віддала}. Карма "
+     "записала.", dict(money=50, toxic=1), 1),
 ]
 
 
@@ -590,8 +626,20 @@ class Pet:
     def tier_name(self, key: str, t: int | None = None) -> str:
         t = self.tier(key) if t is None else t
         if key == "money":
-            return MONEY_TIERS[t][1]
-        return f"{LIFE[key][0]} {LIFE[key][2][t]}"
+            icon, title = MONEY_TIERS[t][1].split(" ", 1)
+            return f"{icon} {self.girl(TIER_F, title)}"
+        return f"{LIFE[key][0]} {self.girl(TIER_F, LIFE[key][2][t])}"
+
+    def girl(self, feminine: dict, word: str) -> str:
+        """The feminine form of a word from a table, for a girl; the word itself otherwise."""
+        return feminine.get(word, word) if self.gender == "f" else word
+
+    def dream_text(self) -> str:
+        return self.girl(DREAM_F, self.persona.get("dream", ""))
+
+    def temper_name(self) -> str:
+        t = self.persona.get("temper", "")
+        return self.girl(TEMPER_F, t)
 
     def _tiers(self) -> None:
         """Announce new peaks of money and life-stat tiers (journal, story, achievements at the top)."""
@@ -600,7 +648,7 @@ class Pet:
             best = self.counters.get(f"tier_{key}", 1 if key == "money" else 0)  # hosts set it at birth/migration
             if t > best:
                 self.counters[f"tier_{key}"] = t
-                self.note("tier", f"{self.tier_name(key)} — {self.name} піднявся на новий рівень!")
+                self.note("tier", f"{self.tier_name(key)} — {self.name} {self.g('піднявся', 'піднялася')} на новий рівень!")
                 if t == 4:
                     self.ach(MONEY_TIERS[4][1][2:] if key == "money" else LIFE[key][2][4])
 
@@ -706,8 +754,8 @@ class Pet:
         p = self.persona
         try:
             return pick(text, self.gender, other.gender if other else None).format_map(SafeDict(
-                name=self.name, owner=self.owner_name, food=p.get("food", "борщ"), dream=p.get("dream", ""),
-                fear=p.get("fear", ""), quirk=p.get("quirk", ""), temper=p.get("temper", ""),
+                name=self.name, owner=self.owner_name, food=p.get("food", "борщ"), dream=self.dream_text(),
+                fear=p.get("fear", ""), quirk=p.get("quirk", ""), temper=self.temper_name(),
                 other=other.name if other else "хтось", other_owner=other.owner_name if other else "хтось",
                 money=f"{int(self.money)}", role=self.role_name(),
                 **{f"name_{c}": self.name_in(c) for c in CASES[1:]},
@@ -723,6 +771,9 @@ class Pet:
     def g(self, masculine: str, feminine: str) -> str:
         """A gendered word for engine notes: p.g("вилупився", "вилупилася")."""
         return feminine if self.gender == "f" else masculine
+
+    def job_name(self, job: str | None = None) -> str:
+        return job_name(self.job if job is None else job, self.gender)
 
     def role_name(self, role: str | None = None) -> str:
         return role_name(self.role if role is None else role, self.gender)
@@ -745,14 +796,14 @@ class Pet:
             self.health, self.hunger = max(self.health, 45.0), max(self.hunger, 30.0)
             self.lifespan = max(self.lifespan, self.years + 8)
             self.counters["dodged"] = self.counters.get("dodged", 0) + 1
-            self.note("twist", f"⚛️ {self.name} мав загинути ({cause}), але в цьому всесвіті вижив. В іншому — ні.")
+            self.note("twist", f"⚛️ {self.name} {self.g('мав', 'мала')} загинути ({cause}), але в цьому всесвіті {self.g('вижив', 'вижила')}. В іншому — ні.")
             self.ach("Кіт Шредінгера")
             return False
         if not natural and self.role not in UNDEAD and rng.random() < RESURRECT:
             self.set_role("zombie")
             self.health, self.hunger, self.mood = 60.0, 50.0, 40.0
             self.lifespan = max(self.lifespan, self.years + 30)
-            self.note("twist", f"🧟 СЮЖЕТНИЙ ПОВОРОТ! {self.name} {cause}… а на третю ніч виліз з могили. Тепер це зомбі.")
+            self.note("twist", f"🧟 СЮЖЕТНИЙ ПОВОРОТ! {self.name} {cause}… а на третю ніч {self.g('виліз', 'вилізла')} з могили. Тепер це зомбі.")
             return False
         self.state, self.cause, self.died = "dead", cause, now()
         if natural:
@@ -827,13 +878,14 @@ class Pet:
             self.health = min(100.0, self.health + HEAL_PER_H * h * (1.5 if role == "angel" else 1)
                               * (0.5 if self.stage == 4 else 1) * (1.5 if self.mood > 70 else 1))
         if self.health <= 0:
-            self.die("не витримав боргів і дзвінків колекторів" if broke else "згас від туги й самотності", rng)
+            self.die(self.g("не витримав", "не витримала") + " боргів і дзвінків колекторів" if broke
+                     else self.g("згас", "згасла") + " від туги й самотності", rng)
             return
         if not self._age_checks(rng):
             return
         if self.jail_until and at >= self.jail_until:
             self.jail_until = 0.0
-            self.note("jail", f"🔓 {self.name} вийшов на волю")
+            self.note("jail", f"🔓 {self.name} {self.g('вийшов', 'вийшла')} на волю")
         if self.hospital_until and at >= self.hospital_until:
             self.hospital_until = 0.0
         if broke and not self.flags.get("_warned"):
@@ -855,16 +907,17 @@ class Pet:
     def _age_checks(self, rng: random.Random) -> bool:
         """Grow up by years, die of old age. False if the pet died."""
         if self.years >= self.lifespan:
-            self.die(rng.choice(["помер від старості у теплому ліжку, як справжній дід",
-                                 "заснув і не прокинувся. Тихо, з посмішкою",
-                                 "пішов на вічну пенсію, яку нарешті проіндексували"]), rng, natural=True)
+            self.die(pick(rng.choice(["{помер|померла} від старості у теплому ліжку, як справжн{ій дід|я бабця}",
+                                      "{заснув|заснула} і не {прокинувся|прокинулася}. Тихо, з посмішкою",
+                                      "{пішов|пішла} на вічну пенсію, яку нарешті проіндексували"]), self.gender),
+                     rng, natural=True)
             return self.alive
         for st, yrs in STAGE_YEARS.items():
             if self.stage < st and self.years >= yrs and not (st == 4 and self.role == "cyborg"):
                 self.stage = st
                 for sk in rng.sample(list(SKILLS), 3):
                     self._add(sk, 4)
-                self.note("grew", f"{STAGES[st]}: {self.name} подорослішав (навички підросли)")
+                self.note("grew", f"{stage_name(st, self.gender)}: {self.name} {self.g('подорослішав', 'подорослішала')} (навички підросли)")
                 if st == 4 and "cane" not in self.items:
                     self.items.append("cane")
         if self.pending and not self.age_fits(EVENTS.get(self.pending.get("id", ""))):
@@ -880,7 +933,7 @@ class Pet:
             inc = int(rng.randint(lo, hi) * (1 + min(self.job_days, 30) * 0.02) * (1 + self.life.get("blat", 0) / 200))
             if self.in_hospital:
                 inc //= 2
-            why = j["name"]
+            why = self.job_name()
             self.job_days += 1
             self.xp += 3
             for k, v in j["drift"].items():
@@ -889,7 +942,7 @@ class Pet:
             if risk and rng.random() < risk[1]:
                 self.jail_until = now() + 24 * hour()
                 self.flags["jailed_times"] = self.flags.get("jailed_times", 0) + 1
-                self.note("jail", f"⛓ {self.name} спалився на роботі ({j['name']}) і сів на добу")
+                self.note("jail", f"⛓ {self.name} {self.g('спалився', 'спалилася')} на роботі ({self.job_name()}) і {self.g('сів', 'сіла')} на добу")
             if self.job_days == 30:
                 self.ach("Ветеран праці")
         elif self.stage <= 2:
@@ -928,7 +981,7 @@ class Pet:
             kind = rng.randrange(4)
             if kind == 0:
                 self.apply({"mutate": 1}, None, rng)
-                self.note("twist", f"👽 {self.name} прокинувся з новою частиною тіла. Звідки — не каже.")
+                self.note("twist", f"👽 {self.name} {self.g('прокинувся', 'прокинулася')} з новою частиною тіла. Звідки — не каже.")
             elif kind == 1:
                 a, b = rng.sample(list(SKILLS), 2)
                 self.skills[a], self.skills[b] = self.skills.get(b, 10), self.skills.get(a, 10)
@@ -936,10 +989,10 @@ class Pet:
             elif kind == 2:
                 t = rng.choice(list(TRAITS))
                 self._add(t, 4)
-                self.note("life", f"👽 {self.name} всю ніч передавав сигнали в космос. +{TRAITS[t]}")
+                self.note("life", f"👽 {self.name} всю ніч {self.g('передавав', 'передавала')} сигнали в космос. +{TRAITS[t]}")
             else:
                 self.money += 250
-                self.note("life", f"👽 {self.name} продав вченим пробірку власного слизу. +250 ₴")
+                self.note("life", f"👽 {self.name} {self.g('продав', 'продала')} вченим пробірку власного слизу. +250 ₴")
         if r and r.get("ach") and r["ach"][1] and (now() - self.role_since) * SPEED / DAY >= r["ach"][1]:
             self.ach(r["ach"][0])
         if self.years >= 85:
@@ -1065,7 +1118,7 @@ class Pet:
                 if self.money > 0:
                     lost = self.money * (1 - v)
                     self.money *= v
-                    notes.append(f"💸 {'−' if lost > 0 else '+'}{abs(lost):.0f} ₴" if v != 0 else "💸 втратив усі гроші")
+                    notes.append(f"💸 {'−' if lost > 0 else '+'}{abs(lost):.0f} ₴" if v != 0 else f"💸 {self.g('втратив', 'втратила')} усі гроші")
             elif k == "xp":
                 self.xp += v
             elif k == "lifespan":
@@ -1083,7 +1136,7 @@ class Pet:
                 if it:
                     self.items.remove(it)
                     self.equipped = {s: i for s, i in self.equipped.items() if i != it}
-                    notes.append(f"💨 втратив {item_name(it)}")
+                    notes.append(f"💨 {self.g('втратив', 'втратила')} {item_name(it)}")
             elif k == "unequip":
                 if v in ("all", True):
                     self.equipped = {}
@@ -1107,7 +1160,7 @@ class Pet:
                         self.note("job", f"💼 {self.name} тепер {JOBS[v]['name']}")
                         self.ach("Перша робота")
                 elif not v and self.job:
-                    notes.append(f"🔥 звільнений: {JOBS.get(self.job, {}).get('name', self.job)}")
+                    notes.append(f"🔥 {self.g('звільнений', 'звільнена')}: {self.job_name()}")
                     self.note("job", f"🔥 {self.name_in('acc')} звільнили з роботи")
                     self.job = ""
             elif k == "edu":
@@ -1125,7 +1178,7 @@ class Pet:
                 self.years += v / 48  # a sentence eats years of life (48 h behind bars ≈ a year)
                 self.flags["jailed_times"] = self.flags.get("jailed_times", 0) + 1
                 notes.append(f"⛓ {v} год. за ґратами")
-                self.note("jail", f"⛓ {self.name} сів на {v} год.")
+                self.note("jail", f"⛓ {self.name} {self.g('сів', 'сіла')} на {v} год.")
                 if self.flags["jailed_times"] >= 3:
                     self.ach("Рецидивіст")
             elif k == "hospital":
@@ -1141,8 +1194,8 @@ class Pet:
                 if n:
                     notes.append(n)
             elif k == "die":
-                if self.die(v, rng):
-                    notes.append("☠️ помер")
+                if self.die(pick(v, self.gender), rng):
+                    notes.append(f"☠️ {self.g('помер', 'померла')}")
                 else:
                     notes.append("🌀 …але не до кінця")
             elif k == "gene":
@@ -1255,7 +1308,7 @@ class Pet:
             self.status[old] = "ex"
             self.rel[old] = min(self.rel.get(old, 0.0), -40.0)
             self.partner = ""
-            self.note("love", f"💔 {self.name} кинув свою пару заради {b.name_in('gen')}. Скандал на весь район!")
+            self.note("love", f"💔 {self.name} {self.g('кинув', 'кинула')} свою пару заради {b.name_in('gen')}. Скандал на весь район!")
             self.traits["toxic"] = self.traits.get("toxic", 0) + 3
         self.status[b.pid] = status
         if status == "partner":
@@ -1267,7 +1320,7 @@ class Pet:
             if sum(1 for s in self.status.values() if s == "ex") >= 3:
                 self.ach("Казанова")
         elif status == "crush":
-            self.note("love", f"😳 {self.name} закохався в {b.name_in('acc')}")
+            self.note("love", f"😳 {self.name} {self.g('закохався', 'закохалася')} в {b.name_in('acc')}")
 
     def set_status(self, other: "Pet", status: str) -> None:
         self.set_status_one(other, status)
@@ -1527,7 +1580,7 @@ class Pet:
             else:
                 res.ok = rng.random() < res.chance
             if not res.ok:
-                outs = c.fail or [o("Не вийшло. {name} лише змарнував час і нерви.", mood=-6)]
+                outs = c.fail or [o("Не вийшло. {name} лише {змарнував|змарнувала} час і нерви.", mood=-6)]
         lean = self.persona.get("lean", "")
         weights = [max(0.0, x.w) * (LEAN_OUT if lean and x.fx.get(lean, 0) > 0 else 1) for x in outs]
         out: Out = rng.choices(outs, weights)[0] if sum(weights) else outs[0]
@@ -1550,13 +1603,13 @@ class Pet:
         if self.tale:
             self.tale["path"].append(res.label)
         if self.in_character(c):
-            res.notes.insert(0, f"🎭 {self.persona.get('temper', '')}: у своїй стихії")
+            res.notes.insert(0, f"🎭 {self.temper_name()}: у своїй стихії")
         if self.alive and self.health <= 0:
             if -fx.get("health", 0) >= LETHAL_HIT:  # only a really risky choice kills
-                self.die(f"не пережив пригоду «{res.label}»", rng)
+                self.die(f"{self.g('не пережив', 'не пережила')} пригоду «{res.label}»", rng)
             else:
                 self.health = 1.0
-                res.notes.append("❤️ ледь живий: ще один ризик — і кінець")
+                res.notes.append(f"❤️ ледь {self.g('живий', 'жива')}: ще один ризик — і кінець")
         prev, self.pending = self.pending, {}  # answered: the age checks must not drop it (or its story)
         if self.alive:
             self._age_checks(rng)
@@ -1762,7 +1815,7 @@ def fix_partners(pets: list[Pet]) -> None:
         if q is None:  # partner's owner left / used /forget / the pet was replaced by an heir
             p.status[p.partner] = "ex"
             p.partner = ""
-            p.note("love", f"💔 {p.name} лишився без пари: друга половинка зникла без сліду.")
+            p.note("love", f"💔 {p.name} {p.g('лишився', 'лишилася')} без пари: друга половинка зникла без сліду.")
             continue
         if q.state == "dead" or q.partner == p.pid:
             continue  # dead partners are handled by mourn()
@@ -1772,7 +1825,7 @@ def fix_partners(pets: list[Pet]) -> None:
         p.mood = max(0.0, p.mood - 30)
         p.traits["dark"] = p.traits.get("dark", 0) + 2
         rival = by_pid.get(q.partner)
-        p.note("love", f"💔 {p.name} дізнався, що {q.name} пішов до {rival.name_in('gen') if rival else 'когось іншого'}. "
+        p.note("love", f"💔 {p.name} {p.g('дізнався', 'дізналася')}, що {q.name} {q.g('пішов', 'пішла')} до {rival.name_in('gen') if rival else 'когось іншого'}. "
                        f"Б'є посуд і слухає Скрябіна.")
         if rival and rival.alive:
             p.rel[rival.pid] = min(p.rel.get(rival.pid, 0.0), -60.0)
@@ -1793,13 +1846,13 @@ def mourn(pets: list[Pet]) -> None:
                 p.partner = ""
                 p.status[d.pid] = "ex"
                 p.mood = max(0.0, p.mood - 35)
-                p.note("love", f"🖤 {p.name} овдовів: {d.name} пішов на веселку")
+                p.note("love", f"🖤 {p.name} {p.g('овдовів', 'овдовіла')}: {d.name} {d.g('пішов', 'пішла')} на веселку")
             elif p.status.get(d.pid) in ("friend", "bestie"):
                 p.mood = max(0.0, p.mood - 10)
                 p.note("social", f"😢 {p.name} сумує за другом {d.name_in('ins')}")
             elif p.status.get(d.pid) == "enemy":
                 p.mood = min(100.0, p.mood + 10)
-                p.note("social", f"😈 {p.name} станцював на могилі ворога {d.name_in('gen')}")
+                p.note("social", f"😈 {p.name} {p.g('станцював', 'станцювала')} на могилі {d.g('ворога', 'ворогині')} {d.name_in('gen')}")
 
 
 def chat_daily(pets: list[Pet], rng: random.Random) -> list[str]:
@@ -1813,7 +1866,7 @@ def chat_daily(pets: list[Pet], rng: random.Random) -> list[str]:
             for f in healed[:5]:
                 f._add("health", 15)
                 f._add("mood", 5)
-                f.note("social", f"😇 Ангел {p.name} підлікував {f.name_in('acc')}")
+                f.note("social", f"😇 Ангел {p.name} {p.g('підлікував', 'підлікувала')} {f.name_in('acc')}")
             if healed:
                 p.counters["healed"] = p.counters.get("healed", 0) + len(healed)
                 if p.counters["healed"] >= 5:
@@ -1827,7 +1880,7 @@ def chat_daily(pets: list[Pet], rng: random.Random) -> list[str]:
             p.set_rel(v, -8)
             if p.role == "vampire":
                 p._add("hunger", 40)
-            what = "вкусив" if p.role == "vampire" else "погриз"
+            what = p.g("вкусив", "вкусила") if p.role == "vampire" else p.g("погриз", "погризла")
             v.note("social", f"🩸 {p.name} вночі {what} {v.name_in('acc')}")
             if rng.random() < 0.15:
                 v.set_role(p.role)
@@ -1847,16 +1900,20 @@ CARE = {
     "kick": ("🦶 Копнути", dict(mood=-20, health=-5, toxic=1, dark=0.5), 1.0),
 }
 CARE_TEXT = {
-    "play": ["{name} ганяв м'ячик і розбив вазу. Щасливий.", "{name} грав у хованки й заснув у шафі.",
-             "{name} вивчив новий трюк: вдавати мертвого на команду «податкова».",
-             "{name} носився по хаті, як після трьох енергетиків."],
-    "wash": ["{name} пережив купання і тепер ображений на весь світ.", "Блискучий {name}! Пахне шампунем «Ромашка».",
-             "{name} вилив половину ванни на підлогу. Сусіди знизу вже йдуть."],
-    "pat": ["{name} розтанув від щастя.", "{name} підставив пузо. Довіра 100%.", "{name} заплющив очі й муркотів (як умів)."],
-    "heal": ["{name} отримав укол і подивився з ненавистю.", "Вітамінки з'їдено. {name} відчуває себе безсмертним.",
-             "{name} випив сироп від кашлю і повеселішав підозріло сильно."],
-    "kick": ["{name} полетів у кут. Запам'ятав. Назавжди.", "{name} тепер боїться ще й тебе, а не лише {fear}.",
-             "{name} мовчки дивиться. Він усе запише в щоденник ненависті."],
+    "play": ["{name} {ганяв|ганяла} м'ячик і {розбив|розбила} вазу. "
+             "{Щасливий|Щаслива}.", "{name} {грав|грала} у хованки й {заснув|заснула} у шафі.",
+             "{name} {вивчив|вивчила} новий трюк: вдавати {мертвого|мертву} на команду «податкова».",
+             "{name} {носився|носилася} по хаті, як після трьох енергетиків."],
+    "wash": ["{name} {пережив|пережила} купання і тепер {ображений|ображена} на весь "
+             "світ.", "{Блискучий|Блискуча} {name}! Пахне шампунем «Ромашка».",
+             "{name} {вилив|вилила} половину ванни на підлогу. Сусіди знизу вже йдуть."],
+    "pat": ["{name} {розтанув|розтанула} від щастя.", "{name} {підставив|підставила} пузо. Довіра 100%.", "{name} {заплющив|заплющила} очі й {муркотів|муркотіла} (як {умів|уміла})."],
+    "heal": ["{name} {отримав|отримала} укол і {подивився|подивилася} з "
+             "ненавистю.", "Вітамінки з'їдено. {name} відчуває себе {безсмертним|безсмертною}.",
+             "{name} {випив|випила} сироп від кашлю і {повеселішав|повеселішала} підозріло сильно."],
+    "kick": ["{name} {полетів|полетіла} у кут. {Запам'ятав|Запам'ятала}. "
+             "Назавжди.", "{name} тепер боїться ще й тебе, а не лише {fear}.",
+             "{name} мовчки дивиться. {Він|Вона} усе запише в щоденник ненависті."],
 }
 
 
@@ -1879,7 +1936,7 @@ def care(p: Pet, action: str, rng: random.Random, actor: Pet | None = None, by_o
     extra: list[str] = []
     if action == "kick" and p.role == "werewolf" and is_night() and actor:
         actor._add("health", -20)
-        text += f" …і перевертень вкусив {actor.name_in('acc')} у відповідь! 🐺"
+        text += f" …і {p.g('перевертень', 'перевертниця')} {p.g('вкусив', 'вкусила')} {actor.name_in('acc')} у відповідь! 🐺"
     if action == "kick" and p.role == "angel" and actor:
         actor._add("luck", -2)
         text += " Небеса це бачили. 🍀−2 кривдникові."
@@ -1911,10 +1968,12 @@ def feed(p: Pet, food: str, rng: random.Random, payer: Pet | None = None) -> tup
     payer.money -= price
     fx = dict(fx)
     need = ROLE_FOOD.get(food)
-    text = f"{p.name} з'їв: {name}."
+    ate = p.g("з'їв", "з'їла")
+    text = f"{p.name} {ate}: {name}."
     if need and p.role != need:
         fx = dict(mood=-15, health=-5, hunger=5)
-        text = f"{p.name} понюхав {name} і знепритомнів від огиди. Це не для нього."
+        text = (f"{p.name} {p.g('понюхав', 'понюхала')} {name} і {p.g('знепритомнів', 'знепритомніла')} від огиди. "
+                f"Це не для {p.g('нього', 'неї')}.")
     elif not need and p.role in ("vampire", "zombie"):
         fx["hunger"] = fx.get("hunger", 0) * 0.5
         text += " Без особливого апетиту — йому б чогось… іншого."
@@ -1922,7 +1981,7 @@ def feed(p: Pet, food: str, rng: random.Random, payer: Pet | None = None) -> tup
     notes = p.apply(fx, None, rng)
     if overeat:
         notes += p.apply(dict(health=-5, glutton=1), None, rng)
-        text += " Переїв і лежить як тюлень."
+        text += f" {p.g('Переїв', 'Переїла')} і лежить як тюлень."
     fav = p.persona.get("food", "")
     if fav and fav.split()[0][:4].lower() in name.lower():
         notes += p.apply(dict(mood=10), None, rng)
@@ -1930,7 +1989,7 @@ def feed(p: Pet, food: str, rng: random.Random, payer: Pet | None = None) -> tup
     if payer is not p:
         p.set_rel(payer, 4)
         notes.append(f"💞 {p.name} ↔ {payer.name}")
-        p.note("care", f"🍖 {payer.name} пригостив {p.name_in('acc')}: {name}")
+        p.note("care", f"🍖 {payer.name} {payer.g('пригостив', 'пригостила')} {p.name_in('acc')}: {name}")
     p.xp += 1
     return text, notes
 
@@ -1959,12 +2018,12 @@ def apply_job(p: Pet, jid: str, rng: random.Random) -> tuple[bool, str, list[str
     roll = rng.random()
     if roll < c:
         notes = p.apply({"job": jid}, None, rng)
-        return True, rng.choice([f"Співбесіду пройдено! {p.name} тепер {j['name']}.",
-                                 f"HR сказала «ви нам підходите». {p.name} — {j['name']}!"]), notes
+        return True, rng.choice([f"Співбесіду пройдено! {p.name} тепер {job_name(jid, p.gender)}.",
+                                 f"HR сказала «ви нам підходите». {p.name} — {job_name(jid, p.gender)}!"]), notes
     p.mood = max(0.0, p.mood - 8)
     return False, rng.choice([f"«Ми вам передзвонимо». Не передзвонять. (шанс був {c:.0%})",
                               f"Відмовили: «у вас замало досвіду в 3 роки». (шанс був {c:.0%})",
-                              f"{p.name} запізнився на співбесіду на годину. (шанс був {c:.0%})"]), ["😊−8"]
+                              f"{p.name} {p.g('запізнився', 'запізнилася')} на співбесіду на годину. (шанс був {c:.0%})"]), ["😊−8"]
 
 
 # --- shop --------------------------------------------------------------------------------------
@@ -2008,11 +2067,11 @@ def buy(p: Pet, entry: dict, rng: random.Random) -> tuple[bool, str]:
     p.money -= price
     if kind == "item":
         n = p.give(entry["id"])
-        p.note("life", f"🛒 {p.name} купив {n}")
+        p.note("life", f"🛒 {p.name} {p.g('купив', 'купила')} {n}")
         return True, f"🛍 Куплено й одягнено: {n}"
     if kind == "home":
         p.apply({"home": entry["id"]}, None, rng)
-        p.note("life", f"🏠 {p.name} переїхав: {bg_name(entry['id'])}")
+        p.note("life", f"🏠 {p.name} {p.g('переїхав', 'переїхала')}: {bg_name(entry['id'])}")
         if entry["id"] == "palace":
             p.ach("Межигір'я — моє")
         return True, f"🔑 Новосілля! {p.name} тепер живе тут: {bg_name(entry['id'])}"
@@ -2031,7 +2090,7 @@ def buy(p: Pet, entry: dict, rng: random.Random) -> tuple[bool, str]:
         if r < 0.55:
             role = rng.choice(sorted(ROLES))
             n = p.set_role(role) or ""
-            return True, f"🧪 Буль-буль… {p.name} випив зілля. {n or 'Нічого не змінилось'}!"
+            return True, f"🧪 Буль-буль… {p.name} {p.g('випив', 'випила')} зілля. {n or 'Нічого не змінилось'}!"
         if r < 0.85:
             got = p.mutate(2, rng)
             return True, "🧪 Зілля подіяло дивно. Мутація: " + ", ".join(got)
@@ -2079,12 +2138,13 @@ def casino(p: Pet, venue: str, stake: int, rng: random.Random) -> tuple[str, lis
         p.ach("Зірвав джекпот")
     elif roll < 0.015 + win:
         fx, text = dict(money=stake, mood=10), rng.choice([
-            "{name} поставив на червоне — і червоне не підвело.", "Карта прийшла як по замовленню. Подвоїв ставку.",
-            "{name} вийшов у плюс і (неймовірно) вчасно зупинився."])
+            "{name} {поставив|поставила} на червоне — і червоне не "
+            "підвело.", "Карта прийшла як по замовленню. {Подвоїв|Подвоїла} ставку.",
+            "{name} {вийшов|вийшла} у плюс і (неймовірно) вчасно {зупинився|зупинилася}."])
     else:
         lost = int(stake * (1 - fin / 250))  # financially literate pets stop in time
         fx, text = dict(money=-lost, mood=-10), rng.choice([
-            "Казино завжди виграє. Сьогодні — теж.", "{name} «майже відігрався». Тричі.",
+            "Казино завжди виграє. Сьогодні — теж.", "{name} «майже {відігрався|відігралася}». Тричі.",
             "Дилер співчутливо кивнув і забрав фішки."]) + (" Фінграмотність підказала вчасно встати з-за столу."
                                                           if lost < stake else "")
     special = rng.random()
@@ -2110,68 +2170,78 @@ def casino(p: Pet, venue: str, stake: int, rng: random.Random) -> tuple[str, lis
 WORLD = {
     "meteor": dict(title="☄️ Метеорит над чатом!", text="Над районом пролетів метеорит і впав десь за гаражами.",
                    button="🏃 Бігти шукати уламок", n=4, global_fx={},
-                   claim=[("знайшов уламок і продав на OLX", dict(money=600), 3),
-                          ("надихався космічного пилу", dict(mutate=1, health=-10), 2),
-                          ("отримав уламком по голові", dict(health=-30, int=-2), 1),
-                          ("торкнувся уламка і почув голоси з космосу", dict(role="alien", twist=True), 0.25)]),
+                   claim=[("{знайшов|знайшла} уламок і {продав|продала} на OLX", dict(money=600), 3),
+                          ("{надихався|надихалася} космічного пилу", dict(mutate=1, health=-10), 2),
+                          ("{отримав|отримала} уламком по голові", dict(health=-30, int=-2), 1),
+                          ("{торкнувся|торкнулася} уламка і {почув|почула} голоси з "
+                           "космосу", dict(role="alien", twist=True), 0.25)]),
     "blackout": dict(title="🔌 Відключення світла в усьому районі!", text="Укренерго каже: «ненадовго». Усі пети в темряві.",
                      button="🕯 Запалити свічку", n=5, global_fx=dict(mood=-10), role_fx={"cyborg": dict(health=-15)},
                      mod="blackout",
-                     claim=[("запалив свічку і розповідав страшилки", dict(mood=15, mystic=2), 3),
-                            ("підпалив штори", dict(clean=-30, health=-10), 1),
-                            ("знайшов павербанк і став королем під'їзду", dict(cha=3, money=150), 2)]),
+                     claim=[("{запалив|запалила} свічку і {розповідав|розповідала} "
+                             "страшилки", dict(mood=15, mystic=2), 3),
+                            ("{підпалив|підпалила} штори", dict(clean=-30, health=-10), 1),
+                            ("{знайшов|знайшла} павербанк і {став|стала} {королем|королевою} "
+                             "під'їзду", dict(cha=3, money=150), 2)]),
     "fair": dict(title="🎪 Ярмарок на площі!", text="Сорочинський ярмарок приїхав у наш чат: каруселі, мед і ворожка з картами.",
                  button="🎡 Бігти на ярмарок", n=6, global_fx={},
-                 claim=[("виграв у тирі", dict(item_slot="held", mood=10), 3), ("об'ївся медом", dict(hunger=50, glutton=2), 3),
+                 claim=[("{виграв|виграла} у тирі", dict(item_slot="held", mood=10), 3), ("{об'ївся|об'їлася} "
+                                                                                          "медом", dict(hunger=50, glutton=2), 3),
                         ("ворожка обдурила на 200 ₴", dict(money=-200, mystic=1), 2),
-                        ("купив кота в мішку — а там гроші", dict(money=500), 1)]),
+                        ("{купив|купила} кота в мішку — а там гроші", dict(money=500), 1)]),
     "flood": dict(title="🌊 Сусіди зверху затопили весь під'їзд!", text="Вода тече зі стелі. Килим уже не врятувати.",
                   button="🪣 Рятувати майно", n=5, global_fx=dict(clean=-20), mod="rain",
-                  claim=[("врятував телевізор і гідність", dict(str=2, mood=10), 3),
-                         ("стрибнув у воду і застудився", dict(health=-15), 2),
-                         ("виставив сусідам рахунок", dict(money=400, toxic=1), 2)]),
+                  claim=[("{врятував|врятувала} телевізор і гідність", dict(str=2, mood=10), 3),
+                         ("{стрибнув|стрибнула} у воду і {застудився|застудилася}", dict(health=-15), 2),
+                         ("{виставив|виставила} сусідам рахунок", dict(money=400, toxic=1), 2)]),
     "eclipse": dict(title="🌑 Сонячне затемнення!", text="Вдень стало темно. Вампіри вийшли на прогулянку.",
                     button="👀 Подивитися без окулярів", n=5, global_fx={}, role_fx={"vampire": dict(mood=30)}, mod="night",
-                    claim=[("побачив щось у темряві", dict(mystic=3, luck=-2), 3),
-                           ("тимчасово осліп, але подорослішав духовно", dict(int=2, health=-10), 2),
-                           ("зустрів у тіні дуже блідого незнайомця…", dict(role="vampire", twist=True), 0.3)]),
+                    claim=[("{побачив|побачила} щось у темряві", dict(mystic=3, luck=-2), 3),
+                           ("тимчасово {осліп|осліпла}, але {подорослішав|подорослішала} "
+                            "духовно", dict(int=2, health=-10), 2),
+                           ("{зустрів|зустріла} у тіні дуже блідого "
+                            "незнайомця…", dict(role="vampire", twist=True), 0.3)]),
     "tax": dict(title="🧾 Податкова перевірка всього району!", text="Кожен, хто має понад 2000 ₴, мусить пояснити звідки.",
                 button="🙈 Сховати гроші під матрац", n=6, global_fx={}, rich_fx=dict(money_mult=0.9),
-                claim=[("сховав так, що сам не знайшов", dict(money=-200), 2), ("сховав ідеально", dict(gambler=1, money=150), 3),
-                       ("спалився і заплатив штраф", dict(money=-500), 1)]),
+                claim=[("{сховав|сховала} так, що {сам|сама} не "
+                        "{знайшов|знайшла}", dict(money=-200), 2), ("{сховав|сховала} ідеально", dict(gambler=1, money=150), 3),
+                       ("{спалився|спалилася} і {заплатив|заплатила} штраф", dict(money=-500), 1)]),
     "vaccine": dict(title="🩺 Безкоштовна вакцинація у ветклініці!", text="Перші в черзі отримують щеплення і цукерку.",
                     button="💉 Стати в чергу", n=6, global_fx={},
-                    claim=[("щеплений і щасливий", dict(health=30), 4), ("вкусив ветеринара", dict(toxic=2, mood=5), 1),
-                           ("отримав побічку: третє око", dict(gene={"eyes": "three"}, mystic=2), 0.3)]),
+                    claim=[("{щеплений|щеплена} і "
+                            "{щасливий|щаслива}", dict(health=30), 4), ("{вкусив|вкусила} ветеринара", dict(toxic=2, mood=5), 1),
+                           ("{отримав|отримала} побічку: третє око", dict(gene={"eyes": "three"}, mystic=2), 0.3)]),
     "drop": dict(title="🪂 Гуманітарка з неба!", text="Над районом розкрився парашут з ящиком. Хто перший — того й тапки.",
                  button="📦 Хапати ящик", n=4, global_fx={},
-                 claim=[("схопив консерви", dict(hunger=60), 3), ("схопив щось корисне", dict(item_slot="neck"), 2),
-                        ("схопив 300 ₴ у конверті", dict(money=300), 2), ("отримав ящиком по лобі", dict(health=-20), 1)]),
+                 claim=[("{схопив|схопила} консерви", dict(hunger=60), 3), ("{схопив|схопила} щось "
+                                                                            "корисне", dict(item_slot="neck"), 2),
+                        ("{схопив|схопила} 300 ₴ у "
+                         "конверті", dict(money=300), 2), ("{отримав|отримала} ящиком по лобі", dict(health=-20), 1)]),
     "moon": dict(title="🌕 Повня над чатом!", text="Собаки виють, перевертні нервують, а всі решта не можуть заснути.",
                  button="🐺 Вити на місяць", n=5, global_fx=dict(energy=-15), role_fx={"werewolf": dict(str=2, toxic=2)},
-                 claim=[("вив так гарно, що сусіди заплакали", dict(cha=2, dark=2), 3),
+                 claim=[("{вив|вила} так гарно, що сусіди заплакали", dict(cha=2, dark=2), 3),
                         ("в кущах щось клацнуло зубами…", dict(role="werewolf", twist=True), 0.3),
-                        ("вив до хрипоти", dict(mood=-5, party=1), 2)]),
+                        ("{вив|вила} до хрипоти", dict(mood=-5, party=1), 2)]),
     "ufo": dict(title="🛸 НЛО зависло над районом!", text="Над хрущовками світиться тарілка. Поліція каже, що це дрон.",
                 button="👋 Помахати прибульцям", n=4, global_fx={}, role_fx={"alien": dict(mood=40)},
                 claim=[("прибульці помахали у відповідь", dict(mood=20, mystic=2), 3),
-                       ("викрадений на 6 годин", dict(hospital=6, int=3), 1),
-                       ("повернувся з тарілки зовсім іншим", dict(role="alien", twist=True), 0.35),
-                       ("отримав в обмін на борщ технологію", dict(item="vr", int=2), 1)]),
+                       ("{викрадений|викрадена} на 6 годин", dict(hospital=6, int=3), 1),
+                       ("{повернувся|повернулася} з тарілки зовсім іншим", dict(role="alien", twist=True), 0.35),
+                       ("{отримав|отримала} в обмін на борщ технологію", dict(item="vr", int=2), 1)]),
     "atm": dict(title="💸 Банкомат на розі глючить і видає гроші!", text="Банк обіцяє все повернути «найближчим часом».",
                 button="🏧 Бігом до банкомата", n=3, global_fx={},
-                claim=[("забрав 500 ₴", dict(money=500, gambler=1), 4),
-                       ("потрапив на камеру, тепер у розшуку", dict(jail=6, money=300), 1)]),
+                claim=[("{забрав|забрала} 500 ₴", dict(money=500, gambler=1), 4),
+                       ("{потрапив|потрапила} на камеру, тепер у розшуку", dict(jail=6, money=300), 1)]),
     "concert": dict(title="🎤 Безкоштовний концерт на площі!", text="Грає гурт, назву якого ніхто не запам'ятав, але всі підспівують.",
                     button="🤘 Під сцену!", n=8, global_fx=dict(mood=5),
-                    claim=[("стрибав під сценою до ранку", dict(party=3, mood=20, energy=-20), 4),
-                           ("зловив медіатор гітариста", dict(item="guitar", cha=1), 0.5),
-                           ("загубився в натовпі", dict(mood=-10), 1)]),
+                    claim=[("{стрибав|стрибала} під сценою до ранку", dict(party=3, mood=20, energy=-20), 4),
+                           ("{зловив|зловила} медіатор гітариста", dict(item="guitar", cha=1), 0.5),
+                           ("{загубився|загубилася} в натовпі", dict(mood=-10), 1)]),
     "bees": dict(title="🐝 Рій бджіл атакує двір!", text="Пасічник з п'ятого поверху «трохи не встежив».",
                  button="🍯 Відібрати мед", n=4, global_fx=dict(mood=-5),
-                 claim=[("виніс цілу банку меду", dict(hunger=40, mood=15, str=1), 2),
-                        ("покусаний, але гордий", dict(health=-20, str=2), 2),
-                        ("став другом бджіл", dict(love=2, mystic=1), 1)]),
+                 claim=[("{виніс|винесла} цілу банку меду", dict(hunger=40, mood=15, str=1), 2),
+                        ("{покусаний|покусана}, але {гордий|горда}", dict(health=-20, str=2), 2),
+                        ("{став|стала} {другом|подругою} бджіл", dict(love=2, mystic=1), 1)]),
 }
 
 
@@ -2200,6 +2270,7 @@ def world_start(key: str, pets: list[Pet], rng: random.Random) -> list[str]:
 def world_claim(p: Pet, key: str, rng: random.Random) -> tuple[str, list[str], bool]:
     w = WORLD[key]
     text, fx, _ = rng.choices(w["claim"], [c[2] for c in w["claim"]])[0]
+    text = pick(text, p.gender)
     notes = p.apply(fx, None, rng)
     p.note("twist" if fx.get("twist") else "world", f"{w['title']} {p.name} {text}")
     return f"{p.name} {text}", notes, bool(fx.get("twist"))
@@ -2318,27 +2389,28 @@ def bar(v: float) -> str:
 
 # life summary titles: (test, title) — first match wins; trait titles are the fallback
 LIFE_TITLES = [
-    (lambda p, c: p.flags.get("dream_done"), "Той, хто здійснив свою мрію"),
+    (lambda p, c: p.flags.get("dream_done"), "{Той, хто здійснив|Та, що здійснила} свою мрію"),
     (lambda p, c: p.role in ("vampire", "demon") and c.get("natural"), "Безсмертне зло, яке таки здолала старість"),
-    (lambda p, c: c.get("dodged", 0) >= 2, "Кіт Шредінгера: помирав частіше, ніж обідав"),
-    (lambda p, c: p.flags.get("jailed_times", 0) >= 2, "Кримінальний авторитет району"),
-    (lambda p, c: c.get("money_max", 0) >= 10000, "Місцевий олігарх"),
-    (lambda p, c: p.children >= 2, "Засновник династії"),
+    (lambda p, c: c.get("dodged", 0) >= 2, "{Кіт|Кішка} Шредінгера: {помирав|помирала} частіше, ніж {обідав|обідала}"),
+    (lambda p, c: p.flags.get("jailed_times", 0) >= 2, "{Кримінальний авторитет|Кримінальна авторитетка} району"),
+    (lambda p, c: c.get("money_max", 0) >= 10000, "{Місцевий олігарх|Місцева олігархиня}"),
+    (lambda p, c: p.children >= 2, "{Засновник|Засновниця} династії"),
     (lambda p, c: len(p.achievements) >= 7, "Легенда чату"),
-    (lambda p, c: sum(s == "ex" for s in p.status.values()) >= 2, "Серцеїд з розбитим серцем"),
+    (lambda p, c: sum(s == "ex" for s in p.status.values()) >= 2, "{Серцеїд|Серцеїдка} з розбитим серцем"),
     (lambda p, c: c.get("twists", 0) >= 3, "Магніт для сюжетних поворотів"),
-    (lambda p, c: sum(k.startswith("role_") for k in c) >= 2, "Перепробував усі надприродні професії"),
+    (lambda p, c: sum(k.startswith("role_") for k in c) >= 2, "{Перепробував|Перепробувала} усі надприродні професії"),
     (lambda p, c: c.get("tier_fame", 0) >= 4, "Зірка Євробачення — і назавжди в серцях фанатів"),
-    (lambda p, c: c.get("tier_auth", 0) >= 4, "Хрещений батько району"),
+    (lambda p, c: c.get("tier_auth", 0) >= 4, "{Хрещений батько|Хрещена мати} району"),
     (lambda p, c: c.get("tier_blat", 0) >= 4, "Людина, якій усі були винні"),
     (lambda p, c: p.years < 30, "Яскраве, але дуже коротке життя"),
     (lambda p, c: c.get("fail", 0) > c.get("ok", 0) + 3, "Невдаха з великим серцем"),
-    (lambda p, c: c.get("natural") and p.partner, "Прожив довге життя поруч із коханими"),
+    (lambda p, c: c.get("natural") and p.partner, "{Прожив|Прожила} довге життя поруч із коханими"),
 ]
 TRAIT_TITLES = {
-    "toxic": "Токсик із принципами", "gambler": "Вічний гравець: ще одна ставка — і точно пощастить",
-    "dark": "Темна конячка під'їзду", "party": "Душа кожної вечірки", "patriot": "Патріот свого району",
-    "glutton": "Гурман від Бога", "love": "Добра душа, яку любили всі", "mystic": "Містик, що бачив більше за нас",
+    "toxic": "{Токсик|Токсичка} із принципами", "gambler": "{Вічний гравець|Вічна гравчиня}: ще одна ставка — і точно "
+                                                           "пощастить",
+    "dark": "Темна конячка під'їзду", "party": "Душа кожної вечірки", "patriot": "{Патріот|Патріотка} свого району",
+    "glutton": "{Гурман|Гурманка} від Бога", "love": "Добра душа, яку любили всі", "mystic": "{Містик, що бачив|Містикиня, що бачила} більше за нас",
 }
 
 
@@ -2362,19 +2434,20 @@ def life_summary(p: Pet, names: dict[str, str] | None = None) -> dict:
     if not title:
         top = p.top_traits(1)
         title = TRAIT_TITLES[top[0]] if top else "Тихе звичайне життя — і це теж перемога"
+    title = pick(title, p.gender)
     ok, fail = c.get("ok", 0), c.get("fail", 0)
     yrs = int(p.years)
-    facts = [f"📅 {yrs} {plural(yrs, 'рік', 'роки', 'років')} · {STAGES[p.stage]} · рівень {p.level}"
+    facts = [f"📅 {yrs} {plural(yrs, 'рік', 'роки', 'років')} · {stage_name(p.stage, p.gender)} · рівень {p.level}"
              + (f" · 👑 {p.dynasty}, покоління {p.gen}" if p.gen > 1 and p.dynasty else ""),
              f"🎲 {p.events_done} {plural(p.events_done, 'пригода', 'пригоди', 'пригод')}" + (f" · 🎯 кубик: {ok}✅ {fail}❌" if ok + fail else "")
              + (f" · 🌀 поворотів: {c['twists']}" if c.get("twists") else "")]
-    career = [JOBS[p.job]["name"] if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else ""]
-    money = f"💰 найбільше мав {c.get('money_max', int(p.money)):,} ₴".replace(",", " ")
+    career = [p.job_name() if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else ""]
+    money = f"💰 найбільше {p.g('мав', 'мала')} {c.get('money_max', int(p.money)):,} ₴".replace(",", " ")
     facts.append(" · ".join(x for x in career + [money] if x))
-    dream = p.persona.get("dream", "")
+    dream = p.dream_text()
     if dream:
-        facts.append(f"🌟 здійснив мрію: {dream}" if p.flags.get("dream_done") else
-                     f"🎯 мріяв {dream}" + (f" (дійшов до кроку {p.goal_step()} з 3)" if 0 < p.goal_step() < 3 else ""))
+        facts.append(f"🌟 {p.g('здійснив', 'здійснила')} мрію: {dream}" if p.flags.get("dream_done") else
+                     f"🎯 {p.g('мріяв', 'мріяла')} {dream}" + (f" ({p.g('дійшов', 'дійшла')} до кроку {p.goal_step()} з 3)" if 0 < p.goal_step() < 3 else ""))
     roles = [p.role_name(k[5:]) for k in c if k.startswith("role_") and k[5:] in ROLES]
     if roles or p.flags.get("jailed_times"):
         facts.append(" · ".join(roles + ([f"⛓ відсидок: {p.flags['jailed_times']}"] if p.flags.get("jailed_times") else [])))
@@ -2425,7 +2498,7 @@ def perk_text(p: Pet) -> str:
 def goal_text(p: Pet) -> str:
     """«🎯 Мрія: побачити море в Одесі ▰▰▱»."""
     n = p.goal_step()
-    dream = _esc(p.persona.get("dream", ""))
+    dream = _esc(p.dream_text())
     if p.flags.get("dream_done"):
         return f"🌟 Мрія збулася: {dream}"
     if n >= 3:
@@ -2439,13 +2512,13 @@ def card(p: Pet, names: dict[str, str]) -> str:
     emoji = SPECIES_EMOJI.get(p.species, "🐾")
     if p.state == "egg":
         left = max(0, EGG_HOURS * hour() - (now() - p.born)) / 60
-        return (f"🥚 <b>Яйце</b> · {_esc(p.owner_name)}\nЗсередини чути: «{_esc(p.persona.get('temper', ''))}»…\n"
+        return (f"🥚 <b>Яйце</b> · {_esc(p.owner_name)}\nЗсередини чути: «{_esc(p.temper_name())}»…\n"
                 f"Вилупиться приблизно через {left:.0f} хв. Рідкість: {tier}"
                 + (f"\n👑 {_esc(p.dynasty)}, покоління {p.gen}" if p.gen > 1 else ""))
     if p.state == "dead":
         return obituary(p, names, 1020, f"\n🥚 «Нове яйце» — покоління {p.gen + 1}" + (" (є спадкоємець від пари!)" if p.heir else ""))
     lines = [
-        f"{emoji} <b>{_esc(p.name)}</b> · {PHASE_NAMES[p.phase()]} · {int(p.years)} р. · ур. {p.level}",
+        f"{emoji} <b>{_esc(p.name)}</b> · {phase_name(p.phase(), p.gender)} · {int(p.years)} р. · ур. {p.level}",
         f"👤 {_esc(p.owner_name)} · {tier}" + (f" · 👑 {_esc(p.dynasty)} ({p.gen})" if p.gen > 1 else ""),
     ]
     if p.role:
@@ -2458,11 +2531,11 @@ def card(p: Pet, names: dict[str, str]) -> str:
         " ".join(f"{SKILLS[s]}{SKILL_NAMES[s]} {int(p.skill(s))}" for s in SKILLS)
         + (" · " + " ".join(f"{TRAITS[t]} {int(p.traits[t])}" for t in p.top_traits()) if p.top_traits() else ""),
     ]
-    work = [JOBS[p.job]["name"] if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else "",
+    work = [p.job_name() if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else "",
             bg_name(p.home)]
     lines.append(" · ".join(x for x in work if x))
     pr = p.persona
-    lines.append(f"🎭 {_esc(pr.get('temper'))} ({perk_text(p)}), боїться {_esc(pr.get('fear'))}")
+    lines.append(f"🎭 {_esc(p.temper_name())} ({perk_text(p)}), боїться {_esc(pr.get('fear'))}")
     lines.append(goal_text(p))
     rels = []
     if p.partner:

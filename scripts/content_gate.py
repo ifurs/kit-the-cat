@@ -15,6 +15,7 @@ GATES = [
     ("DSL contract", ["python", "-m", "kit_the_cat.content.validate"]),
     ("Ukrainian lint", ["python", "scripts/ua_lint.py", "--strict", "--warnings"]),
     ("Name cases", ["python", "scripts/case_scan.py", "--strict"]),
+    ("Pet gender", ["python", "scripts/gender_scan.py", "--strict"]),
     ("Dead ends & hard checks", ["python", "scripts/content_stats.py", "--strict", "--gaps"]),
     ("DSL reference fresh", ["python", "scripts/gen_dsl_docs.py", "--check"]),
     ("Content tests", ["python", "-m", "pytest", "-q", "tests/test_dsl_contract.py", "tests/test_ua_lint.py",

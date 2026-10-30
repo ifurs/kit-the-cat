@@ -4,7 +4,7 @@ from collections import Counter
 from . import dsl
 from .events import ALL
 from .persona import EPITAPHS
-from ..grammar import template_errors
+from ..grammar import pick, template_errors
 
 
 def main() -> None:
@@ -18,7 +18,7 @@ def main() -> None:
         if not e.choices:
             errors.append(f"{e.id}: no choices")
         for c in e.choices:
-            if len(c.label) > 40:
+            if max(len(pick(c.label, g, g)) for g in "mf") > 40:  # as the player reads it
                 errors.append(f"{e.id}: label too long ({c.label})")
             for r in (e.req, c.req):
                 for k in ("life", "tier", "tier_max"):
@@ -42,7 +42,7 @@ def main() -> None:
                         errors += [f"{e.id}: unknown other-effect {x}" for x in v if x not in dsl.KNOWN_FX]
             if not c.outs:
                 errors.append(f"{e.id}/{c.label}: no outcomes")
-        if len(e.text) > 450:
+        if max(len(pick(e.text, g, g)) for g in "mf") > 450:
             errors.append(f"{e.id}: text too long for a caption")
     texts = [(e.id, e.text) for e in ALL] + [(f"{e.id}/{c.label}", c.label) for e in ALL for c in e.choices]
     texts += [(f"{e.id}/{c.label}", o.text) for e in ALL for c in e.choices for o in c.outs + c.fail]

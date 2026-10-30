@@ -56,7 +56,8 @@ async def test_a_life(client):
     assert gif.status == 200 and (await gif.read())[:3] == b"GIF"
 
     await do(client, "npcs", 3)
-    assert "з'їв" in (await do(client, "feed", "crust"))["message"]
+    fed = (await do(client, "feed", "crust"))["message"]
+    assert "з'їв" in fed or "з'їла" in fed
     await do(client, "care", "play")
     await do(client, "adventure")
     s = await state(client)

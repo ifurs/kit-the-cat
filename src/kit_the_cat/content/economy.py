@@ -3,44 +3,52 @@
 # id: name, daily pay (₴), requirements (engine.meets), daily trait/skill drift, uniform items, workplace background.
 # open=True → can be applied for at the 💼 job centre (others come only from storylines).
 JOBS = {
-    "atb": dict(name="🛒 Касир АТБ", pay=120, req={}, drift={"fin": 0.1, "toxic": 0.5, "cha": 0.3}, items=["apron@1"], bg="kitchen",
+    "atb": dict(name="🛒 Касир АТБ", name_f="🛒 Касирка "
+                                           "АТБ", pay=120, req={}, drift={"fin": 0.1, "toxic": 0.5, "cha": 0.3}, items=["apron@1"], bg="kitchen",
                 open=True),
-    "courier": dict(name="🛵 Кур'єр на самокаті", pay=150, req={"skill": {"str": 15}}, drift={"attr": 0.1, "str": 0.6, "party": 0.2},
+    "courier": dict(name="🛵 Кур'єр на самокаті", name_f="🛵 Кур'єрка на "
+                                                        "самокаті", pay=150, req={"skill": {"str": 15}}, drift={"attr": 0.1, "str": 0.6, "party": 0.2},
                     items=["backpack@3"], bg="kyiv", open=True),
-    "taxi": dict(name="🚕 Таксист «Шансон FM»", pay=170, req={}, drift={"blat": 0.2, "toxic": 0.4, "cha": 0.4}, items=["cap"],
+    "taxi": dict(name="🚕 Таксист «Шансон FM»", name_f="🚕 Таксистка «Шансон "
+                                                      "FM»", pay=170, req={}, drift={"blat": 0.2, "toxic": 0.4, "cha": 0.4}, items=["cap"],
                  bg="kyiv", open=True),
-    "cook": dict(name="🌯 Кухар у шаурмичній", pay=150, req={}, drift={"glutton": 0.6, "str": 0.2}, items=["chef", "apron"],
+    "cook": dict(name="🌯 Кухар у шаурмичній", name_f="🌯 Кухарка у "
+                                                     "шаурмичній", pay=150, req={}, drift={"glutton": 0.6, "str": 0.2}, items=["chef", "apron"],
                  bg="kitchen", open=True),
-    "farmer": dict(name="🚜 Фермер", pay=170, req={"skill": {"str": 25}}, drift={"patriot": 0.4, "str": 0.5},
+    "farmer": dict(name="🚜 Фермер", name_f="🚜 Фермерка", pay=170, req={"skill": {"str": 25}}, drift={"patriot": 0.4, "str": 0.5},
                    items=["cowboy@3"], bg="farm", open=True),
-    "it": dict(name="💻 Айтішник", pay=380, req={"skill": {"int": 45}}, drift={"fin": 0.4, "int": 0.6, "party": -0.2, "mood": -1},
+    "it": dict(name="💻 Айтішник", name_f="💻 Айтішниця", pay=380, req={"skill": {"int": 45}}, drift={"fin": 0.4, "int": 0.6, "party": -0.2, "mood": -1},
                items=["hoodie", "laptop", "nerd"], bg="office", open=True),
-    "blogger": dict(name="📸 Блогер", pay=0, req={"skill": {"cha": 35}}, drift={"fame": 1.2, "attr": 0.3, "cha": 0.6, "toxic": 0.3},
+    "blogger": dict(name="📸 Блогер", name_f="📸 Блогерка", pay=0, req={"skill": {"cha": 35}}, drift={"fame": 1.2, "attr": 0.3, "cha": 0.6, "toxic": 0.3},
                     items=["phone", "sunglasses@8"], bg="club", pay_range=(-50, 700), open=True),
-    "dj": dict(name="🎧 Діджей", pay=240, req={"trait": {"party": 15}}, drift={"fame": 0.5, "party": 0.8, "health": -1},
+    "dj": dict(name="🎧 Діджей", name_f="🎧 Діджейка", pay=240, req={"trait": {"party": 15}}, drift={"fame": 0.5, "party": 0.8, "health": -1},
                items=["headphones", "sunglasses"], bg="club", open=True),
     "witch": dict(name="🔮 Потомствена ворожка", pay=200, req={"trait": {"mystic": 15}}, drift={"fame": 0.3, "mystic": 0.8, "cha": 0.2},
                   items=["wizard@7", "cards"], bg="mystic", pay_range=(50, 450), open=True),
-    "doctor": dict(name="🩺 Лікар", pay=340, req={"edu": "med"}, drift={"blat": 0.3, "int": 0.3, "love": 0.3, "mood": -1},
+    "doctor": dict(name="🩺 Лікар", name_f="🩺 Лікарка", pay=340, req={"edu": "med"}, drift={"blat": 0.3, "int": 0.3, "love": 0.3, "mood": -1},
                    items=["coat", "mask"], bg="hospital", open=True),
-    "volunteer": dict(name="🇺🇦 Волонтер", pay=60, req={"trait": {"patriot": 15}}, drift={"blat": 0.4, "fame": 0.2, "patriot": 1, "cha": 0.5, "love": 0.3},
+    "volunteer": dict(name="🇺🇦 Волонтер", name_f="🇺🇦 Волонтерка", pay=60, req={"trait": {"patriot": 15}}, drift={"blat": 0.4, "fame": 0.2, "patriot": 1, "cha": 0.5, "love": 0.3},
                       items=["vyshyvanka", "scarf"], bg="field", open=True),
-    "deputy": dict(name="🏛 Депутат", pay=350, req={"flag": "politics"}, drift={"blat": 1.2, "auth": 0.2, "toxic": 0.6, "gambler": 0.3},
+    "deputy": dict(name="🏛 Депутат", name_f="🏛 Депутатка", pay=350, req={"flag": "politics"}, drift={"blat": 1.2, "auth": 0.2, "toxic": 0.6, "gambler": 0.3},
                    items=["suit", "tie@6"], bg="palace", pay_range=(200, 1200)),
-    "bandit": dict(name="🕶 Бандит", pay=400, req={"flag": "crime"}, drift={"auth": 1.2, "toxic": 0.6, "dark": 0.5, "str": 0.3},
+    "bandit": dict(name="🕶 Бандит", name_f="🕶 Бандитка", pay=400, req={"flag": "crime"}, drift={"auth": 1.2, "toxic": 0.6, "dark": 0.5, "str": 0.3},
                    items=["tracksuit", "chain"], bg="kyiv", risk=("jail", 0.08)),
-    "poker": dict(name="🃏 Професійний покерист", pay=0, req={"skill": {"luck": 40}}, drift={"fin": 0.2, "gambler": 1},
+    "poker": dict(name="🃏 Професійний покерист", name_f="🃏 Професійна "
+                                                        "покеристка", pay=0, req={"skill": {"luck": 40}}, drift={"fin": 0.2, "gambler": 1},
                   items=["cards", "monocle"], bg="casino", pay_range=(-400, 900), open=True),
-    "prophet": dict(name="🕯 Пророк секти", pay=450, req={"flag": "cult"}, drift={"fame": 0.6, "auth": 0.3, "mystic": 0.8, "dark": 0.4},
+    "prophet": dict(name="🕯 Пророк секти", name_f="🕯 Пророчиця "
+                                                  "секти", pay=450, req={"flag": "cult"}, drift={"fame": 0.6, "auth": 0.3, "mystic": 0.8, "dark": 0.4},
                     items=["robe", "wand"], bg="mystic"),
-    "astronaut": dict(name="👨‍🚀 Космонавт", pay=600, req={"flag": "space"}, drift={"fame": 1.0, "int": 0.4, "luck": 0.2},
+    "astronaut": dict(name="👨‍🚀 Космонавт", name_f="👨‍🚀 Космонавтка", pay=600, req={"flag": "space"}, drift={"fame": 1.0, "int": 0.4, "luck": 0.2},
                       items=["spacesuit", "jetpack"], bg="space"),
-    "military": dict(name="🪖 Захисник", pay=300, req={"flag": "army"}, drift={"patriot": 1, "str": 0.6, "dark": 0.2},
+    "military": dict(name="🪖 Захисник", name_f="🪖 Захисниця", pay=300, req={"flag": "army"}, drift={"patriot": 1, "str": 0.6, "dark": 0.2},
                      items=["helmet", "bronik"], bg="bunker"),
     # role jobs
-    "night_guard": dict(name="🌙 Нічний сторож на кладовищі", pay=260, req={"role": "any"}, drift={"dark": 0.8},
+    "night_guard": dict(name="🌙 Нічний сторож на кладовищі", name_f="🌙 Нічна охоронниця на "
+                                                                    "кладовищі", pay=260, req={"role": "any"}, drift={"dark": 0.8},
                         items=["cape@10"], bg="cemetery", open=True),
-    "exorcist": dict(name="✝️ Екзорцист за викликом", pay=320, req={"trait": {"mystic": 30}}, drift={"fame": 0.3, "mystic": 0.6, "str": 0.2},
+    "exorcist": dict(name="✝️ Екзорцист за викликом", name_f="✝️ Екзорцистка за "
+                                                             "викликом", pay=320, req={"trait": {"mystic": 30}}, drift={"fame": 0.3, "mystic": 0.6, "str": 0.2},
                      items=["book", "robe@1"], bg="mystic", pay_range=(100, 600), open=True),
 }
 

@@ -1,0 +1,41 @@
+# sentences gender_scan.py flags but that are not about the pet: `<first 40 characters> | reason`
+{name} {вирішив|вирішила}, що настав час | somebody else is the subject, or the word is not about the pet
+{Кіборг|Кіборгиня} {name} {помітив|поміт | somebody else is the subject (a character, an object, a speaker)
+{Програв|Програла} кандидату, що роздава | somebody else is the subject, or the word is not about the pet
+«Я гаманець вдома {забув|забула}» | common-gender or non-gendered noun/adjective (or not about the pet)
+Бабця зітхнула: «Бракований». | somebody else is the subject, or the word is not about the pet
+Директор вражений настільки, що підвищив | somebody else is the subject, or the word is not about the pet
+Довести, що ти аксолотль | common-gender or non-gendered noun/adjective (or not about the pet)
+Кава, бруківка, нові друзі й картина, як | somebody else is the subject, or the word is not about the pet
+Капсулу забрав на металобрухт місцевий п | somebody else is the subject, or the word is not about the pet
+Мільйонник зробив вигляд, що не почув. | somebody else is the subject, or the word is not about the pet
+На піці дроби зрозумів навіть кіт. | somebody else is the subject, or the word is not about the pet
+Одну картину купив ресторан на Подолі. | somebody else is the subject, or the word is not about the pet
+Переміг кіт сусідки. | somebody else is the subject, or the word is not about the pet
+Прадід розповів, де закопав гроші. | somebody else is the subject, or the word is not about the pet
+Привезли чоловіка, що «просто сів» на пл | somebody else is the subject, or the word is not about the pet
+Привид показав, де закопав гроші. | somebody else is the subject, or the word is not about the pet
+Прикрити колегу, який помилився | somebody else is the subject, or the word is not about the pet
+Пропав пес | somebody else is the subject, or the word is not about the pet
+Пішов дощ! | somebody else is the subject, or the word is not about the pet
+Світанок над Дніпром, сукні, костюми й о | somebody else is the subject, or the word is not about the pet
+Секту купив фонд з Кіпру. | somebody else is the subject, or the word is not about the pet
+Сказати, що ти Олег | common-gender or non-gendered noun/adjective (or not about the pet)
+Страх переміг. | somebody else is the subject, or the word is not about the pet
+Там був ще один ти. | somebody else is the subject, or the word is not about the pet
+Тебе знімали всі й ти — тренд дня. | common-gender or non-gendered noun/adjective (or not about the pet)
+Тепер ти — купідон району. | common-gender or non-gendered noun/adjective (or not about the pet)
+Ти тепер банк. | common-gender or non-gendered noun/adjective (or not about the pet)
+Ти тепер живий оркестр парку. | common-gender or non-gendered noun/adjective (or not about the pet)
+Ти — ангел! | common-gender or non-gendered noun/adjective (or not about the pet)
+Ти — архангел на пів ставки! | common-gender or non-gendered noun/adjective (or not about the pet)
+Ти — геній. | common-gender or non-gendered noun/adjective (or not about the pet)
+Ти — кіборг! | common-gender or non-gendered noun/adjective (or not about the pet)
+Ти — обслуговуючий персонал. | common-gender or non-gendered noun/adjective (or not about the pet)
+Ти — тімлід. | common-gender or non-gendered noun/adjective (or not about the pet)
+У майбутньому ти — кіборг. | common-gender or non-gendered noun/adjective (or not about the pet)
+У склепі вже ховався інший сторож. | somebody else is the subject, or the word is not about the pet
+Через тиждень з метеорита вилупився… | somebody else is the subject, or the word is not about the pet
+ШІ виписав догану. | somebody else is the subject, or the word is not about the pet
+ШІ виписав премію 10 000 ₴. | somebody else is the subject, or the word is not about the pet
+ШІ написав, що ти {лицар, який переміг|л | somebody else is the subject, or the word is not about the pet

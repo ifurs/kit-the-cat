@@ -32,7 +32,7 @@ Kit the Cat: the pet life-sim of the Ukrainian Telegram bot «Кошеня», as
   `kit-release`. Agent `.claude/agents/content-reviewer.md` reviews language and boundaries.
 - Content pipeline: `scripts/content_gate.py` runs every content check; `scripts/ua_lint.py` is the Ukrainian lint
   (strict in CI); the `content-reviewer` agent does the human-level language review.
-- Tools: `scripts/case_scan.py` (names in the wrong case), `scripts/content_stats.py` (gaps, dead ends, hard checks), `scripts/balance.py` (simulation vs targets),
+- Tools: `scripts/case_scan.py` (names in the wrong case), `scripts/gender_scan.py` (masculine words about a pet), `scripts/content_stats.py` (gaps, dead ends, hard checks), `scripts/balance.py` (simulation vs targets),
   `scripts/preview.py` (sprite sheets, `--smoke`), `scripts/ui_audit.js` (layout audit in a browser).
 - New DSL key = contract in `dsl.py` + its docstring + `engine.apply/meets` + test + regenerate `docs/DSL.md`.
 - Every user-visible change goes into `CHANGELOG.md` → Unreleased.

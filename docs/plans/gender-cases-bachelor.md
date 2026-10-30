@@ -1,6 +1,6 @@
 # Plan: name cases, pet gender, «Холостяк / Холостячка»
 
-Status: phases 1–2 done on `feat/gender-cases` (not pushed) · written 2026-10-29 · executor: Claude Sonnet, one phase per session.
+Status: phases 1–3 done on `feat/gender-cases` (not pushed) · written 2026-10-29 · executor: Claude Sonnet, one phase per session.
 
 Three user-visible problems, in the order they are fixed:
 
@@ -91,15 +91,15 @@ Numbers to keep in mind (2026-10-29): 698 events in 25 content modules, 606 `{na
 
 ## Phase 3 — gender in the content  · 3–4 sessions (≈ 6–8 modules each)
 
-- [ ] Write `scripts/gender_scan.py`: for each module, render every text (event text, choice labels, outcomes, fail
+- [x] Write `scripts/gender_scan.py`: for each module, render every text (event text, choice labels, outcomes, fail
   outcomes, engine notes) for a girl named «Мурка» and list words that look masculine and refer to the pet:
   past-tense verbs ending in `-в`/`-вся`/`-шов` (знайшов, вирішив, повернувся, пішов), short adjectives/participles
   (радий, готовий, щасливий, сам), nouns of role (переможець, чемпіон, блогер? — decide), «він/його/йому» about the
   pet. It prints `module:line: word — text`; keep an allowlist for words about other characters (сусід вирішив…).
-- [ ] Go module by module (biggest first: check `scripts/content_stats.py`), turning each hit into `{…|…}` or
+- [x] Go module by module (biggest first: check `scripts/content_stats.py`), turning each hit into `{…|…}` or
   rephrasing so it is gender-neutral (second person present, «вдалося», «тобі дісталося») — rephrasing is often nicer
   than a pair. Keep lines ≤ 120 columns; caption limits still apply (the bot posts these as photo captions ≤ 1024).
-- [ ] Add a gate test: every text rendered for `"f"` has no unresolved `{`, and `gender_scan.py --strict` reports zero
+- [x] Add a gate test: every text rendered for `"f"` has no unresolved `{`, and `gender_scan.py --strict` reports zero
   unreviewed hits (allowlist entries carry a short reason).
 - Suggested split: session A — `life`, `youth`, `daily`, `consequences`; B — `chains`, `arcs`, `arcs_soul`, `social`,
   `status`; C — `jobs`, `dreams`, `stories`, `stories_more`; D — everything left + engine notes + `sandbox/game.py`.

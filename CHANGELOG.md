@@ -18,6 +18,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   Breaking for hosts that read the data directly: `persona.NAMES[species]` is `{"m": …, "f": …}`, `NAME_SUFFIX` holds
   `(masculine, feminine)` pairs, `FALLBACK_NAMES` is split by gender.
 
+- **The texts speak about a girl in the feminine** (phase 3): ~1100 masculine words about the pet in 698 events and
+  the engine's notes became `{знайшов|знайшла}` pairs (verbs, predicate adjectives, «Ти — {герой|героїня}»,
+  «{Депутат|Депутатка} {name}», `{other:…|…}` for the other pet); death causes, epitaphs, life-summary titles,
+  casino/world/care/battle texts, temperaments (`TEMPER_F`), tier titles (`TIER_F`), life stages (`STAGES_F`) and job
+  names (`name_f` in `economy.JOBS`, `Pet.job_name`) have feminine forms. New `scripts/gender_scan.py` finds the
+  masculine words that are left; its `--strict` is a gate in `content_gate.py` (`scripts/gender_allow.txt` lists the
+  sentences that are about somebody else). Achievement keys stay masculine; `content/validate.py` measures texts as the
+  player reads them.
+
 ### Fixed
 - **Pet names are declined**: «Під дверима Крилатий з Троєщини пищить кошеня» is now «Під дверима Крилатого з
   Троєщини…». New `grammar.py` (`decline`, `inflect`) gives all seven cases of a name (adjectives, nouns on a
