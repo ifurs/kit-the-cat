@@ -1,6 +1,6 @@
 [project]
 name = "kit-the-cat"
-version = "0.12.0"
+version = "0.12.1"
 description = "Kit the Cat: pet life-sim engine — genomes & pixel art, 313 life events, roles, battles"
 readme = "README.md"
 license = "MIT"
