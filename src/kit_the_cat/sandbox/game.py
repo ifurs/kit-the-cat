@@ -88,7 +88,7 @@ class Sandbox:
         if not p:
             return out
         out["pet"] = dict(
-            name=p.name, state=p.state, stage=E.phase_name(p.phase(), p.gender) if p.alive else E.stage_name(p.stage, p.gender),
+            name=p.name, gender=p.gender, state=p.state, stage=E.phase_name(p.phase(), p.gender) if p.alive else E.stage_name(p.stage, p.gender),
             card=E.card(p, names),
             stats={k: round(getattr(p, k)) for k in E.STATS}, money=int(p.money), level=p.level,
             age=round(p.age_days, 1), years=int(p.years),
@@ -123,16 +123,19 @@ class Sandbox:
         return out
 
     # --- pet lifecycle ---------------------------------------------------------------------------
-    async def create(self, owner: int, species: str) -> str:
+    async def create(self, owner: int, species: str, gender: str | None = None) -> str:
+        """`gender` is "m", "f" or None for a coin flip."""
         if species not in sprites.SPECIES:
             return "Невідомий вид"
+        if gender and gender not in E.GENDERS:
+            return "Невідома стать"
         async with self.lock:
             pets = await self.pets()
             old = next((x for x in pets if x.owner_id == owner), None)
             if old and old.state != "dead":
                 return "У тебе вже є пет"
             p = E.new_pet(SANDBOX, owner, HUMANS.get(owner, f"Гравець {owner}"), species,
-                          [x for x in pets if x.owner_id != owner], self.rng)
+                          [x for x in pets if x.owner_id != owner], self.rng, gender=gender or None)
             if old:
                 p.gen = old.gen + 1
             await self.save(p)

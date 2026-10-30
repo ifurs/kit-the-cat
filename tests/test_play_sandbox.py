@@ -199,3 +199,13 @@ async def test_no_time_button_hatch_once_and_actions_move_time(client):
             break
     s = await state(client)
     assert s["clock"] != clock and s["pet"]["years"] > years            # the world and the pet moved on
+
+
+async def test_adopt_with_chosen_gender(client):
+    assert "стать" in (await do(client, "create", "cat", gender="x"))["message"]
+    assert (await state(client))["pet"] is None
+    await do(client, "create", "cat", who=1, gender="f")
+    await do(client, "create", "dog", who=2, gender="m")
+    await do(client, "create", "fox", who=3)  # no choice: a coin flip, still a valid gender
+    assert [(await state(client, w))["pet"]["gender"] for w in (1, 2)] == ["f", "m"]
+    assert (await state(client, 3))["pet"]["gender"] in ("m", "f")
