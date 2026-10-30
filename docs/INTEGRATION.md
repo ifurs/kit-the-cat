@@ -6,7 +6,7 @@ worth reading first.
 ## Install and pin
 
 ```bash
-uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat@v0.5.0"
+uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat@v0.12.0"
 ```
 
 Always pin a tag. Extras: `images` (Pillow, for GIF/PNG), `sandbox` (aiohttp server).
