@@ -76,7 +76,7 @@ class Sandbox:
                    pet=None, players=[], world=None, world_feed=self.world_feed[-8:][::-1])
         for x in sorted(pets, key=lambda x: x.owner_id):
             out["players"].append(dict(owner=x.owner_id, owner_name=x.owner_name, name=x.name, state=x.state,
-                                       stage=E.STAGES.get(x.stage, ""), npc=x.owner_id >= NPC_BASE,
+                                       stage=E.stage_name(x.stage, x.gender), npc=x.owner_id >= NPC_BASE,
                                        emoji=E.SPECIES_EMOJI.get(x.species, "🥚"),
                                        status=(p.status.get(x.pid, "") if p and x is not p else ""),
                                        rel=round(p.rel.get(x.pid, 0)) if p and x is not p else 0))
@@ -88,7 +88,7 @@ class Sandbox:
         if not p:
             return out
         out["pet"] = dict(
-            name=p.name, state=p.state, stage=E.PHASE_NAMES[p.phase()] if p.alive else E.STAGES.get(p.stage, ""),
+            name=p.name, state=p.state, stage=E.phase_name(p.phase(), p.gender) if p.alive else E.stage_name(p.stage, p.gender),
             card=E.card(p, names),
             stats={k: round(getattr(p, k)) for k in E.STATS}, money=int(p.money), level=p.level,
             age=round(p.age_days, 1), years=int(p.years),
@@ -97,12 +97,12 @@ class Sandbox:
             money_tier=p.tier_name("money"),
             casino=[dict(id=k, name=E.CASINO[k][0], lo=E.CASINO[k][2], hi=min(E.CASINO[k][3], int(p.money)))
                     for k in E.casino_venues(p)],
-            role=p.role_name() if p.role in E.ROLES else "", job=JOBS[p.job]["name"] if p.job in JOBS else "",
+            role=p.role_name() if p.role in E.ROLES else "", job=p.job_name() if p.job in JOBS else "",
             traits={E.TRAITS[t]: round(p.traits.get(t, 0), 1) for t in p.top_traits()},
             skills={k: round(p.skills.get(k, 0)) for k in E.SKILLS}, jailed=p.jailed, pending=None,
             genes=sprites.describe(p.genome), dna=sprites.dna_code(p.genome), rarity=sprites.rarity(p.genome)[1],
             gen=p.gen, dynasty=p.dynasty, achievements=[p.ach_name(a) for a in p.achievements[-12:]], heir=bool(p.heir), look=_look_key(p),
-            persona={k: p.persona.get(k, "") for k in ("temper", "dream", "fear")}, emoji=E.SPECIES_EMOJI.get(p.species, "🐾"),
+            persona=dict(temper=p.temper_name(), dream=p.dream_text(), fear=p.persona.get("fear", "")), emoji=E.SPECIES_EMOJI.get(p.species, "🐾"),
             perk=E.perk_text(p), goal_step=p.goal_step(), dream_done=bool(p.flags.get("dream_done")),
             power={k: round(p.skill(k)) for k in E.SKILLS},
             egg_left=max(0, round((E.EGG_HOURS * E.hour() - (E.now() - p.born)) / 60)) if p.state == "egg" else 0,
@@ -145,7 +145,7 @@ class Sandbox:
                 return "Нема що вилуплювати"
             p.hatch(E.now())
             await self.save(p)
-        return f"🐣 Вилупився {p.name}! Характер: {p.persona.get('temper', '')}. Мрія: {p.persona.get('dream', '')}."
+        return f"🐣 {p.g('Вилупився', 'Вилупилася')} {p.name}! Характер: {p.temper_name()}. Мрія: {p.persona.get('dream', '')}."
 
     async def _pass(self, years: float) -> None:
         """The world moves on while your pet lives: a few hours for a small thing, up to a day and a half."""
@@ -189,7 +189,8 @@ class Sandbox:
                 return "⛓ Пет за ґратами"
             left = p.cooldown_left(actor_id, action, E.CARE[action][2])
             if left > 0:
-                return "Лікар щойно був. Спробуй трохи згодом." if action == "heal" else "Зарано, дай йому перепочити"
+                return "Лікар щойно був. Спробуй трохи згодом." if action == "heal" else \
+                    f"Зарано, дай {p.g('йому', 'їй')} перепочити"
             by_owner = actor_id == owner
             actor = None if by_owner else next((x for x in pets if x.owner_id == actor_id and x.alive), None)
             text, notes = E.care(p, action, self.rng, actor, by_owner, HUMANS.get(actor_id, "Гість"))
@@ -328,7 +329,7 @@ class Sandbox:
 
     async def jobs(self, owner: int) -> list[dict]:
         p = await self.pet(owner, tick=False)
-        return [dict(id=j, name=JOBS[j]["name"], pay=JOBS[j]["pay"]) for j in E.job_offers(p)] if p else []
+        return [dict(id=j, name=p.job_name(j), pay=JOBS[j]["pay"]) for j in E.job_offers(p)] if p else []
 
     async def apply_job(self, owner: int, jid: str) -> str:
         async with self.lock:
@@ -349,7 +350,7 @@ class Sandbox:
                 return "Ти й так вільний"
             p.apply({"job": "", "mood": 10, "cha": 1}, None, self.rng)
             await self.save(p)
-        return "🚪 Звільнився. Свобода! (і голод)"
+        return f"🚪 {p.g('Звільнився', 'Звільнилася')}. Свобода! (і голод)"
 
     async def rename(self, owner: int, name: str) -> str:
         name = "".join(ch for ch in name if ch.isprintable() and ch not in "<>").strip()[:24]
@@ -632,7 +633,7 @@ class Sandbox:
             t["bets"].setdefault(key, {})[str(owner)] = [side, amount, odds]
             await self.save(me)
             await self._save_state(st)
-        return f"🎰 Ставка {amount} ₴ на {inflect([fa.name, fb.name][side], "acc")} (×{odds})"
+        return f"🎰 Ставка {amount} ₴ на {inflect([fa.name, fb.name][side], "acc", [fa.gender, fb.gender][side])} (×{odds})"
 
     def _skip_byes(self, t: dict, by: dict) -> None:
         """Resolve byes and walkovers until the next match has two fighters (or the bracket is done),

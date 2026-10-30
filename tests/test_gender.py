@@ -1,6 +1,7 @@
 """Pet gender: the field, names, {він|вона} pairs in texts, gendered display words and achievements."""
 import random
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -255,3 +256,120 @@ def test_a_new_pet_of_each_gender_plays_a_few_events(gender):
     for e in list(E.EVENTS.values())[:60]:
         text = p.fmt(e.text, _pet() if e.social else None)
         assert "|" not in text, e.id
+
+
+# --- the content is converted ----------------------------------------------------------------------------
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import gender_scan  # noqa: E402
+
+
+def test_no_masculine_word_about_a_pet_is_left_in_the_content():
+    left = gender_scan.scan()
+    assert not left, "\n".join(f"{f}:{line}: {h.word} — {h.sentence[:70]}" for f, line, h in left[:10])
+
+
+def test_every_allowlist_entry_still_matches_a_sentence_and_has_a_reason():
+    sentences = {gender_scan.key_of(h.sentence) for _, _, text in gender_scan.strings() for h in gender_scan.scan_text(text)}
+    for key, why in gender_scan.allowed().items():
+        assert why, key
+        assert key in sentences, f"stale allowlist entry: {key!r}"
+
+
+def test_the_scanner_knows_a_pet_from_somebody_else():
+    def words(text, social=False):
+        return [(h.word, h.subj) for h in gender_scan.scan_text(text, social)]
+    assert words("{name} знайшов гаманець.") == [("знайшов", "pet")]
+    assert words("Знайшов гаманець і вирішив залишити.") == [("Знайшов", "pet"), ("вирішив", "pet")]
+    assert words("Кум забрав гроші.") == [("забрав", "who")]
+    assert words("Приїхав патруль, знайшов соску.") == [("Приїхав", "who"), ("знайшов", "who")]
+    assert words("Ніхто не помітив.") == [("помітив", "who")]
+    assert words("{other} образився.") == [("образився", "other")]
+    assert words("Шарик, якого {name} підібрав, став зіркою.") == [("підібрав", "pet"), ("став", "who")]
+    assert words("{name} вирішив, що настав час.") == [("вирішив", "pet"), ("настав", "who")]
+    assert words("Записав {name_acc} у «хороші».", social=True) == [("Записав", "other")]
+    assert words("Записав {name_acc} у «хороші».") == [("Записав", "who")]
+    assert words("{Знайшов|Знайшла} гаманець.") == []  # a pair is already written
+    assert words("Щасливий.") == [("Щасливий", "pet")]
+    assert words("Щасливий випадок.") == []  # an attribute, not a predicate
+    assert words("Ти став мером.") == [("став", "pet")]
+
+
+def test_feminine_past_tense_forms():
+    table = {"знайшов": "знайшла", "прийшов": "прийшла", "вирішився": "вирішилася", "зрозумів": "зрозуміла",
+             "виріс": "виросла", "втік": "втекла", "переміг": "перемогла", "помер": "померла", "з'їв": "з'їла",
+             "підвівся": "підвелася", "приніс": "принесла", "був": "була", "став": "стала", "ВТІК": "ВТЕКЛА",
+             "Запам'ятав": "Запам'ятала", "хотів": "хотіла", "об'ївся": "об'їлася", "зустрів": "зустріла"}
+    for masculine, fem in table.items():
+        assert gender_scan.feminine(masculine) == fem, masculine
+    for not_a_verb in ("друзів", "років", "колектив", "будинок", "вона", "шов"):
+        assert gender_scan.feminine(not_a_verb) is None, not_a_verb
+
+
+def test_every_text_renders_for_both_genders_without_leftovers():
+    boy, girl = _pet(), _girl()
+    for e in ALL:
+        texts = [e.text] + [c.label for c in e.choices] + [o.text for c in e.choices for o in c.outs + c.fail]
+        for s in texts:
+            for me, other in ((boy, girl), (girl, boy), (girl, girl)):
+                out = me.fmt(s, other if e.social else None)
+                assert "|" not in out and "{" not in out.replace("{x}", ""), (e.id, out)
+
+
+def test_achievement_keys_in_content_are_plain_masculine_strings():
+    for e in ALL:
+        for c in e.choices:
+            for o in c.outs + c.fail:
+                a = o.fx.get("achievement", "")
+                assert "{" not in a and "|" not in a, (e.id, a)
+
+
+# --- the engine speaks about a girl in the feminine -----------------------------------------------------------
+
+def test_tiers_temperament_stage_and_job_have_feminine_forms():
+    girl, boy = _girl(), _pet()
+    girl.persona["temper"] = boy.persona["temper"] = "хуліган"
+    assert girl.temper_name() == "хуліганка" and boy.temper_name() == "хуліган"
+    assert girl.fmt("{temper}") == "хуліганка"
+    girl.persona["temper"] = "зануда"
+    assert girl.temper_name() == "зануда"
+    for key, tier, fem in (("money", 3, "🚗 Мажорка"), ("auth", 4, "🕶 Хрещена мати"), ("attr", 3, "✨ Красуня району")):
+        assert girl.tier_name(key, tier).endswith(fem.split(" ", 1)[1])
+        assert not boy.tier_name(key, tier).endswith(fem.split(" ", 1)[1])
+    assert girl.tier_name("money", 0) == "🕳 У боргах" or "борг" in girl.tier_name("money", 0)
+    assert E.stage_name(3, "f") == "🧑 Доросла" and E.stage_name(3, "m") == "🧑 Дорослий"
+    assert E.job_name("atb", "f") == "🛒 Касирка АТБ" and E.job_name("atb", "m") == "🛒 Касир АТБ"
+    assert E.job_name("witch", "f") == E.job_name("witch", "m") and E.job_name("nope", "f") == "nope"
+    for k, v in E.TEMPER_F.items():
+        assert k in E.PERKS and v != k
+
+
+def test_world_event_claims_and_life_summaries_are_gendered():
+    girl = _girl()
+    seen = set()
+    for i in range(60):
+        text, _, _ = E.world_claim(girl, "meteor", random.Random(i))
+        assert "{" not in text
+        seen.add(text)
+    assert any("знайшла" in s or "надихалася" in s for s in seen)
+    assert not any(" знайшов " in s or "надихався" in s for s in seen)
+    girl.state, girl.stage, girl.flags["dream_done"] = "dead", 3, 1
+    s = E.life_summary(girl)
+    assert s["title"] == "Та, що здійснила свою мрію"
+
+
+def test_a_girl_fights_and_wins_in_the_feminine():
+    from kit_the_cat import battle as B
+    a, b = _girl("Мурка"), _pet()
+    a.name, b.name = "Мурка", "Барсик"
+    a.state = b.state = "alive"
+    texts = []
+    for i in range(30):
+        res = B.fight(B.Fighter.of(a, "aggressive"), B.Fighter.of(b, "aggressive"), random.Random(i))
+        texts.append(res.text if res.text else " ".join(map(str, res.log)))
+        assert "{" not in texts[-1]
+    assert B.Fighter.of(a).gender == "f" and B.Fighter.of(b).gender == "m"
+    win, lose = _girl("Мурка"), _pet()
+    lose.name = "Барсик"
+    B.aftermath(win, lose, random.Random(1))
+    assert "Мурка перемогла Барсика" in win.log[-1][2] and "Барсик програв Мурці" in lose.log[-1][2]
