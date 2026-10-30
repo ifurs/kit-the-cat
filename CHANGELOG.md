@@ -22,6 +22,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   resolved by `Pet.fmt` before the name is substituted (`grammar.pick`); `content/validate.py` rejects a malformed
   pair. Epitaphs, role names/descriptions (Вампірка, Перевертниця…), relationship words (подруга, суперниця…),
   species words (Кішечка) and 70 achievement titles (`ACH_F`, shown through `Pet.ach_name`) have feminine forms.
+- **Browser game: choose the gender** (phase 5): under the species buttons — ♂ Хлопчик / ♀ Дівчинка / 🎲 Будь-яка
+  (default 🎲, a coin flip); the card shows a small ♂/♀ next to the name. The sandbox API `create` takes an optional
+  `gender` (`"m"` | `"f"`), the state has `pet.gender`; both pages (`sandbox/static/index.html`, `web/index.html`) updated.
 - API: `Pet.g`, `Pet.role_name`, `Pet.role_desc`, `Pet.ach_name`, `engine.role_name/role_desc/status_name/species_name`.
   Breaking for hosts that read the data directly: `persona.NAMES[species]` is `{"m": …, "f": …}`, `NAME_SUFFIX` holds
   `(masculine, feminine)` pairs, `FALLBACK_NAMES` is split by gender.

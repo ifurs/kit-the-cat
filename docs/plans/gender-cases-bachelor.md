@@ -1,6 +1,6 @@
 # Plan: name cases, pet gender, «Холостяк / Холостячка»
 
-Status: phases 1–4 done on `feat/gender-cases` (not pushed) · written 2026-10-29 · executor: Claude Sonnet, one phase per session.
+Status: phases 1–5 done on `feat/gender-cases` (not pushed) · written 2026-10-29 · executor: Claude Sonnet, one phase per session.
 
 Three user-visible problems, in the order they are fixed:
 
@@ -137,11 +137,11 @@ Design (write the texts with `kit-event-writer`; follow the «Історії» s
 
 ## Phase 5 — browser game  · 1 session
 
-- [ ] Adoption: under the species buttons a ♂ / ♀ / 🎲 choice (default 🎲). Sandbox API `adopt(species, gender)`.
-- [ ] Card: a small ♂/♀ next to the name; journal and recaps already come formatted from the engine.
-- [ ] Keep `web/index.html` and `src/kit_the_cat/sandbox/static/index.html` identical outside the loader block;
+- [x] Adoption: under the species buttons a ♂ / ♀ / 🎲 choice (default 🎲). Sandbox API: the existing `create` action takes an optional `gender` (kept the name, no new action).
+- [x] Card: a small ♂/♀ next to the name; journal and recaps already come formatted from the engine.
+- [x] Keep `web/index.html` and `src/kit_the_cat/sandbox/static/index.html` identical outside the loader block;
   check phone 375 px and 1280×720 (choices fit) with `scripts/ui_audit.js`.
-- [ ] Update `README.md` / `docs/PET.md` (gender, cases), `CHANGELOG.md`.
+- [x] Update `README.md` / `docs/PET.md` (gender, cases), `CHANGELOG.md`.
 
 ## Phase 6 — release and the bot  · with the owner
 
