@@ -5,10 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.12.1] — 2026-10-30
+
 ### Fixed
 - Language: «Перепідарувати чужий подарунок» → «Передарувати…»; the four events that put a fear into the wrong case
   («що огірків заважає жити») now say «страх {fear}»; «мерка» → «міська голова»; «командир черги»,
   «Кримінальна лідерка»; `ua_lint` flags «перепідар*» and «сперечальник*».
+- Language, review pass over the new feminine forms: «нащадкиня», «добровольчиня», «шефиня», «сіра еміненція»,
+  «екомажор», «криптоінфлюенсер», «фітнес-тренер», «охоронниця скарбу», «єдинорогиня», «гніда» (not «вороная»),
+  «старша по камері»; the unused case of «хтось» in `NOBODY.loc`.
 
 ## [0.12.0] — 2026-10-30
 
@@ -334,7 +339,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/ifurs/kit-the-cat/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/ifurs/kit-the-cat/compare/v0.11.3...v0.12.0
 [0.11.3]: https://github.com/ifurs/kit-the-cat/compare/v0.11.2...v0.11.3
 [0.11.2]: https://github.com/ifurs/kit-the-cat/compare/v0.11.1...v0.11.2
