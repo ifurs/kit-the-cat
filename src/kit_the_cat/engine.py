@@ -2393,7 +2393,7 @@ LIFE_TITLES = [
     (lambda p, c: p.flags.get("dream_done"), "{Той, хто здійснив|Та, що здійснила} свою мрію"),
     (lambda p, c: p.role in ("vampire", "demon") and c.get("natural"), "Безсмертне зло, яке таки здолала старість"),
     (lambda p, c: c.get("dodged", 0) >= 2, "{Кіт|Кішка} Шредінгера: {помирав|помирала} частіше, ніж {обідав|обідала}"),
-    (lambda p, c: p.flags.get("jailed_times", 0) >= 2, "{Кримінальний авторитет|Кримінальна авторитетка} району"),
+    (lambda p, c: p.flags.get("jailed_times", 0) >= 2, "{Кримінальний авторитет|Кримінальна лідерка} району"),
     (lambda p, c: c.get("money_max", 0) >= 10000, "{Місцевий олігарх|Місцева олігархиня}"),
     (lambda p, c: p.children >= 2, "{Засновник|Засновниця} династії"),
     (lambda p, c: len(p.achievements) >= 7, "Легенда чату"),

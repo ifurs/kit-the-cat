@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Fixed
+- Language: «Перепідарувати чужий подарунок» → «Передарувати…»; the four events that put a fear into the wrong case
+  («що огірків заважає жити») now say «страх {fear}»; «мерка» → «міська голова»; «командир черги»,
+  «Кримінальна лідерка»; `ua_lint` flags «перепідар*» and «сперечальник*».
+
 ## [0.12.0] — 2026-10-30
 
 ### Added
