@@ -21,6 +21,7 @@ from .daily import DAILY
 from .dreams import DREAMS_CONTENT
 from .dsl import infer_time
 from .health import HEALTH
+from .holidays import HOLIDAY_EVENTS
 from .jobs import JOBS_LIFE
 from .life import LIFE
 from .social import SOCIAL
@@ -31,7 +32,7 @@ from .twists import TWISTS
 DEFAULT_TIME = [(DAILY, "3d"), (LIFE, "1m"), (CHAINS, "3m"), (JOBS_LIFE, "1m"), (SPECIES, "1w"), (SOCIAL, "1w"),
                 (TWISTS, "1m"), (STATUS, "1m"), (CONSEQUENCES, "2w"), (ARCS_YOUNG, "1m"), (ARCS_ADULT, "1m"),
                 (ARCS_SOUL, "1m"), (DREAMS_CONTENT, "3m"), (HEALTH, "1w"),
-                (ARCS_WEEK_20261029, "1m"), (ARCS_WEEK_20261102, "1m"), (AGES, "1m"), (YOUTH, "1m"), (STORIES, "1d"), (STORIES_MORE, "1d"), (STORIES_TV, "1d")]
+                (ARCS_WEEK_20261029, "1m"), (ARCS_WEEK_20261102, "1m"), (HOLIDAY_EVENTS, "2d"), (AGES, "1m"), (YOUTH, "1m"), (STORIES, "1d"), (STORIES_MORE, "1d"), (STORIES_TV, "1d")]
 ALL = [e for events, _ in DEFAULT_TIME for e in events]
 CHOICE_TIME = {
     "teen_uni": ["4y", "4y", "6y", "3y", "1y"],
@@ -68,6 +69,7 @@ CHOICE_TIME = {
 }
 # (event, choice index): (follow-up event, after how much of the pet's life)
 FOLLOWUPS = {
+    ("daily_easter", 0): ("hol_krashanka_final", "1y"),
     ("daily_scam_call", 2): ("fu_scam_return", "6m"), ("daily_scam_call", 1): ("fu_scam_fame", "3m"),
     ("adult_hamster", 1): ("fu_hamster_crash", "1y"), ("daily_pigeon", 0): ("fu_pigeon_ticket", "1m"),
     ("crime_start", 0): ("fu_shukher_past", "8y"), ("crime_start", 2): ("fu_snitch_reward", "6y"),

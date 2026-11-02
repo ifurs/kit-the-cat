@@ -421,7 +421,8 @@ SEASON_OF_MONTH = {12: "winter", 1: "winter", 2: "winter", 3: "spring", 4: "spri
 # named windows for req season=...: (month, day) from..to inclusive, may wrap the new year
 HOLIDAYS = {"newyear": ((12, 20), (1, 14)), "christmas": ((12, 20), (1, 10)), "andriy": ((12, 8), (12, 16)),
             "easter": ((3, 25), (5, 10)), "kupala": ((6, 20), (7, 10)), "halloween": ((10, 25), (11, 2)),
-            "valentine": ((2, 10), (2, 16)), "independence": ((8, 20), (8, 27))}
+            "valentine": ((2, 10), (2, 16)), "independence": ((8, 20), (8, 27)),
+            "malanka": ((1, 12), (1, 14)), "vyshyvanka": ((5, 15), (5, 21)), "pokrova": ((10, 12), (10, 16))}
 
 
 def in_season(v) -> bool:
