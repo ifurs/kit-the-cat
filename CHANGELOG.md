@@ -5,6 +5,34 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-11-03
+
+### Added
+- **Event reachability** (`scripts/event_coverage.py`): walks the content like a player who tries every choice and
+  outcome, forges a pet for every event's `req`, and says which events can never happen (contradictory `req`, a
+  follow-up nobody schedules, story state nothing gives, a follow-up its own root makes ineligible or that comes due at
+  the wrong age). `content_stats.py --strict` (and so `content_gate.py`) fails on them. `--sim [--union N]` splits the
+  balance run's «never fired» list into categories. Report: `docs/reports/event-coverage.md`.
+- `Pet.candidates(other, kind, twist)`: the weighted pool `pick_event` draws from (same weights, now inspectable).
+- **Holidays** (`content/holidays.py`, 31 events: 25 + 6 follow-ups): the Ukrainian calendar through `season=`.
+  Christmas (вертеп + районний фестиваль, Святвечір з кутею, ярмарок), Щедрий вечір, the New Year tree (+ the yard
+  that copied it), Андрія (вишнева гілочка), Valentine's Day (teen+: анонімна валентинка + підпис через рік, вечір «без
+  сердець»), Easter (кошик, писанки + писанка на виставці, паска, Подоляночка, реванш крашанками after
+  `daily_easter`), День вишиванки, Купала (вінок, цвіт папороті — rare `sparkles@9` —, стрибок через вогонь for two pets),
+  День Незалежності (парад вишиванок + фото в музеї, ярмарок «Усе для ЗСУ» + лист подяки), День захисників (волонтерський
+  центр + відповідь з війська) and Halloween (костюм з рідкісною роллю вампіра, цукерка чи капость, гарбуз, страшилки).
+  Gaps: `patriot` and `mystic` choices.
+- Holiday windows `malanka` (12–14 Jan), `vyshyvanka` (15–21 May: the third Thursday), `pokrova` (12–16 Oct) for `req=dict(season=…)`;
+  `dsl.SEASONS` lists every valid value and `content.validate` rejects an unknown one (a typo used to make an event
+  silently dead).
+- `tests/test_holidays.py`: every window holds its dates; every holiday event is eligible in its days and not in September.
+- **Видові пригоди й арки** (`content/species_more.py`, 32 події, по 4–5 на кожен вид): лис — історія «Набіг на курник»
+  (жадібність, пес Бровко, наслідок через роки); кіт — історія «Котяче пограбування» (Зломщик / Відволікач / Технар) і подкаст
+  дільничного; свиня — «Рити» (трюфель, клумба біля мерії, монета з наслідками) і дегустація соусу; пес — історія
+  «Виставка «Золотий нашийник»» (догляд проти «Найщиріший погляд»); кінь — гурток верхової їзди (+ вершниця через
+  8 років), весілля, електропастух, Купала; аксолотль — заплив «Дніпрова хвиля» (+ реванш), біологи, світний ставок;
+  птах — годівничка взимку (+ весняний садочок), птахи на дротах, кільцювання (+ лист з маршрутом).
+
 ### Fixed
 - Language and logic review of the 0.13.0 «побут» events (`arcs_week_20261102.py`; ids unchanged): «Борщ» → «Бограч» in the
   bograch story, «той, хто приносить капусту» / «не одеський» / «шерсть» / «для кота» (wrong for a girl or another species),
@@ -19,40 +47,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   it is. Texts with an agreeing adjective or verb («домашній {food}», «{food} дарує») were rephrased, since a food can
   be plural. `scripts/food_scan.py` is a new gate in `content_gate.py`. The food «кулешик» (a russism) is now «куліш»;
   pets that already have the old word keep it in every case.
-### Added
-- **Event reachability** (`scripts/event_coverage.py`): walks the content like a player who tries every choice and
-  outcome, forges a pet for every event's `req`, and says which events can never happen (contradictory `req`, a
-  follow-up nobody schedules, story state nothing gives, a follow-up its own root makes ineligible or that comes due at
-  the wrong age). `content_stats.py --strict` (and so `content_gate.py`) fails on them. `--sim [--union N]` splits the
-  balance run's «never fired» list into categories. Report: `docs/reports/event-coverage.md`.
-- `Pet.candidates(other, kind, twist)`: the weighted pool `pick_event` draws from (same weights, now inspectable).
-
-### Fixed
 - Sandbox: a neighbour's story stopped after its second step (the auto-resolve of a pending step cleared the next step
   it had just started); stories now finish for NPCs.
 - `balance.py` is reproducible: the sandbox clock was real time (season, holidays, hour of the day and the seconds the
   run took leaked into the result — `check_success` jumped between 62% and 72%), `Pet.hatch` used the global random.
   `Sandbox(..., epoch=)` gives a purely virtual clock; `balance.py --start YYYY-MM-DD` picks the simulated date.
-### Added
-- **Holidays** (`content/holidays.py`, 31 events: 25 + 6 follow-ups): the Ukrainian calendar through `season=`.
-  Christmas (вертеп + районний фестиваль, Святвечір з кутею, ярмарок), Щедрий вечір, the New Year tree (+ the yard
-  that copied it), Андрія (вишнева гілочка), Valentine's Day (teen+: анонімна валентинка + підпис через рік, вечір «без
-  сердець»), Easter (кошик, писанки + писанка на виставці, паска, Подоляночка, реванш крашанками after
-  `daily_easter`), День вишиванки, Купала (вінок, цвіт папороті — rare `sparkles@9` —, стрибок через вогонь for two pets),
-  День Незалежності (парад вишиванок + фото в музеї, ярмарок «Усе для ЗСУ» + лист подяки), День захисників (волонтерський
-  центр + відповідь з війська) and Halloween (костюм з рідкісною роллю вампіра, цукерка чи капость, гарбуз, страшилки).
-  Gaps: `patriot` and `mystic` choices.
-- Holiday windows `malanka` (12–14 Jan), `vyshyvanka` (15–21 May: the third Thursday), `pokrova` (12–16 Oct) for `req=dict(season=…)`;
-  `dsl.SEASONS` lists every valid value and `content.validate` rejects an unknown one (a typo used to make an event
-  silently dead).
-- `tests/test_holidays.py`: every window holds its dates; every holiday event is eligible in its days and not in September.
-### Added
-- **Видові пригоди й арки** (`content/species_more.py`, 32 події, по 4–5 на кожен вид): лис — історія «Набіг на курник»
-  (жадібність, пес Бровко, наслідок через роки); кіт — історія «Котяче пограбування» (Зломщик / Відволікач / Технар) і подкаст
-  дільничного; свиня — «Рити» (трюфель, клумба біля мерії, монета з наслідками) і дегустація соусу; пес — історія
-  «Виставка «Золотий нашийник»» (догляд проти «Найщиріший погляд»); кінь — гурток верхової їзди (+ вершниця через
-  8 років), весілля, електропастух, Купала; аксолотль — заплив «Дніпрова хвиля» (+ реванш), біологи, світний ставок;
-  птах — годівничка взимку (+ весняний садочок), птахи на дротах, кільцювання (+ лист з маршрутом).
 
 ## [0.14.0] — 2026-11-02
 
@@ -407,7 +406,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/ifurs/kit-the-cat/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/ifurs/kit-the-cat/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/ifurs/kit-the-cat/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/ifurs/kit-the-cat/compare/v0.12.0...v0.12.1
