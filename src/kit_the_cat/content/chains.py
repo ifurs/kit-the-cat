@@ -142,7 +142,7 @@ POLITICS = [
           req=dict(money=8000)),
        req=dict(flag={"nabu": 1}), bg="palace"),
     ev("pol_mayor", "{name} настільки популярний, що пропонують балотуватися в мери.",
-       ch("Йти на вибори", o("МЕР {name}! Перше рішення — фонтан у формі {food}.", item="crown", home="palace",
+       ch("Йти на вибори", o("МЕР {name}! Перше рішення — фонтан у формі {food_gen}.", item="crown", home="palace",
                              achievement="Мер міста", money=5000, cha=5),
           check=("cha", 60), fail=[o("{Програв|Програла} боксеру. Знову.", mood=-20)], auto="gambler"),
        ch("Залишитись депутатом", o("Стабільність.", money=1000), auto="dark"),

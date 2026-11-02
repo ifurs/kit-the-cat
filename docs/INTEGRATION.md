@@ -47,7 +47,9 @@ await store.save_pets([p.to_dict()] + ([other.to_dict()] if other else []))
 ```
 
 Text from the engine (`Result`, `p.fmt(...)`) is plain Ukrainian with user-controlled pieces (pet and owner names) substituted. Pet names are declined by `grammar.py` (`p.name_in("gen")`, `grammar.inflect(name, case)`); to put a name into your own
-text use these instead of the bare `p.name` after a preposition or as an object.
+text use these instead of the bare `p.name` after a preposition or as an object. The favourite food (`p.persona["food"]`)
+is stored in the accusative; `persona.food_in(food, case)` gives its other forms (`"nom"`, `"gen"`, `"dat"`, `"ins"`,
+`"loc"`) from a hand-written table, and a food the table does not know (an old document, your own list) is returned as is.
 Pets have a gender (`p.gender`, `"m"` or `"f"`; `new_pet(..., gender=None)` flips a coin, an heir gets a fresh one,
 documents without the field load as `"m"`). Texts hold gender pairs («{вилупився|вилупилася}») that `p.fmt` resolves;
 for your own words use `p.g("він", "вона")`, `p.role_name()`, `p.role_desc()`, `engine.status_name(status, gender)`,

@@ -173,7 +173,7 @@ ARCS_SOUL = [
     ev("arc_veteran_neighbor", "Сусід з третього поверху повернувся зі служби. Тягне по сходах важкі коробки.",
        ch("Допомогти занести", o("Занесли разом, він подякував і запросив на каву.", love=3, str=1,
                                  then=("arc_veteran_friend", "6m")), auto="love"),
-       ch("Принести домашній {food}", o("Він усміхнувся вперше за день. Тепло на душі.", love=3, glutton=1,
+       ch("Принести {food} власного приготування", o("Він усміхнувся вперше за день. Тепло на душі.", love=3, glutton=1,
                                         then=("arc_veteran_friend", "6m"))),
        ch("Привітатися й не заважати", o("Він кивнув у відповідь. Іноді простір — теж повага.", love=1,
                                         then=("arc_veteran_business", "1y"))),
@@ -196,7 +196,7 @@ ARCS_SOUL = [
           auto="patriot"),
        ch("Задонатити й розшерити", o("Банку закрили за дві години. Сила спільноти.", money=-500, patriot=4,
                                      fame=2, then=("arc_drone_thanks_jar", "3m")), auto="patriot"),
-       ch("Влаштувати розіграш {food}", o("Донати пішли рікою. Переможець отримав ящик {food}.", patriot=3,
+       ch("Влаштувати розіграш {food_gen}", o("Донати пішли рікою. Переможець отримав ящик {food_gen}.", patriot=3,
                                           glutton=1, then=("arc_drone_thanks_jar", "3m")), auto="glutton"),
        req=dict(stage=GROWN), once=True, bg="khrushchovka"),
     ev("arc_drone_thanks_jar", "Син сусідки передав фото: дрон з написом «Від нашого під'їзду» вже працює. "
