@@ -82,7 +82,7 @@ Requirements (req=dict(...)):
   sv={"kind": (2, 9)} (story variables of the story being played, at least / within a range)
   phase="young" | ["young", "middle"]   life phase by age: kid 0–12, teen 12–18, young 18–30, middle 30–60, grand 60+
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
-         independence) | list of those | month numbers (real Kyiv date)
+         independence malanka vyshyvanka pokrova) | list of those | month numbers (real Kyiv date)
 """
 from dataclasses import dataclass, field
 
@@ -133,6 +133,8 @@ def infer_time(c: "Choice", base) -> float:
 
 
 PHASES = {"kid", "teen", "young", "middle", "grand"}   # engine.PHASES has their age ranges
+SEASONS = {"winter", "spring", "summer", "autumn", "newyear", "christmas", "andriy", "easter", "kupala", "halloween",
+           "valentine", "independence", "malanka", "vyshyvanka", "pokrova"}   # engine.HOLIDAYS has their dates
 ROLES = {"vampire", "werewolf", "zombie", "demon", "angel", "cyborg", "alien", "quantum"}
 
 
