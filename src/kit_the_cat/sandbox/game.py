@@ -25,13 +25,15 @@ NPC_NAMES = ["Тьотя Валя", "Дядько Толік", "Кума Окс�
 
 
 class Sandbox:
-    def __init__(self, db: MemoryStore, seed: int | None = None):
+    def __init__(self, db: MemoryStore, seed: int | None = None, epoch: float | None = None):
+        """`epoch` (unix time) makes the clock purely virtual: epoch + offset, no real time in it — for reproducible
+        simulations (scripts/balance.py). Without it the clock is real time + offset, like the bot."""
         self.db = db
         self.rng = random.Random(seed)
         self.offset = 0.0
         self.lock = asyncio.Lock()
         self.world_feed: list[str] = []
-        E.clock = lambda: time.time() + self.offset
+        E.clock = (lambda: time.time() + self.offset) if epoch is None else (lambda: epoch + self.offset)
 
     # --- persistence ---------------------------------------------------------------------------
     async def init(self) -> None:
@@ -146,7 +148,7 @@ class Sandbox:
             p = await self.pet(owner)
             if not p or p.state != "egg":
                 return "Нема що вилуплювати"
-            p.hatch(E.now())
+            p.hatch(E.now(), self.rng)
             await self.save(p)
         return f"🐣 {p.g('Вилупився', 'Вилупилася')} {p.name}! Характер: {p.temper_name()}. Мрія: {p.persona.get('dream', '')}."
 
@@ -379,7 +381,7 @@ class Sandbox:
                 if oid in used:
                     continue
                 p = E.new_pet(SANDBOX, oid, self.rng.choice(NPC_NAMES), self.rng.choice(sprites.SPECIES), pets, self.rng)
-                p.hatch(E.now())
+                p.hatch(E.now(), self.rng)
                 pets.append(p)
                 await self.save(p)
                 added += 1
@@ -458,9 +460,10 @@ class Sandbox:
                         other = next((x for x in pets if x.pid == p.pending.get("other")), None)
                         if e:
                             idx, _ = p.auto_choice(e, other, self.rng)
-                            p.resolve(e, idx, other, self.rng)
+                            p.resolve(e, idx, other, self.rng)  # clears pending itself, or starts the next story step
                             summary["events"] += 1
-                        p.pending = {}
+                        else:
+                            p.pending = {}
                         continue
                     if p.pending or (p.next_ev and p.next_ev > t):
                         if not p.next_ev:
