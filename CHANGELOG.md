@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Fixed
+- Story endings: in a random-picks player, 88% of «Весілля», 72% of «Говерла» and «Кав'ярня» ended in the fallback and the
+  special endings were almost out of reach. Thresholds lowered (`st_wedding_end_duty/star` 5→4, `st_coffee_end_hit` 5→4,
+  `st_hov_end_rescue` 3→2): wedding 45/39/16%, Говерла 64/23/13%, кав'ярня 49/25/26%. A test now plays every story with
+  random picks for both genders and requires every ending to be reachable (≥ 2%) and nobody to die on the way.
+
 ## [0.15.0] — 2026-11-03
 
 ### Added
