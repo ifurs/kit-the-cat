@@ -18,7 +18,7 @@
 ## Як модуль
 
 ```bash
-uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat@v0.12.1"
+uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat@v0.13.0"
 ```
 
 ```python
