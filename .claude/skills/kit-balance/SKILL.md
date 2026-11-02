@@ -32,8 +32,10 @@ a small difference; `--pets 60` for rare things (roles, chains).
 
 ## 2. Diagnose
 
-- Never-fired events: check their `req=` (impossible combos, flag never set → `content_stats.py --strict`),
-  weight `w=`, `season=` (real date!), `once=`. Chains and job events need adult pets with jobs — longer runs.
+- Never-fired events: first `uv run python scripts/event_coverage.py` — it proves which events can really happen
+  (contradictory `req=`, follow-up nobody schedules, flag nobody sets) and `--sim --union 12 --list` splits the run's
+  «never fired» into causes (seasonal, job/role, follow-up waiting for its root…). Only then look at weight `w=`
+  and `once=`. The run is reproducible: the simulated calendar starts at `--start` (default in `balance.py`), never today.
 - Check success too low/high: `content_stats.py` warnings list the hardest checks; the formula is in
   `engine.Pet.chance` (and mirrored by `typical_chance()` in `scripts/content_stats.py` — keep them in sync).
 - Deaths/neglect: `engine.DECAY`, `STARVE`, `EVENT_ENERGY`, lifespan in `new_pet`.
