@@ -22,6 +22,13 @@ role takes its own case — {name_gen} «Крилатого з Троєщини�
 («Ей, {name_voc}!»); the same for {other_gen} … {other_voc}. «До {name} прийшов кур'єр» is a bug, «До {name_gen}
 прийшов кур'єр» is right; scripts/case_scan.py lists the suspicious ones. The rules live in grammar.py.
 
+The favourite food is declined the same way, from a hand-written table (content/persona.py FOOD_FORMS): «{food}» is
+the accusative, as it is stored («їсть {food}», «піти по {food}», «Принести лікарю {food}»), and the other cases are
+{food_nom} («Головне — {food_nom}»), {food_gen} («поменше {food_gen}», «ящик {food_gen}», «банок з-під {food_gen}»),
+{food_dat}, {food_ins} («подякувати {food_ins}») and {food_loc} («у {food_loc}»). A food can be plural
+(«вареники з вишнями», «чебуреки з вокзалу»), so never put a verb or an adjective that agrees with it next to the
+placeholder («{food} дарує» is a bug; «порція {food_gen}» is right); scripts/food_scan.py lists the suspicious ones.
+
 Pets are boys or girls (Pet.gender "m" | "f"), and a text speaks about both: a word that changes with the gender is a
 pair, «{вилупився|вилупилася}» (the first for a boy, the second for a girl), «{other:відмовив|відмовила}» for the other
 pet of a social event. Exactly two alternatives, no braces, colons or bars inside them; the validator checks it.
@@ -93,7 +100,7 @@ Requirements (req=dict(...)):
 |---|---|
 | `{name}` | ім'я пета |
 | `{owner}` | ім'я власника |
-| `{food}` | улюблена їжа пета |
+| `{food}` | улюблена їжа пета, знахідний (їсть кого? що? — «шаурму») |
 | `{dream}` | мрія |
 | `{fear}` | страх |
 | `{quirk}` | дивна звичка |
@@ -108,6 +115,11 @@ Requirements (req=dict(...)):
 | `{name_ins}` | орудний (з ким? — «Муркою») |
 | `{name_loc}` | місцевий, без прийменника (на кому? — «Мурці») |
 | `{name_voc}` | кличний (Ей, «Мурко»!) |
+| `{food_nom}` | їжа в називному (що? — «шаурма», «вареники з вишнями») |
+| `{food_gen}` | родовий (нема чого? — «шаурми») |
+| `{food_dat}` | давальний (чому? — «шаурмі») |
+| `{food_ins}` | орудний (з чим? — «шаурмою») |
+| `{food_loc}` | місцевий, без прийменника (на чому? — «шаурмі») |
 | `{other_gen}…{other_voc}` | ті самі відмінки для імені іншого пета (лише social) |
 | `{він\|вона}` | слово за статтю пета: перша частина для хлопчика, друга для дівчинки («{вилупився\|вилупилася}») |
 | `{other:він\|вона}` | те саме за статтю іншого пета (лише social; без іншого пета — перша частина) |
