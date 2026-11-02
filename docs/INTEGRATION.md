@@ -6,7 +6,7 @@ worth reading first.
 ## Install and pin
 
 ```bash
-uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat@v0.12.1"
+uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat@v0.14.0"
 ```
 
 Always pin a tag. Extras: `images` (Pillow, for GIF/PNG), `sandbox` (aiohttp server).
@@ -57,6 +57,8 @@ forms (`name_f` / `desc_f`, `STATUS_NAMES_F`, `SPECIES_NAME_F` hold the feminine
 `{"m": [...], "f": [...]}` and `NAME_SUFFIX` a list of `(masculine, feminine)` tails.
 **Escape it for your output format** (the bot uses HTML parse mode and escapes everything). Never use player
 input as a format template — `Pet.fmt` only formats trusted content templates.
+`p.inner_voice(e, other)` (0.14) is one line of the pet's temperament for an event card (`""` most of the time and over
+grave events): show it as «🎭 {p.temper_name()}: «…»» under the text.
 
 ## Storage contract
 
