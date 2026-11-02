@@ -26,10 +26,11 @@ from .jobs import JOBS_LIFE
 from .life import LIFE
 from .social import SOCIAL
 from .species import SPECIES
+from .species_more import SPECIES_MORE
 from .status import STATUS
 from .twists import TWISTS
 
-DEFAULT_TIME = [(DAILY, "3d"), (LIFE, "1m"), (CHAINS, "3m"), (JOBS_LIFE, "1m"), (SPECIES, "1w"), (SOCIAL, "1w"),
+DEFAULT_TIME = [(DAILY, "3d"), (LIFE, "1m"), (CHAINS, "3m"), (JOBS_LIFE, "1m"), (SPECIES, "1w"), (SPECIES_MORE, "1w"), (SOCIAL, "1w"),
                 (TWISTS, "1m"), (STATUS, "1m"), (CONSEQUENCES, "2w"), (ARCS_YOUNG, "1m"), (ARCS_ADULT, "1m"),
                 (ARCS_SOUL, "1m"), (DREAMS_CONTENT, "3m"), (HEALTH, "1w"),
                 (ARCS_WEEK_20261029, "1m"), (ARCS_WEEK_20261102, "1m"), (HOLIDAY_EVENTS, "2d"), (AGES, "1m"), (YOUTH, "1m"), (STORIES, "1d"), (STORIES_MORE, "1d"), (STORIES_TV, "1d")]

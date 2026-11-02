@@ -46,6 +46,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   `dsl.SEASONS` lists every valid value and `content.validate` rejects an unknown one (a typo used to make an event
   silently dead).
 - `tests/test_holidays.py`: every window holds its dates; every holiday event is eligible in its days and not in September.
+### Added
+- **Видові пригоди й арки** (`content/species_more.py`, 32 події, по 4–5 на кожен вид): лис — історія «Набіг на курник»
+  (жадібність, пес Бровко, наслідок через роки); кіт — історія «Котяче пограбування» (Зломщик / Відволікач / Технар) і подкаст
+  дільничного; свиня — «Рити» (трюфель, клумба біля мерії, монета з наслідками) і дегустація соусу; пес — історія
+  «Виставка «Золотий нашийник»» (догляд проти «Найщиріший погляд»); кінь — гурток верхової їзди (+ вершниця через
+  8 років), весілля, електропастух, Купала; аксолотль — заплив «Дніпрова хвиля» (+ реванш), біологи, світний ставок;
+  птах — годівничка взимку (+ весняний садочок), птахи на дротах, кільцювання (+ лист з маршрутом).
 
 ## [0.14.0] — 2026-11-02
 
