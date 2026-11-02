@@ -807,9 +807,9 @@ class Pet:
         return role_desc(self.role if role is None else role, self.gender)
 
     # --- lifecycle ---------------------------------------------------------------------------
-    def hatch(self, t: float) -> None:
+    def hatch(self, t: float, rng: random.Random | None = None) -> None:
         self.state, self.stage, self.hatched, self.last_tick, self.gday = "alive", 1, t, t, game_day(t)
-        self.next_ev = t + random.uniform(1, 3) * hour()
+        self.next_ev = t + (rng or random).uniform(1, 3) * hour()
         self.note("hatched", f"🐣 {self.g('Вилупився', 'Вилупилася')} {self.name} ({species_name(self.species, self.gender)})!")
 
     def die(self, cause: str, rng: random.Random | None = None, natural: bool = False) -> bool:
@@ -863,7 +863,7 @@ class Pet:
             if (t - self.born) / hour() < EGG_HOURS:
                 self.last_tick = t
                 return
-            self.hatch(min(t, self.born + EGG_HOURS * hour()))
+            self.hatch(min(t, self.born + EGG_HOURS * hour()), rng)
         if not self.alive:
             self.last_tick = t
             return
@@ -1472,25 +1472,8 @@ class Pet:
             return False
         return self.meets(e.req, other) and bool(self.options(e, other))
 
-    def pick_event(self, others: list["Pet"], rng: random.Random, kind: str = "") -> tuple[Event | None, "Pet | None"]:
-        """kind: "" any, "solo", "social", "twist", "date", "fight". Others = other pets in the chat."""
-        if kind in ("", "solo") and self.followups:  # an earlier choice comes back
-            self.followups = [f for f in self.followups if f[0] in EVENTS and self.years - f[1] < 15]
-            for f in sorted(self.followups, key=lambda f: f[1]):
-                e = EVENTS[f[0]]
-                if self.years >= f[1] and self.eligible(e, None, fresh=False):
-                    self.followups.remove(f)
-                    return e, None
-        pool = [x for x in others if x.alive and x.pid != self.pid and x.stage >= 1 and not x.jailed]
-        twist = kind == "twist" or (not kind and self.flags.get("_twist"))
-        other = None
-        if kind in ("social", "date", "fight") and pool:
-            other = pool[0] if len(pool) == 1 else None
-        if other is None and pool and (kind in ("social", "date", "fight") or (not kind and rng.random() < 0.35)):
-            weights = [abs(self.rel.get(x.pid, 0)) + 5 + (40 if x.pid == self.partner else 0) for x in pool]
-            other = rng.choices(pool, weights)[0]
-        if kind == "solo":
-            other = None
+    def candidates(self, other: "Pet | None", kind: str = "", twist: bool = False) -> tuple[list[Event], list[float]]:
+        """Events this pet could live right now with their weights (before the "not seen recently" filter)."""
         cands, ws = [], []
         for e in EVENTS.values():
             if e.followup or (twist and e.id not in TWIST_IDS):
@@ -1518,6 +1501,28 @@ class Pet:
                 w *= 0.4 if not kind else 1
             cands.append(e)
             ws.append(w)
+        return cands, ws
+
+    def pick_event(self, others: list["Pet"], rng: random.Random, kind: str = "") -> tuple[Event | None, "Pet | None"]:
+        """kind: "" any, "solo", "social", "twist", "date", "fight". Others = other pets in the chat."""
+        if kind in ("", "solo") and self.followups:  # an earlier choice comes back
+            self.followups = [f for f in self.followups if f[0] in EVENTS and self.years - f[1] < 15]
+            for f in sorted(self.followups, key=lambda f: f[1]):
+                e = EVENTS[f[0]]
+                if self.years >= f[1] and self.eligible(e, None, fresh=False):
+                    self.followups.remove(f)
+                    return e, None
+        pool = [x for x in others if x.alive and x.pid != self.pid and x.stage >= 1 and not x.jailed]
+        twist = kind == "twist" or (not kind and self.flags.get("_twist"))
+        other = None
+        if kind in ("social", "date", "fight") and pool:
+            other = pool[0] if len(pool) == 1 else None
+        if other is None and pool and (kind in ("social", "date", "fight") or (not kind and rng.random() < 0.35)):
+            weights = [abs(self.rel.get(x.pid, 0)) + 5 + (40 if x.pid == self.partner else 0) for x in pool]
+            other = rng.choices(pool, weights)[0]
+        if kind == "solo":
+            other = None
+        cands, ws = self.candidates(other, kind, twist)
         fresh = [i for i, e in enumerate(cands) if e.id not in self.recent and not (other and e.id in other.recent)]
         if fresh:  # a recent event comes back only when nothing else fits
             cands, ws = [cands[i] for i in fresh], [ws[i] for i in fresh]

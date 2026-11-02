@@ -4,7 +4,9 @@
     uv run python scripts/content_stats.py --gaps     # only the weak spots (what to write next)
     uv run python scripts/content_stats.py --strict   # exit 1 on content errors (CI)
 
-Errors: story-chain flag values required somewhere but never set (dead ends), `{other}` outside social events.
+Errors: story-chain flag values required somewhere but never set (dead ends), `{other}` outside social events;
+with --strict also events that can never happen (event_coverage.py: contradictory req, follow-up nobody schedules,
+story state nothing gives).
 Warnings: skill checks whose typical success chance is < 30% for the youngest pet that can see the event
 (same formula as Pet.chance, typical skill/level per stage).
 """
@@ -172,6 +174,9 @@ def main() -> None:
     print("\n".join(f"  - {x}" for x in g) or "  none")
     print("\n## Warnings (hard checks for young pets)")
     print("\n".join(f"  - {x}" for x in a["warnings"]) or "  none")
+    if "--strict" in sys.argv:   # unreachable events (a dozen seconds)
+        import event_coverage
+        a["errors"] += [f"{i}: unreachable — {why}" for i, why in sorted(event_coverage.analyse()["unreachable"].items())]
     print("\n## Errors")
     print("\n".join(f"  - {x}" for x in a["errors"]) or "  none")
     if "--strict" in sys.argv and a["errors"]:
