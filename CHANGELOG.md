@@ -6,6 +6,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 ## [Unreleased]
 
 ### Changed
+- Browser game: **«Як це працює»** — a short intro and a legend of the symbols (🎭, the % on a button, ❤️/😊, perks like 🧠+9,
+  level, rarity, dream steps, the result chips, the tabs). It opens once on the first visit without a pet, then from the
+  «?» button in the header; one column on phones, closes with a tap on the backdrop or Esc. Both pages.
 - Browser game, small UX fixes (both pages): the arena hint no longer points at a «⚙️» that does not exist («вкладка «Сусіди» →
   «Заселити 3 сусідів»»); an egg's card shows only «Яйце», not money/level/rarity; «Лікар» is disabled for a healthy pet
   (a mis-tap used to cost mood); the bazaar dims what you cannot afford and says «не вистачає»; the sub-tabs of «Ще…» are
