@@ -12,6 +12,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   longer calls the pet its founder when the pet only went to the housing office, a failed Lviv password no longer throws
   the pet out before the café scene, and the like. Seasonal sense: the Odesa story is summer/early-autumn, the bograch
   festival May–October; `clean=-5` removed from the exploding jar.
+- **The favourite food is declined.** `{food}` was always the accusative, so 22 texts said «Головне — шаурму»,
+  «Вам би поменше шаурму», «банок з-під шаурму», «ящик борщ». New placeholders `{food_nom}`, `{food_gen}`,
+  `{food_dat}`, `{food_ins}`, `{food_loc}` from a hand-written table (`persona.FOOD_FORMS`, `persona.food_in`); `{food}`
+  stays the accusative. Old pet documents keep their stored `persona.food`; a food missing from the table is used as
+  it is. Texts with an agreeing adjective or verb («домашній {food}», «{food} дарує») were rephrased, since a food can
+  be plural. `scripts/food_scan.py` is a new gate in `content_gate.py`. The food «кулешик» (a russism) is now «куліш»;
+  pets that already have the old word keep it in every case.
 
 ## [0.14.0] — 2026-11-02
 
