@@ -183,7 +183,7 @@ STORIES_MORE = [
                                                     love=2, int=1), req=dict(money=200), auto="love"),
        ch("Пообіцяти собі читати прогноз", o("Урок засвоєно. Коліно нагадуватиме ще тиждень.", int=2),
           auto="dark"),
-       followup=True, req=dict(sv={"risk": 3}), bg="mountains", story=T_HOVERLA),
+       followup=True, req=dict(sv={"risk": 2}), bg="mountains", story=T_HOVERLA),
     ev("st_hov_end", "Вершину ви не взяли, зате ввечері в колибі банош, гуцульська музика й сухі шкарпетки.",
        ch("Повернутися наступного літа", o("Говерла нікуди не дінеться. Ти теж.", mood=10), auto="patriot"),
        ch("Залишитися ще на день", o("Наступного ранку — сонце й Петрос замість Говерли.", str=1, mood=12),
@@ -461,7 +461,7 @@ STORIES_MORE = [
                                fame=2, achievement="Своя кав'ярня"), auto="gambler"),
        ch("Залишитися {самому|самій} за стійкою", o("Втомлено, але все своє. І гроші теж.", money=800, mood=10,
                                            achievement="Своя кав'ярня"), auto="dark"),
-       followup=True, req=dict(sv={"proper": 5}), bg="kyiv", story=T_COFFEE),
+       followup=True, req=dict(sv={"proper": 4}), bg="kyiv", story=T_COFFEE),
     ev("st_coffee_end_flop", "Знайомий раптом «продав» кіоск іншому, а кавомашина засвистіла востаннє. Бізнес "
        "закрився, не встигнувши розкрутитися.",
        ch("Продати обладнання", o("{Повернув|Повернула} частину грошей і досвід на все життя.", money=200, fin=2),
