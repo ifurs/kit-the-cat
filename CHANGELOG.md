@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Fixed
+- Language and logic review of the 0.13.0 «побут» events (`arcs_week_20261102.py`; ids unchanged): «Борщ» → «Бограч» in the
+  bograch story, «той, хто приносить капусту» / «не одеський» / «шерсть» / «для кота» (wrong for a girl or another species),
+  «в кухні», «першою чи після кави», «змагання у танцях», «чаєм з малиною», «Дві посилки… обидві чужі», the heating chat no
+  longer calls the pet its founder when the pet only went to the housing office, a failed Lviv password no longer throws
+  the pet out before the café scene, and the like. Seasonal sense: the Odesa story is summer/early-autumn, the bograch
+  festival May–October; `clean=-5` removed from the exploding jar.
+
 ## [0.14.0] — 2026-11-02
 
 ### Added
