@@ -50,7 +50,8 @@ seasons use the real Kyiv date.
 ## Randomness
 
 Every engine call that rolls dice takes an explicit `random.Random`. Hosts pass their own (seeded in tests,
-`scripts/balance.py`, and the sandbox), which makes runs reproducible.
+`scripts/balance.py`, and the sandbox), which makes runs reproducible. The clock is part of it: `Sandbox(epoch=…)` is a
+purely virtual clock (season, holidays and night follow the simulated date, never real time).
 
 ## Invariants (tests guard them)
 

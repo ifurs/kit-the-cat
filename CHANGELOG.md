@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **Event reachability** (`scripts/event_coverage.py`): walks the content like a player who tries every choice and
+  outcome, forges a pet for every event's `req`, and says which events can never happen (contradictory `req`, a
+  follow-up nobody schedules, story state nothing gives, a follow-up its own root makes ineligible or that comes due at
+  the wrong age). `content_stats.py --strict` (and so `content_gate.py`) fails on them. `--sim [--union N]` splits the
+  balance run's «never fired» list into categories. Report: `docs/reports/event-coverage.md`.
+- `Pet.candidates(other, kind, twist)`: the weighted pool `pick_event` draws from (same weights, now inspectable).
+
+### Fixed
+- Sandbox: a neighbour's story stopped after its second step (the auto-resolve of a pending step cleared the next step
+  it had just started); stories now finish for NPCs.
+- `balance.py` is reproducible: the sandbox clock was real time (season, holidays, hour of the day and the seconds the
+  run took leaked into the result — `check_success` jumped between 62% and 72%), `Pet.hatch` used the global random.
+  `Sandbox(..., epoch=)` gives a purely virtual clock; `balance.py --start YYYY-MM-DD` picks the simulated date.
+
 ## [0.14.0] — 2026-11-02
 
 ### Added
