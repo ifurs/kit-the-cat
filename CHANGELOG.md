@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **Holidays** (`content/holidays.py`, 31 events: 25 + 6 follow-ups): the Ukrainian calendar through `season=`.
+  Christmas (вертеп + районний фестиваль, Святвечір з кутею, ярмарок), Щедрий вечір, the New Year tree (+ the yard
+  that copied it), Андрія (вишнева гілочка), Valentine's Day (teen+: анонімна валентинка + підпис через рік, вечір «без
+  сердець»), Easter (кошик, писанки + писанка на виставці, паска, Подоляночка, реванш крашанками after
+  `daily_easter`), День вишиванки, Купала (вінок, цвіт папороті — rare `sparkles@9` —, стрибок через вогонь for two pets),
+  День Незалежності (парад вишиванок + фото в музеї, ярмарок «Усе для ЗСУ» + лист подяки), День захисників (волонтерський
+  центр + відповідь з війська) and Halloween (костюм з рідкісною роллю вампіра, цукерка чи капость, гарбуз, страшилки).
+  Gaps: `patriot` and `mystic` choices.
+- Holiday windows `malanka` (12–14 Jan), `vyshyvanka` (15–21 May: the third Thursday), `pokrova` (12–16 Oct) for `req=dict(season=…)`;
+  `dsl.SEASONS` lists every valid value and `content.validate` rejects an unknown one (a typo used to make an event
+  silently dead).
+- `tests/test_holidays.py`: every window holds its dates; every holiday event is eligible in its days and not in September.
+
 ## [0.14.0] — 2026-11-02
 
 ### Added
