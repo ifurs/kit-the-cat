@@ -25,7 +25,10 @@ from .content.economy import (BACKGROUND_PRICES, EDUCATION, FOOD, HOME_UPKEEP, J
                               POTION, PRICES, ROLE_FOOD, WEALTH_TAX, WELFARE)
 from .content.persona import (EPITAPHS, FEARS, FOODS, GOALS, NAME_SUFFIX, NAMES, PERKS, QUIRKS, TEMPER_F,
                               TEMPERAMENTS)
+from .content.voices import VOICES
 
+VOICE_CHANCE = 0.4   # share of events with the pet's inner voice over them
+VOICE_PUSH = 0.6     # …when a choice is in its character: how often the voice leans towards it instead
 NOBODY = dict(gen="когось", dat="комусь", acc="когось", ins="кимось", loc="комусь", voc="хтосю")  # no second pet
 SPEED = 1.0          # >1 = game time runs faster (set from PET_SPEED)
 DAY = 86400
@@ -250,6 +253,14 @@ ACH_F = {
 }
 
 EVENTS: dict[str, Event] = {e.id: e for e in event_content.ALL}
+
+
+def is_grave_event(e: Event) -> bool:
+    """Too heavy for a joke from the pet's inner voice: death, hospital, jail, a big health hit, the army."""
+    if e.id.startswith(("army_", "fu_army")):
+        return True
+    fx = [x.fx for c in e.choices for x in c.outs + c.fail]
+    return any("die" in f or "hospital" in f or "jail" in f or f.get("health", 0) <= -25 for f in fx)
 
 
 def is_twist_event(e: Event) -> bool:
@@ -701,6 +712,20 @@ class Pet:
 
     def in_character(self, c: Choice) -> bool:
         return bool(c.auto) and c.auto == self.persona.get("lean")
+
+    def inner_voice(self, e: Event, other: "Pet | None" = None) -> str:
+        """One line of the pet's temperament over an event (content/voices.py), or "". It shows over a share of
+        events (VOICE_CHANCE), never over a grave one (is_grave_event), and is the same every time the same event
+        is shown to the same pet in the same year. When a choice is «in character» (🎭) the voice often leans
+        towards it."""
+        lines = VOICES.get(self.persona.get("temper", ""))
+        if not lines or is_grave_event(e):
+            return ""
+        rng = random.Random(f"{self.pid}|{e.id}|{int(self.years)}")
+        if rng.random() >= VOICE_CHANCE:
+            return ""
+        push = lines.get("push") if any(self.in_character(c) for c in e.choices) else None
+        return self.fmt(rng.choice(push if push and rng.random() < VOICE_PUSH else lines["any"]), other)
 
     def mood_face(self) -> str:
         if self.state == "dead":

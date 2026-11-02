@@ -114,7 +114,7 @@ class Sandbox:
             other = next((x for x in pets if x.pid == p.pending.get("other")), None)
             out["pet"]["pending"] = dict(
                 id=e.id, text=p.fmt(e.text, other), other=other.name if other else "",
-                twist=E.is_twist_event(e), mode=p.pending.get("mode", ""),
+                voice=p.inner_voice(e, other), twist=E.is_twist_event(e), mode=p.pending.get("mode", ""),
                 story=dict(title=p.fmt(e.story), step=len(p.tale.get("path", [])) + 1 if e.followup else 1) if e.story else None,
                 choices=[dict(i=i, label=p.button(e, i, other), chance=p.chance(c)) for i, c in p.options(e, other)])
         rows = await self.db.pet_log(SANDBOX, owner, p.gen, 40)
