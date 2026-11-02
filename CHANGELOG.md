@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.15.1] — 2026-11-03
+
 ### Changed
 - Browser game: **«Як це працює»** — a short intro and a legend of the symbols (🎭, the % on a button, ❤️/😊, perks like 🧠+9,
   level, rarity, dream steps, the result chips, the tabs). It opens once on the first visit without a pet, then from the
@@ -421,7 +423,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.15.1...HEAD
+[0.15.1]: https://github.com/ifurs/kit-the-cat/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/ifurs/kit-the-cat/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/ifurs/kit-the-cat/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/ifurs/kit-the-cat/compare/v0.12.1...v0.13.0
