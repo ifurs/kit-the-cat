@@ -5,8 +5,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-11-02
+
 ### Added
-- **Побут і календар** (`arcs_week_20261102.py`): «Опалювальний сезон» (+ чат стояка), «Борщ із квасолею чи без» (+ двірський
+- **Побут і календар** (`arcs_week_20261102.py`): «Опалювальний сезон» (+ чат стояка), «Борщ із квасолею чи без» (+ дворовий
   фестиваль), «Закрутки» (+ вибухова банка), Святий Миколай, Масляна, Водохреща, ожеледиця.
 - **Цифрова дрібниця**: «Дія» без потрібної довідки (+ довідка на ім'я кума), зум із бабусею (+ сімейний зум), поштомат із чужою посилкою.
 - **Чотири короткі історії про регіони** (3 кроки, 3 кінцівки кожна): «Одеський привіз», «Бограч на фестивалі»
@@ -347,6 +349,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
 [Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.12.1...HEAD
+[0.13.0]: https://github.com/ifurs/kit-the-cat/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/ifurs/kit-the-cat/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/ifurs/kit-the-cat/compare/v0.11.3...v0.12.0
 [0.11.3]: https://github.com/ifurs/kit-the-cat/compare/v0.11.2...v0.11.3
