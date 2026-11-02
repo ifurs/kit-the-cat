@@ -54,6 +54,10 @@ def main() -> None:
             ph = r.get("phase")
             if ph is not None and not set([ph] if isinstance(ph, str) else ph) <= dsl.PHASES:
                 errors.append(f"{e.id}: unknown phase {ph!r}")
+            if "season" in r:
+                bad = [x for x in ([r["season"]] if isinstance(r["season"], (str, int)) else r["season"])
+                       if isinstance(x, str) and x not in dsl.SEASONS]
+                errors += [f"{e.id}: unknown season {x!r}" for x in bad]
             if "goal" in r and r["goal"] not in GOALS:
                 errors.append(f"{e.id}: unknown goal {r['goal']!r}")
     by_id = {e.id: e for e in ALL}

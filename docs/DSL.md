@@ -84,7 +84,7 @@ Requirements (req=dict(...)):
   sv={"kind": (2, 9)} (story variables of the story being played, at least / within a range)
   phase="young" | ["young", "middle"]   life phase by age: kid 0–12, teen 12–18, young 18–30, middle 30–60, grand 60+
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
-         independence) | list of those | month numbers (real Kyiv date)
+         independence malanka vyshyvanka pokrova) | list of those | month numbers (real Kyiv date)
 ```
 
 ## Підстановки в тексті
@@ -210,6 +210,9 @@ Requirements (req=dict(...)):
 | `halloween` | (10, 25) → (11, 2) |
 | `valentine` | (2, 10) → (2, 16) |
 | `independence` | (8, 20) → (8, 27) |
+| `malanka` | (1, 12) → (1, 14) |
+| `vyshyvanka` | (5, 15) → (5, 21) |
+| `pokrova` | (10, 12) → (10, 16) |
 | `winter` | 12, 1, 2 |
 | `spring` | 3, 4, 5 |
 | `summer` | 6, 7, 8 |
