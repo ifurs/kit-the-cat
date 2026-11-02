@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Changed
+- Browser game, small UX fixes (both pages): the arena hint no longer points at a «⚙️» that does not exist («вкладка «Сусіди» →
+  «Заселити 3 сусідів»»); an egg's card shows only «Яйце», not money/level/rarity; «Лікар» is disabled for a healthy pet
+  (a mis-tap used to cost mood); the bazaar dims what you cannot afford and says «не вистачає»; the sub-tabs of «Ще…» are
+  32 px high.
+
 ### Fixed
 - Story endings: in a random-picks player, 88% of «Весілля», 72% of «Говерла» and «Кав'ярня» ended in the fallback and the
   special endings were almost out of reach. Thresholds lowered (`st_wedding_end_duty/star` 5→4, `st_coffee_end_hit` 5→4,
