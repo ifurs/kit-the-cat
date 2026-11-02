@@ -5,12 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-11-02
+
 ### Added
-- **Inner voice of the temperament** (prototype): over about 40% of events the pet's character says one line —
+- **Inner voice of the temperament**: over about 40% of events the pet's character says one line —
   «🎭 хуліганка: «Правила — це рекомендації для тих, хто боїться.»». 36 temperaments × 6 lines
   (`content/voices.py`); when a choice is in character (🎭) the voice often leans towards it. Never over grave events
   (death, hospital, jail, a big health hit, the army: `engine.is_grave_event`). `Pet.inner_voice(e, other)`; the
-  sandbox state has `pet.pending.voice`; both pages show it.
+  sandbox state has `pet.pending.voice`; both pages show it. Hosts: show `p.inner_voice(e, other)` under the event text (a no-op on older games:
+  guard with `getattr`).
 
 ## [0.13.0] — 2026-11-02
 
@@ -355,7 +358,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/ifurs/kit-the-cat/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/ifurs/kit-the-cat/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/ifurs/kit-the-cat/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/ifurs/kit-the-cat/compare/v0.11.3...v0.12.0
