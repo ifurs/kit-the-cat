@@ -209,3 +209,19 @@ async def test_adopt_with_chosen_gender(client):
     await do(client, "create", "fox", who=3)  # no choice: a coin flip, still a valid gender
     assert [(await state(client, w))["pet"]["gender"] for w in (1, 2)] == ["f", "m"]
     assert (await state(client, 3))["pet"]["gender"] in ("m", "f")
+
+
+async def test_pending_event_carries_the_inner_voice(client):
+    await do(client, "create", "cat", gender="f")
+    await do(client, "hatch")
+    await do(client, "advance", 24 * 2, care=True)
+    seen = set()
+    for _ in range(40):
+        await do(client, "adventure")
+        pend = (await state(client))["pet"]["pending"]
+        if not pend:
+            continue
+        assert isinstance(pend["voice"], str) and "{" not in pend["voice"]
+        seen.add(bool(pend["voice"]))
+        await do(client, "choose", None)
+    assert seen == {True, False}

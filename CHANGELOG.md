@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **Inner voice of the temperament** (prototype): over about 40% of events the pet's character says one line —
+  «🎭 хуліганка: «Правила — це рекомендації для тих, хто боїться.»». 36 temperaments × 6 lines
+  (`content/voices.py`); when a choice is in character (🎭) the voice often leans towards it. Never over grave events
+  (death, hospital, jail, a big health hit, the army: `engine.is_grave_event`). `Pet.inner_voice(e, other)`; the
+  sandbox state has `pet.pending.voice`; both pages show it.
+
 ## [0.13.0] — 2026-11-02
 
 ### Added
