@@ -23,8 +23,8 @@ from .content.dsl import years as parse_years
 from .content.dsl import KNOWN_REQ, Choice, Event, Out, ch, ev, o
 from .content.economy import (BACKGROUND_PRICES, EDUCATION, FOOD, HOME_UPKEEP, JOBS, MYSTERY_BOX, PENSION, POCKET,
                               POTION, PRICES, ROLE_FOOD, WEALTH_TAX, WELFARE)
-from .content.persona import (EPITAPHS, FEARS, FOODS, GOALS, NAME_SUFFIX, NAMES, PERKS, QUIRKS, TEMPER_F,
-                              TEMPERAMENTS)
+from .content.persona import (EPITAPHS, FEARS, FOOD_CASES, FOODS, GOALS, NAME_SUFFIX, NAMES, PERKS, QUIRKS, TEMPER_F,
+                              TEMPERAMENTS, food_in)
 from .content.voices import VOICES
 
 VOICE_CHANCE = 0.4   # share of events with the pet's inner voice over them
@@ -346,7 +346,7 @@ TAILS = [
     ("Подзвонила мама й спитала, коли вже онуки.", dict(love=2, mood=-8), 1),
     ("Хтось з чату вночі лайкнув стару фотку {name_gen}. Підозріло.", dict(cha=1, mood=5), 1),
     ("Злива змила весь бруд. Безкоштовний душ!", dict(clean=100), 1),
-    ("У новинах сказали, що {food} дарує безсмертя. {name} {повірив|повірила}.", dict(lifespan=5, glutton=1), 0.6),
+    ("У новинах сказали, що безсмертя дарує щоденна порція {food_gen}. {name} {повірив|повірила}.", dict(lifespan=5, glutton=1), 0.6),
     ("Чорний кіт перейшов {name_dat} дорогу. Двічі. Туди й назад.", dict(luck=-2), 1),
     ("Ворожка на базарі прошепотіла: «Ти {обраний|обрана}». Тепер {name} у це вірить.", dict(mystic=3, cha=1), 1),
     ("Сусід віддав {name_dat} старий ноутбук «бо все одно гальмує».", dict(item="laptop"), 0.3),
@@ -777,12 +777,14 @@ class Pet:
 
     def fmt(self, text: str, other: "Pet | None" = None) -> str:
         p = self.persona
+        food = p.get("food", "борщ")
         try:
             return pick(text, self.gender, other.gender if other else None).format_map(SafeDict(
-                name=self.name, owner=self.owner_name, food=p.get("food", "борщ"), dream=self.dream_text(),
+                name=self.name, owner=self.owner_name, food=food, dream=self.dream_text(),
                 fear=p.get("fear", ""), quirk=p.get("quirk", ""), temper=self.temper_name(),
                 other=other.name if other else "хтось", other_owner=other.owner_name if other else "хтось",
                 money=f"{int(self.money)}", role=self.role_name(),
+                **{f"food_{c}": food_in(food, c) for c in FOOD_CASES},
                 **{f"name_{c}": self.name_in(c) for c in CASES[1:]},
                 **{f"other_{c}": other.name_in(c) if other else NOBODY[c] for c in CASES[1:]},
             ))
