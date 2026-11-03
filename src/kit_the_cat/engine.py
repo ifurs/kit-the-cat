@@ -1508,6 +1508,8 @@ class Pet:
                 return False
             elif k == "partner" and bool(self.partner) != bool(v):
                 return False
+            elif k == "kids" and self.children < v:
+                return False
             elif k == "night" and is_night() != bool(v):
                 return False
             elif k == "jail" and self.jailed != bool(v):

@@ -2,7 +2,7 @@
 
 > Згенеровано `scripts/gen_dsl_docs.py` з коду — не редагуй вручну. Як писати гарні пригоди: [CONTENT_GUIDE.md](CONTENT_GUIDE.md).
 
-Контракт: **61 ефектів**, **40 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
+Контракт: **61 ефектів**, **41 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
 
 ## Синтаксис (з `content/dsl.py`)
 
@@ -98,6 +98,7 @@ Requirements (req=dict(...)):
   stage=2 | (2, 3)   species="pig"   flag="crime" | flag={"crime": 2}   noflag="crime"
   tenure=(0, 1.5)    years in the CURRENT job (min, max): «перший тиждень на новій роботі» needs it, else it would come
                      after thirty years of work; a pet without a job (or hired before 0.18) never meets it
+  kids=1             the pet has had at least that many children (heir eggs): grandchildren belong only to those who did
   trait={"toxic": 10}   skill={"int": 30}   money=100   job="it"|"any"|"none"   edu="kpi"   noedu="kpi"
   has="sabre"   partner=True|False   night=True   jail=True (only while jailed)
   status=["crush"] (social: relation with the other pet)   other_stage=2   age=(min_days, max_days)

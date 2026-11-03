@@ -328,7 +328,7 @@ MYSTIC = [
        ch("Укласти угоду з головним", o("Головний на шабаші — чорт. Угода підписана кров'ю.", role="demon",
                                          money=3000), auto="dark"),
        ch("Заочна школа магії", o("Диплом відьмака отримано!", edu="hogwarts", int=3, mystic=3), auto="mystic"),
-       req=dict(flag={"witch": 1}, stage=GROWN), bg="mystic"),
+       req=dict(flag={"witch": 1}, stage=GROWN), once=True, bg="mystic"),
 ]
 
 HEALTH = [

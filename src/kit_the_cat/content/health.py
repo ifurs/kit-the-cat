@@ -92,7 +92,7 @@ HEALTH = [
                           mood=15), auto="patriot", time="1d"),
        ch("Привести колег", o("Прийшли всім відділом. Медсестри аплодували.", patriot=4, fame=3, love=2),
           check=("cha", 32), fail=[o("Колеги згадали про «терміновий дедлайн». {Здав|Здала} {сам|сама}.", health=-5,
-                                     patriot=2)], auto="love", time="1d"),
+                                     patriot=2)], auto="love", time="1d", req=dict(job="any")),
        ch("Не можу — боюся голок", o("{Задонатив|Задонатила} на центр крові. Теж допомога.", money=-200, patriot=1),
           time="1d"),
        req=dict(stage=GROWN), bg="hospital"),

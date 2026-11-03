@@ -58,3 +58,42 @@ def test_an_exhausted_social_pool_gives_a_solo_event_not_a_repeat():
     for seed in range(80):
         e, who = p.pick_event([p, other], random.Random(seed))
         assert e is None or not e.social, (seed, e.id)
+
+
+def test_kids_is_the_number_of_children():
+    p = adult(70)
+    assert not p.meets(dict(kids=1))
+    p.children = 1
+    assert p.meets(dict(kids=1)) and not p.meets(dict(kids=2))
+
+
+def test_grandchildren_belong_to_those_who_have_children():
+    """«Онуки приїхали на літо» to a pet that never had a child was a real line of a real life."""
+    import re
+    from kit_the_cat.grammar import pick
+    grand = re.compile(r"онук|внук", re.I)
+    for i in ("old_grandkids",):
+        assert E.EVENTS[i].req["kids"] == 1
+    for c in E.EVENTS["old_pension"].choices:
+        if grand.search(c.label):
+            assert c.req.get("kids") == 1
+    # the neutral twin exists for the childless
+    assert "old_yard_kids" in E.EVENTS and "kids" not in E.EVENTS["old_yard_kids"].req
+    assert not grand.search(pick(E.EVENTS["old_yard_kids"].text, "m", "m"))
+    p = adult(70)
+    p.stage = 4
+    assert not p.meets(E.EVENTS["old_grandkids"].req) and p.meets(E.EVENTS["old_yard_kids"].req)
+
+
+def test_a_boss_needs_a_job():
+    assert E.EVENTS["tw_quantum_double"].req["job"] == "any"
+    assert any(c.req.get("job") == "any" for c in E.EVENTS["hl_blood"].choices)
+
+
+def test_the_new_social_events_fit_the_ages_they_tell_about():
+    """Sandboxes for kids, prom for teens, weddings and trips for adults — never the other way round."""
+    from kit_the_cat.content.social_more import KIDS, TEENS
+    assert KIDS and all(e.req["stage"] == 1 and e.req["other_stage"] == 1 for e in KIDS)
+    assert TEENS and all(e.req["stage"] == 2 and e.req["other_stage"] == 2 for e in TEENS)
+    for i in ("soc_partner_anniversary", "soc_partner_dinner", "soc_partner_trip", "soc_ex_wedding"):
+        assert E.EVENTS[i].req["stage"] == (3, 4), i
