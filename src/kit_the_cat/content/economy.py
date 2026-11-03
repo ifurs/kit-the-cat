@@ -9,9 +9,9 @@ JOBS = {
     "courier": dict(name="🛵 Кур'єр на самокаті", name_f="🛵 Кур'єрка на "
                                                         "самокаті", pay=150, req={"skill": {"str": 15}}, drift={"attr": 0.1, "str": 0.6, "party": 0.2},
                     items=["backpack@3"], bg="kyiv", open=True),
-    "taxi": dict(name="🚕 Таксист «Шансон FM»", name_f="🚕 Таксистка «Шансон "
-                                                      "FM»", pay=170, req={}, drift={"blat": 0.2, "toxic": 0.4, "cha": 0.4}, items=["cap"],
-                 bg="kyiv", open=True),
+    "taxi": dict(name="🚕 Таксист «Ялинка FM»", name_f="🚕 Таксистка «Ялинка FM»", pay=170, req={},
+                 drift={"blat": 0.2, "toxic": 0.4, "cha": 0.4}, items=["cap"], bg="kyiv", open=True,
+                 titles={"taxi_classic": ("🚕 Таксист «Класика FM»", "🚕 Таксистка «Класика FM»")}),
     "cook": dict(name="🌯 Кухар у шаурмичній", name_f="🌯 Кухарка у "
                                                      "шаурмичній", pay=150, req={}, drift={"glutton": 0.6, "str": 0.2}, items=["chef", "apron"],
                  bg="kitchen", open=True),

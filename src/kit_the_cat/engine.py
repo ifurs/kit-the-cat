@@ -212,10 +212,17 @@ def status_name(status: str, gender: str = "m") -> str:
     return (STATUS_NAMES_F if gender == "f" else STATUS_NAMES).get(status, status)
 
 
-def job_name(job: str, gender: str = "m") -> str:
-    """«🛒 Касир АТБ» / «🛒 Касирка АТБ»; the job's id when it is unknown."""
+def job_name(job: str, gender: str = "m", flags: dict | None = None) -> str:
+    """«🛒 Касир АТБ» / «🛒 Касирка АТБ»; the job's id when it is unknown. A job may grow a new title with a flag
+    (`titles={flag: (name, name_f)}`): the taxi's radio goes from «Ялинка FM» to «Класика FM»."""
     j = JOBS.get(job)
-    return (j.get("name_f", j["name"]) if gender == "f" else j["name"]) if j else job
+    if not j:
+        return job
+    name, name_f = j["name"], j.get("name_f", j["name"])
+    for flag, (new, new_f) in j.get("titles", {}).items():
+        if flags and flags.get(flag):
+            name, name_f = new, new_f
+    return name_f if gender == "f" else name
 
 
 def phase_name(phase: str, gender: str = "m") -> str:
@@ -859,7 +866,7 @@ class Pet:
         return feminine if self.gender == "f" else masculine
 
     def job_name(self, job: str | None = None) -> str:
-        return job_name(self.job if job is None else job, self.gender)
+        return job_name(self.job if job is None else job, self.gender, self.flags)
 
     def role_name(self, role: str | None = None) -> str:
         return role_name(self.role if role is None else role, self.gender)
@@ -1301,6 +1308,11 @@ class Pet:
                 n = self.ach(v)
                 if n:
                     notes.append(n)
+            elif k == "dream":  # the pet's dream comes true — if it is this one and it has not come true yet
+                if self.persona.get("goal") == v and not self.flags.get("dream_done"):
+                    notes += self.apply(dict(flag={f"dr_{v}": 3, "dream_done": 1}, achievement="Мрія збулася", mood=30, xp=40),
+                                        None, rng)
+                    notes.append(f"🌟 Мрія збулася: {self.dream_text()}")
             elif k == "die":
                 if self.die(pick(v, self.gender), rng):
                     notes.append(f"☠️ {self.g('помер', 'померла')}")

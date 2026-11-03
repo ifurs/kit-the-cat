@@ -78,7 +78,7 @@ FAME = [
        req=dict(stage=GROWN, tier={"fame": 2}), bg="kyiv"),
     ev("st_charity_stream", "{name_dat} пропонують провести благодійний стрім на збір для волонтерів.",
        ch("Стрімити добу", o("Зібрали на два дрони й тепловізор. Чат плакав, ти — теж.", fame=10, patriot=4, love=2,
-                            energy=-40), auto="patriot"),
+                            energy=-40, dream="drone"), auto="patriot"),
        ch("Задонатити {самому|самій}", o("Тихо {закинув|закинула} на банку. Без камер, але з "
                                  "гордістю.", money=-400, patriot=3, love=1),
           auto="love"),
