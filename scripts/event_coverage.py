@@ -160,6 +160,7 @@ def fit(p: E.Pet, req: dict, *, story: bool = True) -> E.Pet | None:
         elif k == "sv" and story:
             p.tale = dict(vars={var: (w[0] if isinstance(w, (tuple, list)) else w) for var, w in v.items()},
                           path=[], fx={}, title="", id="")
+    meet_cast(p, req, story)
     rng = random.Random(0)
     other = None
     if any(k in req for k in ("status", "other_stage", "other_role", "other_stage_max", "other_partner")) or req.get("social"):
@@ -182,6 +183,24 @@ def fit(p: E.Pet, req: dict, *, story: bool = True) -> E.Pet | None:
     elif req.get("partner"):
         p.partner = "9:9"
     return other
+
+
+def meet_cast(p: E.Pet, req: dict, story: bool) -> None:
+    """The recurring characters a req asks for (cast, cast_state, cast_for). With `story` they are met at the state the
+    req wants; otherwise only a character the pet already knows is lifted — to the bond and the years asked (living on
+    makes both happen). The state itself must come from an outcome."""
+    states = req.get("cast_state", {})
+    want = {cid: tuple(b) if isinstance(b, (tuple, list)) else (b, E.BOND_MAX) for cid, b in req.get("cast", {}).items()}
+    for cid in set(want) | set(states) | set(req.get("cast_for", {})):
+        rec = p.cast.get(cid)
+        if rec is None and story:
+            rec = p.cast[cid] = dict(b=0, since=p.years, st=states.get(cid, "here"))
+        if rec is None or rec["st"] != states.get(cid, "here"):
+            continue
+        lo, hi = want.get(cid, (E.BOND_MIN, E.BOND_MAX))
+        rec["b"] = min(max(rec["b"], lo), hi) if story else max(rec["b"], lo) if lo <= hi else rec["b"]
+        if cid in req.get("cast_for", {}):
+            rec["since"] = min(rec["since"], p.years - req["cast_for"][cid] - 0.01)
 
 
 def new_pet(species: str = "cat") -> E.Pet:
@@ -227,7 +246,8 @@ def producers(events: dict[str, E.Event]) -> dict:
     """What each kind of story state is given by: {"flag": {(k, v): {event ids}}, "role": {...}, ...}; plus who
     schedules whom ("sched": {follow-up id: {root ids}})."""
     prod: dict = {"flag": defaultdict(set), "role": defaultdict(set), "edu": defaultdict(set), "has": defaultdict(set),
-                  "job": defaultdict(set), "sched": defaultdict(set), "status": defaultdict(set)}
+                  "job": defaultdict(set), "sched": defaultdict(set), "status": defaultdict(set),
+                  "cast": defaultdict(set), "cast_state": defaultdict(set)}
     for e in events.values():
         for o in outs(e):
             fx = o.fx
@@ -245,6 +265,11 @@ def producers(events: dict[str, E.Event]) -> dict:
                 prod["has"][it.split("@")[0]].add(e.id)
             if fx.get("status") and e.social:
                 prod["status"][fx["status"]].add(e.id)
+            for cid in fx.get("cast", {}):   # meeting a character: they are around until something sends them away
+                prod["cast"][cid].add(e.id)
+                prod["cast_state"][(cid, "here")].add(e.id)
+            for cid, st in fx.get("cast_state", {}).items():
+                prod["cast_state"][(cid, st)].add(e.id)
             if fx.get("then"):
                 prod["sched"][fx["then"][0]].add(e.id)
             st = fx.get("step")
@@ -285,6 +310,10 @@ def needs(req: dict) -> list[tuple[str, object]]:
         out.append(("job", _first(j)))
     if "sv" in req:
         out.append(("sv", None))   # story variables: only inside a story
+    states = req.get("cast_state", {})
+    out += [("cast", cid) for cid in req.get("cast", {}) if cid not in states]
+    out += [("cast_state", (cid, st)) for cid, st in states.items()]
+    out += [("cast", cid) for cid in req.get("cast_for", {}) if cid not in states and cid not in req.get("cast", {})]
     return out
 
 
@@ -309,6 +338,7 @@ def clone(p: E.Pet) -> E.Pet:
         setattr(q, f, dict(getattr(p, f)))
     for f in _LISTS:
         setattr(q, f, list(getattr(p, f)))
+    q.cast = {k: dict(v) for k, v in p.cast.items()}
     q.followups = [list(f) for f in p.followups]
     q.tale = copy.deepcopy(p.tale)
     return q
@@ -318,11 +348,22 @@ def state_key(p: E.Pet, items: frozenset) -> tuple:
     """The story state of a pet that matters for what can happen next (and nothing else, or states multiply)."""
     return (tuple(sorted((k, v) for k, v in p.flags.items() if not k.startswith(("_", "seen_")))), p.role, p.job,
             tuple(p.edu), tuple(sorted({i.split("@")[0] for i in p.items} & items)),
-            tuple(sorted(f[0] for f in p.followups)), p.tale.get("title", ""),
+            tuple(sorted(f[0] for f in p.followups)), tuple(sorted((k, v["st"], v["b"] < 0) for k, v in p.cast.items())),
+            p.tale.get("title", ""),
             tuple(sorted(p.tale.get("vars", {}).items())))
 
 
 STORY_REQ = ("flag", "noflag", "edu", "noedu", "sv", "norole")   # cheap first look: what a state must hold for an event
+
+
+def story_met(q: E.Pet, req: dict) -> bool:
+    """The story state of `req` holds for `q` (the cheap first look): flags, education, story variables and the
+    characters being around in the right state — not how close the bond is, which living on lifts."""
+    if not q.meets({k: v for k, v in req.items() if k in STORY_REQ}):
+        return False
+    states = req.get("cast_state", {})
+    ids = set(req.get("cast", {})) | set(states)
+    return all(cid in q.cast and q.cast[cid]["st"] == states.get(cid, "here") for cid in ids)
 
 
 MAX_STATES = 60000
@@ -406,7 +447,7 @@ def closure(events: dict[str, E.Event], forged: dict) -> tuple[dict, dict]:
                                             + ", ".join(blame(r, f.req, other)))
             # events that need story state: does this state unlock one?
             for e in chained:
-                if e.id in reached or not q.meets({k: v for k, v in e.req.items() if k in STORY_REQ}):
+                if e.id in reached or not story_met(q, e.req):
                     continue
                 r = clone(q)
                 with clock(*date_for(e.req)):

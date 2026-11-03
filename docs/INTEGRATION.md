@@ -18,7 +18,9 @@ Stable within a minor version (see [CONTRIBUTING.md](../CONTRIBUTING.md#versioni
 - `engine`: `Pet` (`from_dict`, `to_dict`, `tick`, `pick_event`, `options`, `chance`, `start`, `auto_choice`,
   `resolve`, `look`, `fmt`, `give`, `cooldown_left`, `mark_cool`), `new_pet`, `EVENTS`, `ROLES`, `WORLD`, `BUDGET`,
   `chat_state`, `plan`, `live_silently`, `care`, `feed`, `buy`, `shop_stock`, `job_offers`, `apply_job`,
-  `fix_partners`, `mourn`, `chat_daily`, `world_start`, `world_claim`, `card`, `clock` (patchable), `SPEED`
+  `fix_partners`, `mourn`, `chat_daily`, `world_start`, `world_claim`, `card`, `clock` (patchable), `SPEED`.
+  Recurring characters (0.17): `Pet.cast` (a JSON dict inside the pet document, missing in old documents) and
+  `Pet.cast_list()` — the people the pet knows (name, icon, bond, `state` here/away/gone) for a card or a keyboard
 - `sprites`: `Look`, `render_gif`, `render_png`, `render_group`, `frame_canvases`, `item_name`, `item_slot`
 - `content.economy`: `FOOD`, `JOBS`, `EDUCATION`
 - `battle`: `Fighter`, `fight`, `win_chance`, `update_elo`, `aftermath`, `eligible`, `bracket`
