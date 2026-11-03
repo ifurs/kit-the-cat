@@ -93,3 +93,10 @@ def test_the_pets_name_is_part_of_the_card():
     wide = card.render_life_card(p.look(), dict(E.life_summary(p, {}), name="Дуже-дуже довге ім'я кота зі спадщиною"))
     decode(narrow), decode(wide)
     assert narrow != wide
+
+
+def test_t_and_ya_are_drawn_the_printed_way():
+    """Spleen's own «т» is an italic «m» and its «я» looks like «A»: a «підняти» read as «підмами». Redrawn on bake."""
+    rows = lambda ch: ["".join("#" if b >> (card.FW - 1 - i) & 1 else "." for i in range(card.FW)) for b in card.glyph(ch)]
+    assert rows("т")[3] == "#####." and rows("т")[4] == "..#..."
+    assert rows("я")[7] == "..#.#." and rows("я")[8] == ".#..#."
