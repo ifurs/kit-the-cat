@@ -20,7 +20,8 @@ from . import sprites
 from .grammar import CASES, GENDERS, inflect, pick
 from .content import events as event_content
 from .content.dsl import years as parse_years
-from .content.dsl import KNOWN_REQ, Choice, Event, Out, ch, ev, o
+from .content.cast import BOND_MAX, BOND_MIN, CAST, bond_word
+from .content.dsl import CAST_STATES, KNOWN_REQ, Choice, Event, Out, ch, ev, o
 from .content.economy import (BACKGROUND_PRICES, EDUCATION, FOOD, HOME_UPKEEP, JOBS, MYSTERY_BOX, PENSION, POCKET,
                               POTION, PRICES, ROLE_FOOD, WEALTH_TAX, WELFARE)
 from .content.persona import (EPITAPHS, FEARS, FOOD_CASES, FOODS, GOALS, NAME_SUFFIX, NAMES, PERKS, QUIRKS, TEMPER_F,
@@ -131,6 +132,7 @@ EVENT_ENERGY = 0          # energy is automatic (kept for hosts that still check
 FOLLOWUP_MAX = 3         # a follow-up (e.g. a dream step after a failure) is scheduled at most this often per life
 RECENT = 40              # last N events of a pet are not offered again (unless nothing else fits)
 REPEAT_DECAY = 0.3       # weight × this per earlier time the pet lived the event: fresh content first
+CAST_BOOST = 2.5         # weight × for events about the recurring characters (content/cast.py): people come back
 STORY_MAX = 10           # highlights kept for the life summary
 TWIST_TAIL = 0.06        # chance of a random mini-twist after any outcome
 TWIST_DAILY = 0.04       # chance per pet per game day to queue a twist event
@@ -249,7 +251,7 @@ ACH_F = {
     "Скарбошукач": "Скарбошукачка", "Хрещений батько": "Хрещена мати", "Чемпіон крашанок": "Чемпіонка крашанок",
     "Чемпіон покеру": "Чемпіонка покеру", "Чемпіон породи": "Чемпіонка породи", "Чемпіон турніру": "Чемпіонка турніру",
     "Щасливчик": "Щасливиця", "Ясновельможний": "Ясновельможна", "Непереможний": "Непереможна",
-    "Олігарх": "Олігархиня",
+    "Олігарх": "Олігархиня", "Свій у під'їзді": "Своя в під'їзді", "Друг з гаражів": "Подруга з гаражів",
 }
 
 EVENTS: dict[str, Event] = {e.id: e for e in event_content.ALL}
@@ -545,6 +547,7 @@ class Pet:
     children: int = 0
     pending: dict = field(default_factory=dict)
     tale: dict = field(default_factory=dict)      # the multi-step story being played: id, title, path, vars, fx
+    cast: dict = field(default_factory=dict)      # recurring characters met: id -> {"b": bond, "since": years, "st": state}
     next_ev: float = 0.0
     recent: list = field(default_factory=list)
     seen: dict = field(default_factory=dict)      # event id -> times lived (this life)
@@ -580,6 +583,7 @@ class Pet:
             p.gender = "m"
         if isinstance(p.partner, int):  # old drafts stored the owner id
             p.partner = ""
+        p.cast = {k: v for k, v in p.cast.items() if k in CAST and isinstance(v, dict)}  # a retired character is dropped
         if p.persona and "goal" not in p.persona:  # ≤ 0.5: dreams were flavour; now every pet has a goal
             goal = GOAL_BY_DREAM.get(p.persona.get("dream", "")) or \
                 random.Random(f"{p.chat_id}:{p.owner_id}:{p.gen}").choice(sorted(GOALS))
@@ -795,6 +799,33 @@ class Pet:
     def name_in(self, case: str) -> str:
         """The name in a grammatical case: "gen" «Мурки», "dat", "acc", "ins", "loc", "voc" (see grammar.py)."""
         return inflect(self.name, case, self.gender)
+
+    def meet(self, cid: str, delta: float = 0) -> str | None:
+        """Meet a recurring character (content/cast.py) or move the bond by `delta` (−6..6). Returns a short note."""
+        if cid not in CAST:
+            return None
+        who = CAST[cid]["name"]
+        rec = self.cast.get(cid)
+        if rec is None:
+            rec = self.cast[cid] = dict(b=0, since=round(self.years, 2), st="here")
+            self.note("cast", f"👋 {self.name} знайомиться: {who}")
+            first = True
+        else:
+            first = False
+        old = rec["b"]
+        rec["b"] = int(max(BOND_MIN, min(BOND_MAX, old + round(delta))))
+        if first:
+            return f"👋 Знайомство: {who}" + (f" · {'🤝' if rec['b'] > 0 else '💢'} {rec['b']:+d}".replace("-", "−") if rec["b"] else "")
+        if rec["b"] != old:
+            return f"{'🤝' if rec['b'] > old else '💢'} {who} {rec['b'] - old:+d}".replace("-", "−")
+        return None
+
+    def cast_list(self) -> list[dict]:
+        """The characters this pet knows, closest first: id, name, who, icon, bond, word (how they are), state, years."""
+        rows = [dict(id=cid, name=CAST[cid]["name"], who=CAST[cid]["who"], icon=CAST[cid]["icon"], bond=r["b"],
+                     word=bond_word(r["b"]), state=r["st"], years=int(self.years - r["since"]))
+                for cid, r in self.cast.items() if cid in CAST]
+        return sorted(rows, key=lambda r: (r["state"] == "gone", -r["bond"]))
 
     def g(self, masculine: str, feminine: str) -> str:
         """A gendered word for engine notes: p.g("вилупився", "вилупилася")."""
@@ -1260,6 +1291,15 @@ class Pet:
                         self.tale["vars"][var] = self.tale["vars"].get(var, 0) + d
             elif k == "step":
                 pass  # handled by resolve(): the next story step starts right away
+            elif k == "cast":
+                for cid, d in v.items():
+                    n = self.meet(cid, d)
+                    if n:
+                        notes.append(n)
+            elif k == "cast_state":
+                for cid, st in v.items():
+                    if cid in self.cast and st in CAST_STATES:
+                        self.cast[cid]["st"] = st
             elif other is None:
                 continue  # social-only effects without a partner pet
             elif k == "rel":
@@ -1415,6 +1455,21 @@ class Pet:
                 return False
             elif k == "phase" and self.phase() not in ([v] if isinstance(v, str) else v):
                 return False
+            elif k == "cast":
+                states = req.get("cast_state", {})
+                for cid, want in v.items():
+                    rec = self.cast.get(cid)
+                    lo, hi = want if isinstance(want, (tuple, list)) else (want, BOND_MAX)
+                    if not rec or rec["st"] != states.get(cid, "here") or not lo <= rec["b"] <= hi:
+                        return False
+            elif k == "cast_state":
+                if any(cid not in self.cast or self.cast[cid]["st"] != st for cid, st in v.items()):
+                    return False
+            elif k == "cast_for":
+                if any(cid not in self.cast or self.years - self.cast[cid]["since"] < n for cid, n in v.items()):
+                    return False
+            elif k == "nocast" and any(cid in self.cast for cid in ([v] if isinstance(v, str) else v)):
+                return False
             elif k == "life" and any(self.life.get(s, 0) < n for s, n in v.items()):
                 return False
             elif k == "tier" and any(self.tier(s) < n for s, n in v.items()):
@@ -1496,6 +1551,8 @@ class Pet:
                 w *= 2.0    # a dream nursed since childhood comes calling sooner
             if "flag" in e.req:
                 w *= 3.0    # storylines move forward
+            elif any(k in e.req for k in CAST_REQ):
+                w *= CAST_BOOST   # the people the pet knows come by (and strangers show up)
             elif any(k in e.req for k in ("job", "jail", "role", "season")):
                 w *= 1.6    # situations the pet is in right now
             if "phase" in e.req:
@@ -1737,6 +1794,7 @@ class Pet:
 
 
 FIELDS = tuple(Pet.__dataclass_fields__)
+CAST_REQ = ("cast", "cast_state", "cast_for", "nocast")
 
 
 # --- creation ----------------------------------------------------------------------------------
@@ -2490,6 +2548,9 @@ def life_summary(p: Pet, names: dict[str, str] | None = None) -> dict:
         facts.append("Досяг: " + " · ".join(peaks))
     if p.achievements:
         facts.append(f"🏆 {len(p.achievements)}: " + ", ".join(p.ach_name(a) for a in p.achievements[-4:]))
+    close = [r["name"] for r in p.cast_list() if r["bond"] >= 3]
+    if close:
+        facts.append("🫂 Рідні люди: " + ", ".join(close[:4]))
     st = list(p.status.values())
     family = [f"💍 {names[p.partner]}" if p.partner in names else "",
               f"🥚 дітей: {p.children}" if p.children else "",

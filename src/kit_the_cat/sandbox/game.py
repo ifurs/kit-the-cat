@@ -105,7 +105,7 @@ class Sandbox:
             genes=sprites.describe(p.genome), dna=sprites.dna_code(p.genome), rarity=sprites.rarity(p.genome)[1],
             gen=p.gen, dynasty=p.dynasty, achievements=[p.ach_name(a) for a in p.achievements[-12:]], heir=bool(p.heir), look=_look_key(p),
             persona=dict(temper=p.temper_name(), dream=p.dream_text(), fear=p.persona.get("fear", "")), emoji=E.SPECIES_EMOJI.get(p.species, "🐾"),
-            perk=E.perk_text(p), goal_step=p.goal_step(), dream_done=bool(p.flags.get("dream_done")),
+            cast=p.cast_list(), perk=E.perk_text(p), goal_step=p.goal_step(), dream_done=bool(p.flags.get("dream_done")),
             power={k: round(p.skill(k)) for k in E.SKILLS},
             egg_left=max(0, round((E.EGG_HOURS * E.hour() - (E.now() - p.born)) / 60)) if p.state == "egg" else 0,
             cause=p.cause,

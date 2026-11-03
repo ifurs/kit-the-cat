@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **Recurring characters** («постійні персонажі», `content/cast.py`): seven people who live next to every pet and
+  remember how they were treated — баба Галя (neighbour), лікар Остап (vet), двірняга Гаврик, Оксана з АТБ, пан Богдан
+  (colleague), сусід Мирон (garage), Соломія Андріївна (teacher). A pet meets each of them in its own way; every
+  decision moves a bond (−6..6), and they age, move away, write letters and come back. 40 events in
+  `cast_home.py` / `cast_town.py` (11 follow-ups), e.g. a stairwell neighbour who moves to Poznań and returns, a vet who
+  comes at night when the pet's health is low, a dog from the garages who leads the yard, a cashier who opens a bakery.
+- New DSL keys: effects `cast={"galya": +1}` (meet or change the bond) and `cast_state={"galya": "away"}`; requirements
+  `cast` (bond at least / within a range, the character is around), `cast_state`, `cast_for` (known for N years) and
+  `nocast` (not met yet). Contract in `content/dsl.py`, regenerated `docs/DSL.md`, validation of character ids in
+  `content/validate.py`.
+- `Pet.cast` (new field, old documents load with `{}`), `Pet.meet()`, `Pet.cast_list()`; the sandbox state has `cast`
+  and both game UIs show the people in «Навички й статус»; the life summary lists the closest ones. Events about the cast
+  come `CAST_BOOST` (×2.5) more often.
+- Achievements «Свій у під'їзді» and «Друг з гаражів».
+- Tools: `event_coverage.py` and `content_stats.py` understand characters; `tests/test_cast.py`.
+
 ## [0.16.0] — 2026-11-03
 
 ### Added

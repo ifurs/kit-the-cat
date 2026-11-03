@@ -407,7 +407,8 @@ function renderPet() {
         <div class="stats ${statsOpen() ? "open" : ""}"><button class="ghost stats-toggle" aria-expanded="${statsOpen()}">Навички й статус</button><div class="stats-body">
         <div class="life">${[["сила", "str"], ["розум", "int"], ["харизма", "cha"], ["удача", "luck"]].map(([n, k]) => `<span class="stat">${n} <b>${p.power[k]}</b></span>`).join("")}</div>
         <div class="meta">${esc(p.money_tier)}</div>
-        <div class="life">${p.life.map(l => `<span class="stat" title="${esc(l.tier)}">${esc(l.name)} <b>${l.value}</b> <small>${esc(l.tier)}</small></span>`).join("")}</div></div></div>
+        <div class="life">${p.life.map(l => `<span class="stat" title="${esc(l.tier)}">${esc(l.name)} <b>${l.value}</b> <small>${esc(l.tier)}</small></span>`).join("")}</div>
+        ${p.cast.length ? `<div class="life" title="Люди, з якими ${esc(p.name)} живе пліч-о-пліч: що ближчі стосунки, то частіше вони допомагають">${p.cast.map(c => `<span class="stat" title="${esc(c.who)}">${c.icon} ${esc(c.name)} <small>${c.state === "here" ? esc(c.word) : c.state === "away" ? "далеко" : "лише спогад"}</small></span>`).join("")}</div>` : ""}</div></div>
         <div class="care"><button data-care="heal" title="${s.health >= 90 ? "Здоровий: лікар не потрібен" : "Лікувати"}" ${s.health >= 90 ? "disabled" : ""}>Лікар</button><button data-more="casino" title="${p.casino.length ? "Казино" : "Казино — лише для дорослих при грошах"}" ${p.casino.length ? "" : "disabled"}>Казино</button>
           <button data-more="menu" title="Речі, базар, дім, робота…">Ще…</button></div>
         <div id="more"></div>`;
