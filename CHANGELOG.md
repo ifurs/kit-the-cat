@@ -5,9 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.15.2] — 2026-11-03
+
 ### Changed
 - Browser game: the gender picker has just ♂ Хлопчик / ♀ Дівчинка (the «🎲 Будь-яка» button is gone); one of them is
   preselected by a coin flip.
+- Browser game, UX leftovers of the review: on phones the empty adventure view no longer repeats the «▶ Пригода» button
+  the dock already has; the «Грати за» selector has a visible label (wide screens) and a tooltip; the «Казино» button is
+  disabled with an explanation while the casino is closed to the pet; lists (bazaar, wardrobe…) no longer scroll inside
+  the page; a toast stays up longer when the message is long.
 
 ## [0.15.1] — 2026-11-03
 
@@ -427,7 +433,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.15.1...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.15.2...HEAD
+[0.15.2]: https://github.com/ifurs/kit-the-cat/compare/v0.15.1...v0.15.2
 [0.15.1]: https://github.com/ifurs/kit-the-cat/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/ifurs/kit-the-cat/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/ifurs/kit-the-cat/compare/v0.13.0...v0.14.0
