@@ -2,6 +2,7 @@
 from collections import Counter
 
 from . import dsl
+from .cast import BOND_MAX, BOND_MIN, CAST
 from .events import ALL
 from .persona import EPITAPHS
 from ..grammar import pick, template_errors
@@ -60,6 +61,7 @@ def main() -> None:
                 errors += [f"{e.id}: unknown season {x!r}" for x in bad]
             if "goal" in r and r["goal"] not in GOALS:
                 errors.append(f"{e.id}: unknown goal {r['goal']!r}")
+    errors += cast_errors()
     by_id = {e.id: e for e in ALL}
     targets = set()
     for e in ALL:
@@ -81,6 +83,40 @@ def main() -> None:
     print(f"{len(ALL)} events, {sum(len(e.choices) for e in ALL)} choices")
     print("\n".join(errors) or "OK")
     raise SystemExit(1 if errors else 0)
+
+
+def cast_errors() -> list[str]:
+    """Recurring characters (content/cast.py): known ids, bonds inside the scale, valid states."""
+    errors = []
+
+    def ids(where: str, v) -> None:
+        errors.extend(f"{where}: unknown character {c!r}" for c in v if c not in CAST)
+
+    def bond(where: str, v) -> None:
+        for x in (v if isinstance(v, (tuple, list)) else [v]):
+            if isinstance(x, bool) or not isinstance(x, int) or not BOND_MIN <= x <= BOND_MAX:
+                errors.append(f"{where}: bond {v!r} must be whole numbers within {BOND_MIN}..{BOND_MAX}")
+
+    for e in ALL:
+        for where, req in [(e.id, e.req)] + [(f"{e.id}/{c.label}", c.req) for c in e.choices]:
+            ids(where, req.get("cast", {}))
+            ids(where, req.get("cast_state", {}))
+            ids(where, req.get("cast_for", {}))
+            ids(where, [req["nocast"]] if isinstance(req.get("nocast"), str) else req.get("nocast", []))
+            for want in req.get("cast", {}).values():
+                bond(where, want)
+            errors += [f"{where}: unknown cast_state {st!r}" for st in req.get("cast_state", {}).values()
+                       if st not in dsl.CAST_STATES]
+        for c in e.choices:
+            for out in c.outs + c.fail:
+                where = f"{e.id}/{c.label}"
+                ids(where, out.fx.get("cast", {}))
+                ids(where, out.fx.get("cast_state", {}))
+                for d in out.fx.get("cast", {}).values():
+                    bond(where, d)
+                errors += [f"{where}: unknown cast_state {st!r}" for st in out.fx.get("cast_state", {}).values()
+                           if st not in dsl.CAST_STATES]
+    return errors
 
 
 STORY_STEPS = 6  # a story is 1–6 decisions long

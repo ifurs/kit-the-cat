@@ -66,6 +66,11 @@ async def test_a_life(client):
     assert (await client.get("/img/event/1.png")).status == 200
     res = (await do(client, "choose", ev["choices"][0]["i"]))["result"]
     assert res["label"] and "error" not in res
+    for _ in range(6):  # a story (several decisions in a row) goes on right away
+        nxt = (await state(client))["pet"]["pending"]
+        if not nxt:
+            break
+        res = (await do(client, "choose", nxt["choices"][0]["i"]))["result"]
     assert (await state(client))["pet"]["pending"] is None
 
     await do(client, "world", "meteor")
