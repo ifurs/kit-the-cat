@@ -97,3 +97,58 @@ def test_the_new_social_events_fit_the_ages_they_tell_about():
     assert TEENS and all(e.req["stage"] == 2 and e.req["other_stage"] == 2 for e in TEENS)
     for i in ("soc_partner_anniversary", "soc_partner_dinner", "soc_partner_trip", "soc_ex_wedding"):
         assert E.EVENTS[i].req["stage"] == (3, 4), i
+
+
+def test_the_family_does_not_live_forever():
+    """A mother who calls an 86-year-old pet to dig potatoes: the events about the pet's parents close with the years."""
+    from kit_the_cat.content import family
+    from kit_the_cat.content.events import ALL
+    for e in ALL:
+        cap = family.cap_for(e)
+        if cap is None or (e.story and e.followup):      # a story step follows its first event at once
+            continue
+        assert e.req.get("years", (0, 999))[1] <= cap, e.id
+    mama = E.EVENTS["daily_dacha"]
+    young, old = adult(30), adult(86)
+    old.stage = 4
+    assert young.eligible(mama, None, fresh=False) and not old.eligible(mama, None, fresh=False)
+    for story in {e.story for e in E.EVENTS.values() if e.story}:
+        steps = [e for e in E.EVENTS.values() if e.story == story]
+        caps = [family.cap_for(e) for e in steps if e.followup]
+        roots = [e for e in steps if not e.followup]
+        if any(caps) and roots:
+            assert all(r.req.get("years", (0, 999))[1] <= min(c for c in caps if c) for r in roots), story
+
+
+def test_the_dream_of_the_sea_comes_true_on_the_sea():
+    rng = random.Random(1)
+    p = adult()
+    p.persona.update(goal="sea", dream="побачити море в Одесі")
+    notes = p.apply({"dream": "sea"}, None, rng)
+    assert p.flags["dream_done"] and p.flags["dr_sea"] == 3 and "Мрія збулася" in p.achievements and any("🌟" in n for n in notes)
+    assert p.apply({"dream": "sea"}, None, rng) == []                                  # only once
+    q = adult()
+    q.persona.update(goal="mayor", dream="стати мером Конотопа")
+    q.apply({"dream": "sea"}, None, rng)
+    assert "dream_done" not in q.flags                                                 # somebody else's dream
+    for i in ("adult_vacation", "army_hero", "old_last_wish", "tw_vamp_sea", "st_odesa_3"):
+        assert any("dream" in o.fx for c in E.EVENTS[i].choices for o in c.outs), i
+
+
+def test_a_taxi_changes_its_radio_with_the_rating():
+    assert "Ялинка" in E.job_name("taxi", "m", {}) and "Шансон" not in E.job_name("taxi", "f", {})
+    assert "Класика" in E.job_name("taxi", "f", {"taxi_classic": 1})
+    p = adult()
+    p.job = "taxi"
+    assert "Ялинка" in p.job_name()
+    p.flags["taxi_classic"] = 1
+    assert "Класика" in p.job_name()
+
+
+def test_the_kettle_comes_back_only_to_those_who_bought_it():
+    from kit_the_cat.content.modern import AVRORA_END, THREAD_END
+    assert E.EVENTS["avr_return"].followup
+    sources = [i for i, e in E.EVENTS.items() for c in e.choices for out in c.outs + c.fail if out.fx.get("then", ("",))[0] == "avr_return"]
+    assert set(sources) == {"avr_end", "avr_end_hoard"}
+    for ends in (AVRORA_END, THREAD_END):                  # the last ending is the one without a condition
+        assert all(E.EVENTS[i].req.get("sv") for i in ends[:-1]) and not E.EVENTS[ends[-1]].req.get("sv")

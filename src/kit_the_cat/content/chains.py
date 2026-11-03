@@ -187,7 +187,7 @@ POLITICS = [
        req=dict(flag={"nabu": 1}), bg="palace"),
     ev("pol_mayor", "{name} настільки популярний, що пропонують балотуватися в мери.",
        ch("Йти на вибори", o("МЕР {name}! Перше рішення — фонтан у формі {food_gen}.", item="crown", home="palace",
-                             achievement="Мер міста", money=5000, cha=5),
+                             achievement="Мер міста", money=5000, cha=5, dream="mayor"),
           check=("cha", 60), fail=[o("{Програв|Програла} боксеру. Знову.", mood=-20)], auto="gambler"),
        ch("Залишитись депутатом", o("Стабільність.", money=1000), auto="dark"),
        ch("Висунути замість себе кота", o("Кіт переміг з відривом. Ти — {радник|радниця} мера з особливих "
@@ -249,14 +249,14 @@ SPACE = [
        ch("Відповісти «А шо там по зарплаті?»", o("Маск не відповів. {Заблокував|Заблокувала}.", toxic=1)),
        req=dict(flag={"space": 2}, stage=(3, 3)), bg="space"),
     ev("space_mars", "Марс. {name} {знайшов|знайшла} у кратері щось дивне і пульсуюче.",
-       ch("Доторкнутися", o("Це був марсіанин. Тепер вони одне ціле.", role="alien", achievement="Перший контакт"),
+       ch("Доторкнутися", o("Це був марсіанин. Тепер вони одне ціле.", role="alien", achievement="Перший контакт", dream="mars"),
           o("Це була картопля. {Посадив|Посадила}. Тепер у {name_gen} марсіанська "
-            "ферма.", home="farm", money=3000), auto="mystic"),
+            "ферма.", home="farm", money=3000, dream="mars"), auto="mystic"),
        ch("Повернутися на Землю", o("{Повернувся|Повернулася} з каменем, {продав|продала} на "
-                                    "аукціоні.", money=10000, job="")),
+                                    "аукціоні.", money=10000, job="", dream="mars")),
        ch("Оголосити себе королем Марса", o("{Король|Королева} Марса {name} I. Підданих — 0. Зате "
                                             "корона.", item="crown@4",
-                                             achievement="Король Марса", toxic=2)),
+                                             achievement="Король Марса", toxic=2, dream="mars")),
        req=dict(job="astronaut"), bg="space"),
 ]
 
@@ -441,7 +441,7 @@ SEQUELS = [
        ch("Податися в депутати", o("Кримінальне минуле? У нас це називається «досвід». Ти в міськраді!",
                                    flag={"politics": 2}, unflag="crime", job="", cha=3, twist=True), auto="toxic"),
        ch("Написати мемуари «Лихі Троєщинські»", o("Бестселер! Серіал за мотивами вже знімають.", money=4000,
-                                                   cha=3, item="book@10"), auto="dark"),
+                                                   cha=3, item="book@10", dream="book"), auto="dark"),
        req=dict(flag={"crime": 3}, job="bandit", stage=GROWN), once=True, bg="kyiv"),
     ev("snitch_revenge", "Під дверима {name_gen} записка: «Ми пам'ятаємо, хто нас здав». Підпис: «Пацани з району».",
        ch("Переїхати в інше місто", o("Нове місто, нові сусіди, старі страхи.", home="sea", unflag="snitch",
@@ -650,7 +650,7 @@ SEQUELS = [
                                                patriot=4), auto="love"),
        ch("Відпустка на море", o("Тиждень у Одесі. Ти {спав|спала}, {їв|їла} і {дивився|дивилася} на "
                                  "хвилі.", home="sea", mood=40,
-                                 energy=100), auto="party"),
+                                 energy=100, dream="sea"), auto="party"),
        req=dict(job="military", trait={"patriot": 30}), once=True, bg="bunker"),
     ev("witch_coven_war", "Конкурентка-ворожка з сусіднього під'їзду переманює клієнтів {name_gen}. Вона гадає на кавовій гущі з «Аромату».",
        ch("Магічна дуель", o("Твій віск переміг її гущу! Клієнти повернулися.", mystic=4, money=800,

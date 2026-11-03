@@ -55,6 +55,7 @@ Effects (o(..., **fx)):
   jail=48 | hospital=24                hours (outfit + background while there)
   die="cause"                          death
   achievement="…"
+  dream="sea"                          the pet's dream comes true — if its goal is this one (persona.GOALS) and it is not fulfilled yet
   money_mult=0.5                       multiply money (0 = lose everything)
   free=True                            released from jail
   gene={"extra": "fangs"}              set genes directly (sprite changes!)
@@ -117,7 +118,7 @@ SKILLS = {"str", "int", "cha", "luck"}
 TRAITS = {"toxic", "gambler", "dark", "party", "patriot", "glutton", "love", "mystic"}
 KNOWN_FX = STATS | SKILLS | TRAITS | LIFE | {"time", "then",
     "money", "credit", "money_mult", "xp", "lifespan", "item", "item_slot", "lose_item", "unequip", "flag", "unflag", "job", "edu",
-    "home", "jail", "hospital", "die", "achievement", "free", "gene", "mutate", "species", "role", "reroll_persona",
+    "home", "jail", "hospital", "die", "achievement", "dream", "free", "gene", "mutate", "species", "role", "reroll_persona",
     "twist", "rel", "status", "other", "baby", "swap_genes", "step", "sv", "ss", "recap", "finale", "cast", "cast_state",
 }
 KNOWN_REQ = {

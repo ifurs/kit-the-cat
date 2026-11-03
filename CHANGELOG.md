@@ -5,6 +5,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.19.0] — 2026-11-04
+
+### Added
+- **23 modern events** (`content/modern.py`): the story «Акція в «Аврорі»» (a pot for twelve litres, a cat-shaped kettle,
+  three endings and a kettle that comes back for a return), the story «Борщ без сметани» in Threads (a flame war, a poll
+  of 41 thousand votes, three endings), the pigeon conspiracy of ЖЕК, a reply guy, a night of scrolling and its
+  follow-up, an AI chatbot (a shawarma business plan; a teen's homework), subscriptions, a QR menu, a delivery robot and
+  a four-minute voice message.
+- New effect `dream="sea"`: the pet's dream comes true if its goal is this one and it is not fulfilled yet. A pet that
+  dreams of the sea in Odesa now gets the dream on the Odesa vacation (and on an army leave, a vampire's holiday,
+  the Odesa story, the last wish); the same for Mars, the mayor, the drone and the bestseller.
+- Jobs can grow a new title with a flag (`titles={flag: (name, name_f)}`): the taxi's radio goes from «Ялинка FM» to
+  «Класика FM» after the choice «Вмикати класику, а не шансон».
+
+### Changed
+- The taxi driver is «Ялинка FM», not «Шансон FM»; classical music in the car changes it to «Класика FM».
+- The family does not live forever (`content/family.py`): events about the pet's mother, father or parents close at
+  50 years, those about a living grandmother or grandfather at 40 (a mother no longer calls an 86-year-old to dig potatoes).
+- `__version__` of the package matches the release.
+
 ## [0.18.0] — 2026-11-03
 
 ### Added
@@ -533,7 +553,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/ifurs/kit-the-cat/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/ifurs/kit-the-cat/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/ifurs/kit-the-cat/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/ifurs/kit-the-cat/compare/v0.15.2...v0.16.0

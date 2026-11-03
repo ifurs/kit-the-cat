@@ -2,7 +2,7 @@
 
 > Згенеровано `scripts/gen_dsl_docs.py` з коду — не редагуй вручну. Як писати гарні пригоди: [CONTENT_GUIDE.md](CONTENT_GUIDE.md).
 
-Контракт: **61 ефектів**, **41 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
+Контракт: **62 ефектів**, **41 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
 
 ## Синтаксис (з `content/dsl.py`)
 
@@ -64,6 +64,7 @@ Effects (o(..., **fx)):
   jail=48 | hospital=24                hours (outfit + background while there)
   die="cause"                          death
   achievement="…"
+  dream="sea"                          the pet's dream comes true — if its goal is this one (persona.GOALS) and it is not fulfilled yet
   money_mult=0.5                       multiply money (0 = lose everything)
   free=True                            released from jail
   gene={"extra": "fangs"}              set genes directly (sprite changes!)
@@ -260,7 +261,7 @@ Requirements (req=dict(...)):
 |---|---|---|---|
 | `atb` | 🛒 Касир АТБ | 120 | — |
 | `courier` | 🛵 Кур'єр на самокаті | 150 | {'skill': {'str': 15}} |
-| `taxi` | 🚕 Таксист «Шансон FM» | 170 | — |
+| `taxi` | 🚕 Таксист «Ялинка FM» | 170 | — |
 | `cook` | 🌯 Кухар у шаурмичній | 150 | — |
 | `farmer` | 🚜 Фермер | 170 | {'skill': {'str': 25}} |
 | `it` | 💻 Айтішник | 380 | {'skill': {'int': 45}} |
