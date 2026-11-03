@@ -10,6 +10,8 @@ Kit the Cat: the pet life-sim of the Ukrainian Telegram bot «Кошеня», as
   `content/cast.py` + `cast_home.py` / `cast_town.py` — the recurring characters (bonds, away/back) and their events
 - `grammar.py` — declension of pet names into 7 cases (`decline`, `inflect`; `{name_gen}`…) and the `{він|вона}` gender pairs (`pick`); pure stdlib
 - `sprites*.py` — procedural pixel art: genome, species, roles, items (fixed + generated), backgrounds, groups
+- `card.py` + `cardfont.py` — the life card: a whole life as one PNG (stdlib only: baked bitmap font, pixel icons, zlib
+  PNG encoder); `scripts/bake_font.py` regenerates `cardfont.py` from a Spleen BDF file (BSD-2)
 - `battle.py` — fighters, battles, tournaments (brackets, Elo)
 - `storage.py` — MemoryStore (in-memory, JSON dump/load); hosts may provide their own with the same methods
 - `sandbox/` — Sandbox game service, HTTP-free `api.py`, aiohttp `server.py` (`kit-the-cat`), static UI

@@ -2673,8 +2673,13 @@ def life_summary(p: Pet, names: dict[str, str] | None = None) -> dict:
               f"🤝 друзів: {sum(s in ('friend', 'bestie') for s in st)}" if any(s in ("friend", "bestie") for s in st) else "",
               f"⚔️ ворогів: {sum(s in ('rival', 'enemy') for s in st)}" if any(s in ("rival", "enemy") for s in st) else "",
               f"💔 колишніх: {st.count('ex')}" if "ex" in st else ""]
+    story, seen = [], set()
+    for _, _, x in p.story:  # a repeating line («мав загинути, але вижив» ×3) is told once
+        if x[:24] not in seen:
+            seen.add(x[:24])
+            story.append(x)
     return dict(name=p.name, title=title, cause=p.cause, epitaph=p.epitaph, facts=facts,
-                family=" · ".join(x for x in family if x), story=[x for _, _, x in p.story])
+                family=" · ".join(x for x in family if x), story=story)
 
 
 def obituary(p: Pet, names: dict[str, str] | None = None, limit: int = 1000, footer: str = "") -> str:

@@ -183,6 +183,10 @@ async def test_dead_pet_has_life_summary(client):
     assert p["state"] == "dead"
     s = p["summary"]
     assert s["title"] and s["cause"] and s["facts"]
+    r = await client.get("/img/card/1.png")  # the same life on one picture
+    assert r.status == 200 and r.content_type == "image/png"
+    assert (await r.read())[:8] == b"\x89PNG\r\n\x1a\n"
+    assert (await client.get("/img/card/3.png")).status == 404  # nobody there
 
 
 async def test_no_time_button_hatch_once_and_actions_move_time(client):

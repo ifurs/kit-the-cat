@@ -361,7 +361,7 @@ function obit(p) {
   const story = s.story.length ? `<div class="muted" style="margin-top:6px">📖 Найяскравіше:</div><ul class="obit-story">${s.story.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
   return `<div class="obit"><div class="obit-title">${esc(s.title)}</div><p>⚰️ ${esc(s.cause.charAt(0).toUpperCase() + s.cause.slice(1))}</p>
     ${s.facts.map(x => `<div class="meta">${esc(x)}</div>`).join("")}${story}
-    ${s.family ? `<div class="meta">${esc(s.family)}</div>` : ""}${s.epitaph ? `<p class="obit-epitaph">«${esc(s.epitaph)}»</p>` : ""}</div>`;
+    ${s.family ? `<div class="meta">${esc(s.family)}</div>` : ""}${s.epitaph ? `<p class="obit-epitaph">«${esc(s.epitaph)}»</p>` : ""}<button class="ghost" id="cardBtn" style="width:100%">🖼 Картка життя</button><div id="cardBox"></div></div>`;
 }
 
 const wide = matchMedia("(min-width: 901px)");
@@ -429,6 +429,15 @@ function renderPet() {
     renderMore();
   });
   const h = $("#heir"); if (h) h.onclick = () => act("heir");
+  const cb = $("#cardBtn");
+  if (cb) cb.onclick = async () => {
+    cb.disabled = true;
+    try {
+      const src = `/img/card/${S.owner}.png?t=${Date.now()}`;
+      $("#cardBox").innerHTML = `<img src="${src}" alt="Картка життя" style="width:100%;image-rendering:pixelated;margin-top:6px"><a href="${src}" download="kit-the-cat.png" class="muted">Зберегти картинку</a>`;
+      cb.style.display = "none";
+    } catch (e) { toast("Помилка: " + e.message); } finally { cb.disabled = false; }
+  };
   const hb = $("#hatch"); if (hb) hb.onclick = () => act("hatch");
   renderMore();
 }

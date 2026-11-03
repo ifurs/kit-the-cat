@@ -22,6 +22,10 @@ Stable within a minor version (see [CONTRIBUTING.md](../CONTRIBUTING.md#versioni
   Recurring characters (0.17): `Pet.cast` (a JSON dict inside the pet document, missing in old documents) and
   `Pet.cast_list()` — the people the pet knows (name, icon, bond, `state` here/away/gone) for a card or a keyboard
 - `sprites`: `Look`, `render_gif`, `render_png`, `render_group`, `frame_canvases`, `item_name`, `item_slot`
+- `card` (0.18): `render_life_card(pet.look(), engine.life_summary(pet, names), footer="")` → PNG bytes, a whole life on one
+  picture (portrait, title, cause, facts, highlights, family, epitaph; 792 px wide, taller for a longer life). Pure
+  stdlib — no Pillow, so it works in the browser build too. Send it as a document to keep the pixels sharp; as a photo
+  Telegram recompresses it (still readable). `engine.life_summary` also works for a living pet (no cause line).
 - `content.economy`: `FOOD`, `JOBS`, `EDUCATION`
 - `battle`: `Fighter`, `fight`, `win_chance`, `update_elo`, `aftermath`, `eligible`, `bracket`
 

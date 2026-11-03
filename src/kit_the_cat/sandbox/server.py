@@ -74,6 +74,13 @@ def routes(sb: Sandbox, save=lambda: None) -> web.RouteTableDef:
             raise web.HTTPNotFound()
         return web.Response(body=data, content_type="image/gif", headers={"Cache-Control": "no-store"})
 
+    @r.get("/img/card/{owner}.png")
+    async def card_png(req):
+        data = await sb.card_png(int(req.match_info["owner"]))
+        if not data:
+            raise web.HTTPNotFound()
+        return web.Response(body=data, content_type="image/png", headers={"Cache-Control": "no-store"})
+
     @r.get("/img/event/{owner}.png")
     async def event_png(req):
         data = await sb.event_png(int(req.match_info["owner"]))

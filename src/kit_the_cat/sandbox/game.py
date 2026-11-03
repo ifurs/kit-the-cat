@@ -11,6 +11,7 @@ import time
 from dataclasses import asdict
 
 from .. import battle as B
+from .. import card
 from .. import engine as E
 from .. import sprites
 from ..grammar import inflect
@@ -758,6 +759,15 @@ class Sandbox:
     async def pet_gif(self, owner: int) -> bytes | None:
         p = await self.pet(owner, tick=False)
         return await asyncio.to_thread(sprites.render_gif, p.look()) if p else None
+
+    async def card_png(self, owner: int) -> bytes | None:
+        """The life card (a whole life on one picture) of the pet — alive or dead."""
+        pets = await self.pets(tick=False)
+        p = next((x for x in pets if x.owner_id == owner and x.state != "egg"), None)
+        if not p:
+            return None
+        summary = E.life_summary(p, {x.pid: x.name for x in pets})
+        return await asyncio.to_thread(card.render_life_card, p.look(), summary)
 
     async def event_png(self, owner: int) -> bytes | None:
         pets = await self.pets(tick=False)
