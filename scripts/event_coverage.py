@@ -137,6 +137,8 @@ def fit(p: E.Pet, req: dict, *, story: bool = True) -> E.Pet | None:
         elif k == "tenure":   # a job taken just now (hired «tenure[0]» years ago at the latest)
             p.job = p.job or "atb"
             p.flags["_job_y"] = round(p.years - v[0], 3)
+        elif k == "kids":
+            p.children = max(p.children, v)
         elif k == "edu" and story:
             p.edu = [v]
         elif k == "has" and (story or natural("has", v)):

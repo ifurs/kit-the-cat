@@ -6,11 +6,15 @@
 
 Static: an event about «the first week at a new job» / «the first salary» must be tied to the job's age (`tenure=`),
 a `baby_*` event to a baby's age (`years=`): otherwise a pet meets them decades late.
+  Also: a text about the pet's own work (office, boss, colleagues, salary) must need a job, a text about grandchildren
+  must need `kids=` — otherwise a pet without a job meets «the boss called» and a childless one «the grandchildren
+  came». Those few that are about somebody else (an NPC's boss, a neighbour's grandson) are listed in OTHERS below.
 Dynamic (the sandbox with NPC owners, like balance.py): real lives are lived and counted —
   · age: the oldest pet that lived a `baby_*` event; new-job events that came after the first two years of the job;
   · repeats: share of events that a life already had (solo, social, jail, follow-up/story) and the share of events whose
     outcome text is word for word one the same life already read;
-  · state: outcomes that contradict the state (hired while employed, the same diploma twice, a baby without a partner…).
+  · state: outcomes that contradict the state (hired while employed, the same diploma twice, a baby without a partner…),
+    and texts that speak of a job or grandchildren the pet does not have.
 --strict exits 1 when a limit below is broken.
 """
 import argparse
@@ -31,6 +35,16 @@ from kit_the_cat.storage import MemoryStore  # noqa: E402
 
 LIMITS = dict(solo=0.06, social=0.30, jail=0.45, story=0.04, same_text=0.12)   # max share of repeats in a life
 BABY_MAX_YEARS = 6
+WORK = re.compile(r"офіс|начальник|колег|на роботі|співбесід|зарплат|дедлайн|звільнил|звільнен|випробувальн", re.I)
+GRAND = re.compile(r"онук|внук", re.I)
+# Reviewed by eye: the words are about somebody else (a character's boss, a ghost's grandsons, the mother's «when will
+# there be grandchildren») or the pet takes the job in the same event.
+OTHERS = {
+    "work": {"qlc_root", "st_job_by_call", "jail_library", "tw_wolf_vet", "tw_evil_twin", "arc_magpie", "dr_flat_1", "o_meet", "ox_bakery", "tw_demon_tax",
+             "hol_vyshyvanka_day", "jail_kitchen", "arc_friend_loan", "teen_cook_dinner", "st_garage_meeting"},
+    "kids": {"baby_first_birthday", "tw_vamp_garlic", "old_ancestor_ghost", "st_mortgage", "st_startup", "shelter_corridor",
+             "g_meet", "ox_bakery", "ox_basket", "o_meet", "sp2_horse_wedding", "hol_halloween_pumpkin", "teen_tutor", "st_border"},
+}
 NEW_JOB = re.compile(r"новій роботі|перший тиждень на|перша зарплат|першу зарплат|перший робочий|перший день на роботі|"
                      r"випробувальн", re.I)
 
@@ -39,10 +53,26 @@ def category(e) -> str:
     return ("social" if e.social else "jail" if e.id.startswith("jail_") else "story" if e.followup or e.story else "solo")
 
 
+def texts_of(e) -> list[str]:
+    return [pick(e.text, "m", "m")] + [pick(o.text, "m", "m") for c in e.choices for o in c.outs + c.fail]
+
+
+def guards(e, key: str) -> bool:
+    """The event (or a choice that says it) needs the state its text speaks of."""
+    reqs = [e.req] + [c.req for c in e.choices]
+    return any(key in r for r in reqs) or (key == "job" and any("job" in o.fx for c in e.choices for o in c.outs + c.fail))
+
+
 def static() -> list[str]:
     bad = []
     for e in E.EVENTS.values():
         text = pick(e.text, "m", "m")
+        if not e.social and not e.followup:
+            if any(WORK.search(t) for t in texts_of(e)) and not guards(e, "job") and e.id not in OTHERS["work"] \
+                    and not e.id.startswith(("jail_", "sp_", "sp2_", "tw_")):
+                bad.append(f"{e.id}: speaks of the pet's job, but nothing needs job= (or add it to OTHERS after a look)")
+            if any(GRAND.search(t) for t in texts_of(e)) and not guards(e, "kids") and e.id not in OTHERS["kids"]:
+                bad.append(f"{e.id}: speaks of grandchildren, but nothing needs kids=")
         if NEW_JOB.search(text) and "job" in e.req and "tenure" not in e.req and not e.followup:
             bad.append(f"{e.id}: about a new job but has no tenure= — it would come decades into the job")
         if e.id.startswith("baby_") and e.req.get("years", (0, 99))[1] > BABY_MAX_YEARS:
@@ -80,7 +110,7 @@ async def simulate(pets: int, days: int, seed: int) -> dict:
         return orig_apply(self, fx, other, r)
 
     def resolve(self, e, idx, other, r):
-        before = dict(job=self.job, partner=bool(self.partner), edu=list(self.edu), years=self.years,
+        before = dict(job=self.job, partner=bool(self.partner), edu=list(self.edu), years=self.years, kids=self.children,
                       since=self.flags.get("_job_y"))
         cur.clear()
         cur.update(pid=self.pid, fx={})
@@ -96,6 +126,13 @@ async def simulate(pets: int, days: int, seed: int) -> dict:
             stats["late_job"][e.id] += 1
         for what in contradictions(e, cur["fx"], before):
             stats["bad"][(what, e.id)] += 1
+        if not e.social and not e.followup:
+            said = [pick(e.text, "m", "m"), res.text or ""]
+            if not before["job"] and any(WORK.search(t) for t in said) and e.id not in OTHERS["work"] \
+                    and "job" not in cur["fx"] and not e.id.startswith(("jail_", "sp_", "sp2_", "tw_")):
+                stats["bad"][("speaks of a job the pet does not have", e.id)] += 1
+            if not before["kids"] and any(GRAND.search(t) for t in said) and e.id not in OTHERS["kids"]:
+                stats["bad"][("speaks of grandchildren the pet does not have", e.id)] += 1
         return res
 
     def autocare(self, p):
@@ -160,7 +197,12 @@ def main() -> None:
         kinds = Counter()
         for (what, _), n in st["bad"].items():
             kinds[what] += n
-        print("  state contradictions (info):", dict(kinds))
+        print("  state contradictions:", dict(kinds) or "none")
+        for (what, i), n in st["bad"].most_common(8):
+            print(f"    {n:3}x {i}: {what}")
+        for (what, i), n in st["bad"].items():
+            if what.startswith("speaks"):
+                problems.append(f"{i}: {what} ({n}x)")
     raise SystemExit(1 if a.strict and problems else 0)
 
 

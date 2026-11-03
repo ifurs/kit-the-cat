@@ -21,12 +21,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 - Five jail events (`jail_library`, `jail_lawyer`, `jail_kitchen`, `jail_letter`, `jail_yard`): there were three, so
   every second event behind bars was a repeat.
 
+- **39 social events** (`content/social_more.py`; there were 52, a third of them repeats): sandbox, swing, desk and stickers
+  for kids; cheating, prom, class chat and skipping for teens; a queue at Нова пошта, an air-raid shelter, rain, a charger
+  and a courtyard for strangers; moving a piano, barbecue, karaoke, secret Santa, pysanky for friends; a drill on Sunday,
+  snow, a review for foes; anniversary, dinner, a trip, Valentine's day, an ex's wedding and a box of things for couples.
+- New requirement `kids=N` (the pet has had at least N children): grandchildren belong only to a pet that has some.
+  «Онуки приїхали на літо» now needs it; `old_yard_kids` is the same story with the yard's children for the childless.
+- `integrity_audit.py` also reads the text against the state: a boss, an office or colleagues need a job, grandchildren
+  need `kids=`; the simulation lists the events that speak of a job or grandchildren the pet does not have.
+
 ### Changed
 - Baby events (`baby_*`) have an age window: «перше слово» no longer comes at ten years old, after the first class.
 - A pet younger than 3 (`INFANT_YEARS`) lives only events written for its age (an explicit stage, years or phase):
   no pranks, gossip or queues at АТБ for a baby.
 - A social event is offered at most twice per life (`SOCIAL_LIFE_MAX`); when the pool of fresh ones is empty the pet lives
   a solo event instead of the same prank again (a third of all social events were repeats).
+- «Кинув офіс» (a pet that never had one), a boss who «списує на ремонт офісу», «колеги» in the blood-donation event and the
+  quantum boss no longer come to a pet without a job (`job=` or neutral wording); «смартфон від онуків» is from the neighbours.
 - «Шлюб врятовано» → «Стосунки врятовано» (a pair is not always married).
 - `life_summary` tells a repeating highlight once («мав загинути, але вижив» no longer fills the list three times).
 
