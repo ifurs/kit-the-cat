@@ -58,3 +58,14 @@
 На фінішній прямій сом відстав на півхво | somebody else is the subject (старий пес Бровко, сом)
 Бровко виявився не таким уже й старим. | somebody else is the subject (старий пес Бровко, сом)
 Бровко подав у відставку, а дід Петро ку | somebody else is the subject (старий пес Бровко)
+Продав гараж, купив хату під Полтавою: « | about a recurring character (content/cast.py), not the pet
+Дзвонить Мирон: «Яблука вродили, дах хил | about a recurring character (content/cast.py), not the pet
+До вечора знав весь під'їзд, а до ранку | about a recurring character (content/cast.py), not the pet
+З'явився весь під'їзд із тарілками. | about a recurring character (content/cast.py), not the pet
+Гроші не взяв, зате лекція про сантехнік | about a recurring character (content/cast.py), not the pet
+Біля села мотор здався. | about a recurring character (content/cast.py), not the pet
+«З цього й починав би». | about a recurring character (content/cast.py), not the pet
+Сам лікар сидить у приймальні й роздає с | about a recurring character (content/cast.py), not the pet
+Довідку видав — разом із призначенням на | about a recurring character (content/cast.py), not the pet
+Танцював гірше, ніж лікував. | about a recurring character (content/cast.py), not the pet
+Потім сказав: «Старий звик. | about a recurring character (content/cast.py), not the pet

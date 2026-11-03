@@ -2,7 +2,7 @@
 
 > Згенеровано `scripts/gen_dsl_docs.py` з коду — не редагуй вручну. Як писати гарні пригоди: [CONTENT_GUIDE.md](CONTENT_GUIDE.md).
 
-Контракт: **55 ефектів**, **33 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
+Контракт: **57 ефектів**, **37 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
 
 ## Синтаксис (з `content/dsl.py`)
 
@@ -74,6 +74,10 @@ Effects (o(..., **fx)):
                                        req (usually sv=) holds; the last one is the fallback. Steps are
                                        ev(..., story="Назва", followup=True); the first step has story= only
   sv={"kind": 1, "risk": 2}            story variables: hidden scores the later steps and the ending read (sv=)
+  cast={"galya": 2}                    a recurring character (content/cast.py CAST): met for the first time (bond 0) and
+                                       the bond moves by that much (−6..6); the pet remembers how they were treated
+  cast_state={"galya": "away"}         where the character is now: "here" (default), "away" (moved, may come back),
+                                       "gone" (for good). Only for a character the pet has met
   # social events only:
   rel=+10  status="friend|bestie|rival|enemy|crush|partner|ex"  other={...effects for the other pet}
   baby=True                            the couple gets an heir egg (hybrid genes)
@@ -89,6 +93,9 @@ Requirements (req=dict(...)):
   life={"fame": 40} (life stat at least)   tier={"fame": 2, "money": 3} (tier at least; money tiers too)
   tier_max={"auth": 0}   years=(18, 60) (age in years)   goal="mayor" (the pet's dream, persona.GOALS)
   sv={"kind": (2, 9)} (story variables of the story being played, at least / within a range)
+  cast={"galya": 2} | {"galya": (-6, -2)}   the pet knows the character, who is around ("here"), and the bond is at
+         least that / within the range (negative bonds are grudges); cast_state={"galya": "away"} asks for another state
+         instead; cast_for={"galya": 8} (known for at least that many years); nocast="galya" | [ids] (not met yet)
   phase="young" | ["young", "middle"]   life phase by age: kid 0–12, teen 12–18, young 18–30, middle 30–60, grand 60+
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence malanka vyshyvanka pokrova) | list of those | month numbers (real Kyiv date)
