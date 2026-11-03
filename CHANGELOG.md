@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-11-03
+
 ### Added
 - **Life card** («картка життя»): `card.render_life_card(look, summary)` draws a whole life as one PNG — the pet on its
   scene (a ghost at the cemetery for the dead), name, title, cause of death, facts with pixel icons, up to six
@@ -531,7 +533,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/ifurs/kit-the-cat/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/ifurs/kit-the-cat/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/ifurs/kit-the-cat/compare/v0.15.2...v0.16.0
 [0.15.2]: https://github.com/ifurs/kit-the-cat/compare/v0.15.1...v0.15.2
