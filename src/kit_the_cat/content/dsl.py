@@ -40,7 +40,11 @@ Effects (o(..., **fx)):
   time="5y"                            extra life time this outcome costs (coma, a sentence, cryosleep)
   str int cha luck                     skill deltas
   toxic gambler dark party patriot glutton love mystic   trait deltas
-  money xp lifespan                    ₴, experience, years of life
+  money xp lifespan                    ₴, experience, years of life. A loss never digs deeper than engine.DEBT_FLOOR (−500):
+                                       the rest is written off (mood, sometimes an item). A choice whose every outcome
+                                       loses money is a PRICE: the pet cannot pick it without the money (engine.price)
+  credit=-1500                         a loan the pet takes on purpose: ignores the debt floor and marks the pet as
+                                       «у кредиті». Only in events/choices about кредит/борг/позика/розстрочка
   item="cowboy@6" | ["a", "b"]         give & equip;  item_slot="head" → random item for slot
   lose_item="random" | "id"            take away
   unequip="head" | "all"               take off what is worn in that slot (or everything); items stay owned
@@ -109,7 +113,7 @@ LIFE = {"fame", "auth", "blat", "fin", "attr"}
 SKILLS = {"str", "int", "cha", "luck"}
 TRAITS = {"toxic", "gambler", "dark", "party", "patriot", "glutton", "love", "mystic"}
 KNOWN_FX = STATS | SKILLS | TRAITS | LIFE | {"time", "then",
-    "money", "money_mult", "xp", "lifespan", "item", "item_slot", "lose_item", "unequip", "flag", "unflag", "job", "edu",
+    "money", "credit", "money_mult", "xp", "lifespan", "item", "item_slot", "lose_item", "unequip", "flag", "unflag", "job", "edu",
     "home", "jail", "hospital", "die", "achievement", "free", "gene", "mutate", "species", "role", "reroll_persona",
     "twist", "rel", "status", "other", "baby", "swap_genes", "step", "sv", "ss", "recap", "finale", "cast", "cast_state",
 }

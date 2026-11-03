@@ -214,7 +214,7 @@ STORIES_MORE = [
        ch("Як у журналі", o("Мармур! Ванна як у готелі, гаманець — як у студента.", money=-400, attr=2,
                             sv={"care": 1}, step=REP_END), req=dict(money=400), auto="party"),
        ch("Як у сусідки", o("Плитка з квіточками. Класика.", money=-150, step=REP_END), auto="love"),
-       ch("Залишки зі складу", o("Плитка трьох кольорів. Назвемо це «дизайнерським рішенням».", money=-50,
+       ch("Залишки зі складу", o("Плитка трьох кольорів, майже задарма. Назвемо це «дизайнерським рішенням».",
                                  sv={"diy": 1}, step=REP_END), auto="gambler"),
        followup=True, bg="khrushchovka", story=T_REPAIR, time="2w"),
     ev("st_rep_end_flood", "Тиждень після ремонту. Дзвінок у двері: сусід знизу, мокрий і злий. Ізолента "
@@ -440,7 +440,7 @@ STORIES_MORE = [
                            step="st_coffee_3"), req=dict(money=800), auto="party"),
        ch("Вживану з OLX", o("Працює! Іноді свистить, як чайник.", money=-300, sv={"risk": 1},
                              step="st_coffee_3"), req=dict(money=300), auto="gambler"),
-       ch("Френч-прес і турка", o("Ретро-концепт: «кава, як у бабусі».", money=-50, sv={"small": 2},
+       ch("Френч-прес і турка", o("Ретро-концепт: «кава, як у бабусі». Турку бабуся віддала задарма.", sv={"small": 2},
                                   step="st_coffee_3"), auto="mystic"),
        followup=True, bg="kyiv", story=T_COFFEE, time="2w"),
     ev("st_coffee_3", "Перший тиждень. Ранкова черга з метро, у всіх десять секунд, а сусідній кіоск "

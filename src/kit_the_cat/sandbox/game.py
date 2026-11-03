@@ -119,7 +119,8 @@ class Sandbox:
                 voice=p.inner_voice(e, other), twist=E.is_twist_event(e), mode=p.pending.get("mode", ""),
                 story=dict(title=p.fmt(e.story), step=len(p.tale.get("path", [])) + 1 if e.followup else 1) if e.story else None,
                 series=dict(title=E.SERIES[e.series]["title"], ep=p.series.get(e.series, {}).get("ep", 0) + 1) if e.series else None,
-                choices=[dict(i=i, label=p.button(e, i, other), chance=p.chance(c)) for i, c in p.options(e, other)])
+                choices=[dict(i=i, label=p.button(e, i, other), chance=p.chance(c)) for i, c in p.options(e, other)],
+                locked=[dict(i=i, label=p.button(e, i, other), need=need) for i, need in p.locked(e, other)])
         rows = await self.db.pet_log(SANDBOX, owner, p.gen, 40)
         out["journal"] = [dict(ts=E.kyiv(r["ts"]).strftime("%d.%m %H:%M"), kind=r["kind"], text=r["text"])
                           for r in rows][::-1]

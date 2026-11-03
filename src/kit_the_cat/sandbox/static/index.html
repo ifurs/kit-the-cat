@@ -505,7 +505,7 @@ function renderAdv() {
       ${ev.story && lastResult && lastResult.next === ev.id ? `<div class="prev">«${esc(lastResult.label)}» — ${esc(lastResult.text)}</div>` : ""}
       <p>${ev.twist ? "🌀 " : ""}${ev.other ? `👥 <b>${esc(ev.other)}</b> · ` : ""}${esc(ev.text)}</p>
       ${ev.voice ? `<p class="voice" title="Голос характеру">🎭 <b>${esc(p.persona.temper)}</b>: «${esc(ev.voice)}»</p>` : ""}
-      <div class="choices">${ev.choices.map(c => `<button data-ch="${c.i}"><span>${esc(c.label)}</span>${c.chance != null ? `<small class="muted">${Math.round(c.chance * 100)}%</small>` : ""}</button>`).join("")}
+      <div class="choices">${ev.choices.map(c => `<button data-ch="${c.i}"><span>${esc(c.label)}</span>${c.chance != null ? `<small class="muted">${Math.round(c.chance * 100)}%</small>` : ""}</button>`).join("")}${(ev.locked || []).map(c => `<button class="ghost" disabled title="Бракує ${c.need} ₴"><span>🔒 ${esc(c.label)}</span><small class="muted">бракує ${c.need} ₴</small></button>`).join("")}
         <button data-ch="auto" class="ghost muted">Хай вирішить сам</button></div></div>`;
     el.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => act("choose", b.dataset.ch === "auto" ? null : +b.dataset.ch));
     return;

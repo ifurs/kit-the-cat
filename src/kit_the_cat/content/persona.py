@@ -1,4 +1,5 @@
 """Personality pieces. Every pet gets one of each → millions of personalities before genes and life even start."""
+import re
 
 # (name, trait the pet leans to when deciding alone)
 TEMPERAMENTS = [
@@ -177,6 +178,16 @@ NAME_SUFFIX = [("", ""), ("", ""), ("", ""), (" Молодший", " Молод�
                (" Залізний", " Залізна"), (" Із Жмеринки",) * 2, (" Сором'язливий", " Сором'язлива"),
                (" Непереможний", " Непереможна"), (" з Конотопа",) * 2, (" Вічно Голодний", " Вічно Голодна"),
                (" Мрійливий", " Мрійлива")]
+
+
+def short_name(name: str) -> str:
+    """The name without its tail («Мурчик Великий», «Бублик з Троєщини», «Пуфик №7» → «Мурчик», «Бублик», «Пуфик»).
+    A name that does not end in one of NAME_SUFFIX (a name the owner typed) stays whole."""
+    base = re.sub(r" №\d+$", "", name or "")
+    for tail in sorted({t for pair in NAME_SUFFIX for t in pair if t}, key=len, reverse=True):
+        if base.endswith(tail) and len(base) > len(tail):
+            return base[: -len(tail)]
+    return base
 
 # epitaphs are templates: {він|вона} style pairs are picked by the pet's gender (grammar.pick)
 EPITAPHS = [
