@@ -11,6 +11,7 @@ uses only the standard library, so the same code runs in a Telegram bot, a local
                        │ Pet.from_dict/to_dict│ tick/pick/resolve     │ look() → sprites
    content/*.py ──► engine.EVENTS ──► engine.Pet ──────────────────► sprites.render_gif/png
    (DSL, dsl.py contract)               │  apply(fx) / meets(req)        frame_canvases (browser)
+                                        └─ life_summary ─► card.render_life_card (PNG, stdlib)
                                         └──► battle.Fighter / fight / bracket / Elo
 ```
 

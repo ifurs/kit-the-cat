@@ -23,7 +23,7 @@ uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat@v0.17.0"
 
 ```python
 import random
-from kit_the_cat import engine as E, sprites
+from kit_the_cat import card, engine as E, sprites
 
 rng = random.Random()
 pet = E.new_pet(chat_id=-100, owner_id=42, owner_name="Оля", species="axolotl", others=[], rng=rng)
@@ -31,6 +31,7 @@ pet.tick()                                   # минає час: вік у ро
 e, other = pet.pick_event([pet], rng)        # пригода
 res = pet.resolve(e, 0, other, rng)          # рішення власника → текст, ефекти, твісти
 gif = sprites.render_gif(pet.look())         # потребує extra `images` (Pillow)
+card = card.render_life_card(pet.look(), E.life_summary(pet, {}))  # PNG: усе життя на одній картці (без Pillow)
 doc = pet.to_dict()                          # збереження — справа хоста (JSON-документ)
 ```
 

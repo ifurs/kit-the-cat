@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **Life card** («картка життя»): `card.render_life_card(look, summary)` draws a whole life as one PNG — the pet on its
+  scene (a ghost at the cemetery for the dead), name, title, cause of death, facts with pixel icons, up to six
+  highlights, family and the epitaph. Pure stdlib: a baked bitmap font (`cardfont.py`, Spleen 6×12, BSD-2; regenerate
+  with `scripts/bake_font.py`), pixel icons and a zlib PNG encoder, so it needs no Pillow and works in the browser build.
+  Both game UIs have a «🖼 Картка життя» button on the screen of a dead pet (sandbox route `/img/card/<owner>.png`,
+  browser bridge `card_png`); `tests/test_card.py` checks the PNG and that no letter the game writes is missing from
+  the font.
+
+### Changed
+- `life_summary` tells a repeating highlight once («мав загинути, але вижив» no longer fills the list three times).
+
 ## [0.17.0] — 2026-11-03
 
 ### Added

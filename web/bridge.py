@@ -6,6 +6,7 @@ saves to the viewer's browser. Images are returned as raw RGB frames; the page d
 import json
 from collections import OrderedDict
 
+from kit_the_cat import card
 from kit_the_cat import engine as E
 from kit_the_cat import sprites
 from kit_the_cat.sandbox import api
@@ -79,6 +80,15 @@ async def pet_frames(owner: int):
         return None
     look = p.look()
     return _cached("p" + repr(look), lambda: _pack(sprites.frame_canvases(look, 4)))
+
+
+async def card_png(owner: int):
+    """The life card as PNG bytes (the page turns them into a picture to look at and save)."""
+    pets = await SB.pets(tick=False)
+    p = next((x for x in pets if x.owner_id == owner and x.state != "egg"), None)
+    if not p:
+        return None
+    return card.render_life_card(p.look(), E.life_summary(p, {x.pid: x.name for x in pets}))
 
 
 async def event_frames(owner: int):
