@@ -379,10 +379,10 @@ function renderDock() {  // phones: the main action is always one thumb away
 }
 const statsOpen = () => store.get("ks-stats") === "1";
 
-let adoptGender = "";  // "" = coin flip
+let adoptGender = Math.random() < 0.5 ? "m" : "f";  // preselected by a coin flip; the player can switch
 function renderPet() {
   const el = $("#pet"), p = S.pet;
-  const speciesGrid = `<div class="seg sexpick" role="group" aria-label="Стать">${[["", "🎲 Будь-яка"], ["m", "♂ Хлопчик"], ["f", "♀ Дівчинка"]]
+  const speciesGrid = `<div class="seg sexpick" role="group" aria-label="Стать">${[["m", "♂ Хлопчик"], ["f", "♀ Дівчинка"]]
     .map(([g, n]) => `<button data-g="${g}" class="${adoptGender === g ? "on" : ""}" aria-pressed="${adoptGender === g}">${n}</button>`).join("")}</div>`
     + `<div class="species">${S.species.map(([id, e, n]) => `<button data-sp="${id}">${e}<br><small>${esc(n)}</small></button>`).join("")}</div>`;
   if (!p) el.innerHTML = `<div class="name">Заведи пета</div><p class="muted">Гени, характер і доля випадуть випадково. Стать можна обрати.</p>${speciesGrid}`;

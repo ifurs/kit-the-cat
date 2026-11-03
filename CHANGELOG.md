@@ -5,6 +5,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Changed
+- Browser game: the gender picker has just ♂ Хлопчик / ♀ Дівчинка (the «🎲 Будь-яка» button is gone); one of them is
+  preselected by a coin flip.
+
 ## [0.15.1] — 2026-11-03
 
 ### Changed
