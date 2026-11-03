@@ -21,6 +21,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   come `CAST_BOOST` (×2.5) more often.
 - Achievements «Свій у під'їзді» and «Друг з гаражів».
 - Tools: `event_coverage.py` and `content_stats.py` understand characters; `tests/test_cast.py`.
+- **Series** — serials of 5–8 episodes that come years apart, with a recap («📺 Раніше: …») at the start of each
+  episode, hidden scores kept for the whole life and several endings, then a coda («second season») years later.
+  Four of them in `content/series.py` (33 events): «Шалаш за гаражами» (childhood, 3 endings + coda), «Лист у
+  пляшці» (teen → young, 3 endings incl. a rare one + coda), «Кав'ярня на розі» (adult, 4 endings + coda), «Нічний
+  маршрут» (mystic, 3 endings, a rare one gives a coda).
+- DSL: effects `ss={"hut.team": 1}` (series scores), `recap=("hut", "line")`, `finale=("hut", "legend")`; requirements
+  `ss={"hut.team": 4}` and `finale={"hut": "any"}`; `then=` takes a list of ids and picks the first whose req holds
+  (write `ss=` before it) — the ending depends on the scores. `ev(..., series="hut")`, placeholder `{recap_hut}`.
+- `Pet.series` (id → ep, vars, recap, end; a new field with a default: old documents load as is), `Result.series`
+  (`id`, `title`, `ep`, `finale`, `ending`), the sandbox shows «📺 серія N» on an episode and the ending of a season.
+- `validate.py` checks series (ids, endings, recap length, every outcome of an episode goes on or ends).
 
 ## [0.16.0] — 2026-11-03
 
