@@ -69,6 +69,13 @@ Effects (o(..., **fx)):
                                        the bond moves by that much (−6..6); the pet remembers how they were treated
   cast_state={"galya": "away"}         where the character is now: "here" (default), "away" (moved, may come back),
                                        "gone" (for good). Only for a character the pet has met
+  ss={"bus.trust": 1}                  series scores: "<series>.<score>" is kept for the whole life, between episodes,
+                                       unlike sv= (episodes are far apart in time; see content/series.py)
+  recap=("bus", "пустили на ніч")      one line of «Раніше в серіалі» (≤ 90 chars, no name needed); a later episode shows
+                                       the last four through {recap_bus} at the start of its text
+  finale=("bus", "good")               the series (season) ends with this ending tag (a key of its `ends`)
+  then=(["bus_end_a", "bus_end"], "1y")  a list of ids picks, right now, the first whose req holds (ss= first!);
+                                       the last is the fallback (no ss= in its req): the ending depends on the scores
   # social events only:
   rel=+10  status="friend|bestie|rival|enemy|crush|partner|ex"  other={...effects for the other pet}
   baby=True                            the couple gets an heir egg (hybrid genes)
@@ -87,6 +94,8 @@ Requirements (req=dict(...)):
   cast={"galya": 2} | {"galya": (-6, -2)}   the pet knows the character, who is around ("here"), and the bond is at
          least that / within the range (negative bonds are grudges); cast_state={"galya": "away"} asks for another state
          instead; cast_for={"galya": 8} (known for at least that many years); nocast="galya" | [ids] (not met yet)
+  ss={"bus.trust": 2} | {"bus.trust": (2, 9)} (series scores, at least / within a range)
+  finale={"bus": "good"} | {"bus": "any"} (the series has ended with that ending / with any)
   phase="young" | ["young", "middle"]   life phase by age: kid 0–12, teen 12–18, young 18–30, middle 30–60, grand 60+
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence malanka vyshyvanka pokrova) | list of those | month numbers (real Kyiv date)
@@ -102,13 +111,13 @@ TRAITS = {"toxic", "gambler", "dark", "party", "patriot", "glutton", "love", "my
 KNOWN_FX = STATS | SKILLS | TRAITS | LIFE | {"time", "then",
     "money", "money_mult", "xp", "lifespan", "item", "item_slot", "lose_item", "unequip", "flag", "unflag", "job", "edu",
     "home", "jail", "hospital", "die", "achievement", "free", "gene", "mutate", "species", "role", "reroll_persona",
-    "twist", "rel", "status", "other", "baby", "swap_genes", "step", "sv", "cast", "cast_state",
+    "twist", "rel", "status", "other", "baby", "swap_genes", "step", "sv", "ss", "recap", "finale", "cast", "cast_state",
 }
 KNOWN_REQ = {
     "stage", "species", "flag", "noflag", "trait", "skill", "money", "debt", "job", "edu", "noedu", "has", "partner",
     "night", "jail", "age", "low", "status", "nostatus", "other_stage", "other_partner", "role", "norole", "other_role",
-    "season", "other_stage_max", "life", "tier", "tier_max", "years", "goal", "phase", "sv", "cast", "cast_state",
-    "cast_for", "nocast",
+    "season", "other_stage_max", "life", "tier", "tier_max", "years", "goal", "phase", "sv", "ss", "finale", "cast",
+    "cast_state", "cast_for", "nocast",
 }
 UNITS = {"d": 1 / 365, "w": 7 / 365, "m": 1 / 12, "y": 1.0}
 
@@ -179,6 +188,7 @@ class Event:
     time: str | float = ""  # base cost of its choices ("" → the module's base)
     followup: bool = False  # only comes as a consequence (`then=`), never at random
     story: str = ""         # title of the multi-step story this event is a step of (`step=` links the steps)
+    series: str = ""        # id of the series (content/series.py SERIES) this event is an episode of (`then=` links them)
 
 
 def o(text: str, w: float = 1.0, **fx) -> Out:
@@ -190,5 +200,6 @@ def ch(label: str, *outs: Out, check=None, fail=None, req=None, auto: str = "", 
 
 
 def ev(id: str, text: str, *choices: Choice, req=None, w: float = 1.0, social: bool = False, bg: str = "",
-       once: bool = False, aff: tuple = (), time: str | float = "", followup: bool = False, story: str = "") -> Event:
-    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), time, followup, story)
+       once: bool = False, aff: tuple = (), time: str | float = "", followup: bool = False, story: str = "",
+       series: str = "") -> Event:
+    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), time, followup, story, series)

@@ -24,6 +24,7 @@ from .content.cast import BOND_MAX, BOND_MIN, CAST, bond_word
 from .content.dsl import CAST_STATES, KNOWN_REQ, Choice, Event, Out, ch, ev, o
 from .content.economy import (BACKGROUND_PRICES, EDUCATION, FOOD, HOME_UPKEEP, JOBS, MYSTERY_BOX, PENSION, POCKET,
                               POTION, PRICES, ROLE_FOOD, WEALTH_TAX, WELFARE)
+from .content.series import SERIES
 from .content.persona import (EPITAPHS, FEARS, FOOD_CASES, FOODS, GOALS, NAME_SUFFIX, NAMES, PERKS, QUIRKS, TEMPER_F,
                               TEMPERAMENTS, food_in)
 from .content.voices import VOICES
@@ -134,6 +135,8 @@ RECENT = 40              # last N events of a pet are not offered again (unless 
 REPEAT_DECAY = 0.3       # weight × this per earlier time the pet lived the event: fresh content first
 CAST_BOOST = 2.5         # weight × for events about the recurring characters (content/cast.py): people come back
 STORY_MAX = 10           # highlights kept for the life summary
+RECAP_KEEP = 8           # lines of «Раніше в серіалі» a series remembers…
+RECAP_SHOWN = 4          # …and the last of them an episode shows ({recap_<series>})
 TWIST_TAIL = 0.06        # chance of a random mini-twist after any outcome
 TWIST_DAILY = 0.04       # chance per pet per game day to queue a twist event
 RESURRECT = 0.10         # dead → zombie
@@ -144,7 +147,8 @@ STATUS_NAMES = {"friend": "🤝 друг", "bestie": "💛 найкращий д
 STATUS_NAMES_F = {**STATUS_NAMES, "friend": "🤝 подруга", "bestie": "💛 найкраща подруга", "rival": "😤 суперниця",
                   "enemy": "⚔️ ворогиня", "partner": "💍 партнерка", "ex": "💔 колишня"}  # of the pet it is about
 # journal kinds worth a place in the chronicle / notices (importance 1..3)
-IMPORTANCE = {"died": 3, "twist": 3, "role": 3, "heir": 2, "ach": 2, "love": 2, "jail": 2, "tier": 2, "world": 1, "job": 1,
+IMPORTANCE = {"died": 3, "twist": 3, "role": 3, "heir": 2, "ach": 2, "love": 2, "jail": 2, "tier": 2, "series": 2, "world": 1,
+              "job": 1,
               "casino": 1,
               "grew": 1, "hatched": 1, "social": 1, "hungry": 1}
 
@@ -248,7 +252,7 @@ ACH_F = {
     "Подвиг онука": "Подвиг онуки", "Президент чату": "Президентка чату", "Продав душу вигідно": "Продала душу вигідно",
     "Професор-аксолотль": "Професорка-аксолотль", "Підкорив Говерлу": "Підкорила Говерлу", "Пілот FPV": "Пілотка FPV",
     "Рецидивіст": "Рецидивістка", "Свідок року": "Свідкиня року", "Скандаліст": "Скандалістка",
-    "Скарбошукач": "Скарбошукачка", "Хрещений батько": "Хрещена мати", "Чемпіон крашанок": "Чемпіонка крашанок",
+    "Скарбошукач": "Скарбошукачка", "Водій нічного маршруту": "Водійка нічного маршруту", "Хрещений батько": "Хрещена мати", "Чемпіон крашанок": "Чемпіонка крашанок",
     "Чемпіон покеру": "Чемпіонка покеру", "Чемпіон породи": "Чемпіонка породи", "Чемпіон турніру": "Чемпіонка турніру",
     "Щасливчик": "Щасливиця", "Ясновельможний": "Ясновельможна", "Непереможний": "Непереможна",
     "Олігарх": "Олігархиня", "Свій у під'їзді": "Своя в під'їзді", "Друг з гаражів": "Подруга з гаражів",
@@ -502,6 +506,7 @@ class Result:
     time: float = 0.0            # years the decision cost (hidden from players; hosts use it to pace the world)
     next: str = ""               # story: id of the step that is pending now (hosts show it right away)
     story: dict = field(default_factory=dict)  # story: {title, step} mid-way; {title, steps, notes} at the end
+    series: dict = field(default_factory=dict)  # series: {id, title, ep, finale, ending} of the episode just lived
 
 
 @dataclass
@@ -553,6 +558,7 @@ class Pet:
     seen: dict = field(default_factory=dict)      # event id -> times lived (this life)
     story: list = field(default_factory=list)     # [ts, kind, text] highlights for the life summary
     followups: list = field(default_factory=list)  # [event id, due at age in years]: consequences of earlier choices
+    series: dict = field(default_factory=dict)    # series id -> {ep, vars, recap, end}: serials lived across years
     persona: dict = field(default_factory=dict)
     achievements: list = field(default_factory=list)
     jail_until: float = 0.0
@@ -792,6 +798,7 @@ class Pet:
                 **{f"food_{c}": food_in(food, c) for c in FOOD_CASES},
                 **{f"name_{c}": self.name_in(c) for c in CASES[1:]},
                 **{f"other_{c}": other.name_in(c) if other else NOBODY[c] for c in CASES[1:]},
+                **{f"recap_{k}": self.recap_text(k) for k in SERIES},
             ))
         except (ValueError, IndexError, AttributeError):
             return text
@@ -1167,6 +1174,8 @@ class Pet:
                 self._tally(k, v)
             elif k == "then":
                 fid, after = v
+                if not isinstance(fid, str):  # a list: the ending the scores (ss= before then=) pick; the last is the fallback
+                    fid = next((i for i in fid[:-1] if i in EVENTS and self.meets(EVENTS[i].req, None)), fid[-1])
                 n = self.counters.get(f"then_{fid}", 0)
                 if fid in EVENTS and n < FOLLOWUP_MAX and all(f[0] != fid for f in self.followups):
                     self.counters[f"then_{fid}"] = n + 1  # retries end: no event comes back forever
@@ -1300,6 +1309,19 @@ class Pet:
                 for cid, st in v.items():
                     if cid in self.cast and st in CAST_STATES:
                         self.cast[cid]["st"] = st
+            elif k == "ss":  # series scores, kept between episodes: "<series>.<score>"
+                for key, d in v.items():
+                    sid, var = key.split(".", 1)
+                    st = self.series_state(sid)
+                    st["vars"][var] = st["vars"].get(var, 0) + d
+            elif k == "recap":
+                st = self.series_state(v[0])
+                st["recap"] = (st["recap"] + [self.fmt(v[1], other)[:90]])[-RECAP_KEEP:]
+            elif k == "finale":
+                st = self.series_state(v[0])
+                st["end"] = v[1]
+                title = SERIES.get(v[0], {}).get("title", v[0])
+                self.note("series", f"📺 «{title}»: {self.fmt(SERIES.get(v[0], {}).get('ends', {}).get(v[1], v[1]), other)}")
             elif other is None:
                 continue  # social-only effects without a partner pet
             elif k == "rel":
@@ -1452,6 +1474,14 @@ class Pet:
                 return False
             elif k == "sv" and not all((lambda x, r: r[0] <= x <= r[1] if isinstance(r, (tuple, list)) else x >= r)(
                     self.tale.get("vars", {}).get(var, 0), want) for var, want in v.items()):
+                return False
+            elif k == "ss" and not all((lambda x, r: r[0] <= x <= r[1] if isinstance(r, (tuple, list)) else x >= r)(
+                    self.series.get(key.split(".", 1)[0], {}).get("vars", {}).get(key.split(".", 1)[-1], 0), want)
+                    for key, want in v.items()):
+                return False
+            elif k == "finale" and any(
+                    not (self.series.get(sid, {}).get("end") if tag == "any" else self.series.get(sid, {}).get("end") == tag)
+                    for sid, tag in v.items()):
                 return False
             elif k == "phase" and self.phase() not in ([v] if isinstance(v, str) else v):
                 return False
@@ -1686,6 +1716,8 @@ class Pet:
             fx["health"] = fx.get("health", 0) - 10
             fx["mood"] = fx.get("mood", 0) - 10
         res.text = self.fmt(out.text, other)
+        if e.series:  # one more episode of a serial
+            self.series_state(e.series)["ep"] += 1
         y0 = self.years
         res.time = self.choice_time(e, c)
         self.years += res.time
@@ -1711,6 +1743,11 @@ class Pet:
         if e.once:
             self.flags[f"seen_{e.id}"] = 1
         self.next_ev = now() + rng.uniform(*BUDGET.every) * hour()
+        if e.series:
+            st = self.series_state(e.series)
+            tag = fx["finale"][1] if "finale" in fx else ""
+            res.series = dict(id=e.series, title=SERIES.get(e.series, {}).get("title", e.series), ep=st["ep"], finale=tag,
+                              ending=self.fmt(SERIES.get(e.series, {}).get("ends", {}).get(tag, "")) if tag else "")
         if self.tale:
             nxt = self.next_step(fx.get("step")) if self.alive and not self.jailed and not self.in_hospital else None
             if nxt:  # the story goes on right away: same place (chat or DM), new message
@@ -1751,6 +1788,15 @@ class Pet:
         ids = [v] if isinstance(v, str) else list(v or [])
         steps = [EVENTS[i] for i in ids if i in EVENTS]
         return next((e for e in steps if self.meets(e.req, None)), steps[-1] if steps else None)
+
+    def series_state(self, sid: str) -> dict:
+        """The state of a series this pet lives: {ep: episodes lived, vars: scores, recap: lines, end: ending tag}."""
+        return self.series.setdefault(sid, dict(ep=0, vars={}, recap=[], end=""))
+
+    def recap_text(self, sid: str) -> str:
+        """«Раніше в серіалі…» for the start of an episode (empty before the first episode)."""
+        lines = self.series.get(sid, {}).get("recap", [])[-RECAP_SHOWN:]
+        return "📺 Раніше: " + "; ".join(lines) + ".\n\n" if lines else ""
 
     def _tally(self, k: str, v: float) -> None:
         if self.tale:  # what the whole story changed, shown at its end

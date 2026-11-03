@@ -48,6 +48,11 @@ res = p.resolve(E.EVENTS[p.pending["id"]], idx, other, rng)
 await store.save_pets([p.to_dict()] + ([other.to_dict()] if other else []))
 ```
 
+Series (serials of episodes years apart): an episode's text already starts with the recap («📺 Раніше: …») when you
+format it with `p.fmt(e.text)`; `e.series` is the series id, `engine.SERIES[id]["title"]` its title, `p.series[id]["ep"]` the
+episodes lived so far, and `res.series` (`id`, `title`, `ep`, `finale`, `ending`) tells what the choice just closed
+(`ending` is filled when a season ends). Hosts that ignore all this still play series correctly.
+
 Text from the engine (`Result`, `p.fmt(...)`) is plain Ukrainian with user-controlled pieces (pet and owner names) substituted. Pet names are declined by `grammar.py` (`p.name_in("gen")`, `grammar.inflect(name, case)`); to put a name into your own
 text use these instead of the bare `p.name` after a preposition or as an object. The favourite food (`p.persona["food"]`)
 is stored in the accusative; `persona.food_in(food, case)` gives its other forms (`"nom"`, `"gen"`, `"dat"`, `"ins"`,

@@ -157,6 +157,13 @@ def fit(p: E.Pet, req: dict, *, story: bool = True) -> E.Pet | None:
                 setattr(p, s, n / 2)
         elif k == "role" and (story or v == "any" or natural("role", _first(v))):
             p.role = "vampire" if v == "any" else _first(v)
+        elif k == "ss" and story:
+            for key, w in v.items():
+                sid, _, var = key.partition(".")
+                p.series_state(sid)["vars"][var] = w[0] if isinstance(w, (tuple, list)) else w
+        elif k == "finale" and story:
+            for sid, tag in v.items():
+                p.series_state(sid)["end"] = tag if tag != "any" else "coda"
         elif k == "sv" and story:
             p.tale = dict(vars={var: (w[0] if isinstance(w, (tuple, list)) else w) for var, w in v.items()},
                           path=[], fx={}, title="", id="")
@@ -271,7 +278,8 @@ def producers(events: dict[str, E.Event]) -> dict:
             for cid, st in fx.get("cast_state", {}).items():
                 prod["cast_state"][(cid, st)].add(e.id)
             if fx.get("then"):
-                prod["sched"][fx["then"][0]].add(e.id)
+                for tid in ([fx["then"][0]] if isinstance(fx["then"][0], str) else fx["then"][0]):
+                    prod["sched"][tid].add(e.id)
             st = fx.get("step")
             for i in ([st] if isinstance(st, str) else st or []):
                 prod["sched"][i].add(e.id)
@@ -341,16 +349,29 @@ def clone(p: E.Pet) -> E.Pet:
     q.cast = {k: dict(v) for k, v in p.cast.items()}
     q.followups = [list(f) for f in p.followups]
     q.tale = copy.deepcopy(p.tale)
+    q.series = copy.deepcopy(p.series)
     return q
 
 
-def state_key(p: E.Pet, items: frozenset) -> tuple:
+def ss_caps(events: dict[str, E.Event]) -> dict[str, int]:
+    """Series scores some req reads, with the value above which more makes no difference (so states do not multiply)."""
+    caps: dict[str, int] = {}
+    for e in events.values():
+        for r in [e.req] + [c.req for c in e.choices]:
+            for k, w in r.get("ss", {}).items():
+                caps[k] = max(caps.get(k, 0), max(w) + 1 if isinstance(w, (tuple, list)) else w)
+    return caps
+
+
+def state_key(p: E.Pet, items: frozenset, caps: dict | None = None) -> tuple:
     """The story state of a pet that matters for what can happen next (and nothing else, or states multiply)."""
     return (tuple(sorted((k, v) for k, v in p.flags.items() if not k.startswith(("_", "seen_")))), p.role, p.job,
             tuple(p.edu), tuple(sorted({i.split("@")[0] for i in p.items} & items)),
             tuple(sorted(f[0] for f in p.followups)), tuple(sorted((k, v["st"], v["b"] < 0) for k, v in p.cast.items())),
             p.tale.get("title", ""),
-            tuple(sorted(p.tale.get("vars", {}).items())))
+            tuple(sorted(p.tale.get("vars", {}).items())),
+            tuple(sorted((sid, tuple(sorted((v, min(n, (caps or {}).get(f"{sid}.{v}", 0)))
+                                            for v, n in s["vars"].items())), s["end"]) for sid, s in p.series.items())))
 
 
 STORY_REQ = ("flag", "noflag", "edu", "noedu", "sv", "norole")   # cheap first look: what a state must hold for an event
@@ -382,13 +403,14 @@ def closure(events: dict[str, E.Event], forged: dict) -> tuple[dict, dict]:
     chained = [e for e in events.values() if not e.followup and story_needs(e.req)]
     items = frozenset(e.req["has"] for e in events.values() if e.req.get("has"))
     entered: set = set()
+    caps = ss_caps(events)
 
     def enter(p: E.Pet, e: E.Event, via: str, other: E.Pet | None = None) -> None:
         """`p` lives `e`: try every option and every outcome, queue the states they lead to."""
         reached.setdefault(e.id, via)
-        if (e.id, state_key(p, items)) in entered:
+        if (e.id, state_key(p, items, caps)) in entered:
             return
-        entered.add((e.id, state_key(p, items)))
+        entered.add((e.id, state_key(p, items, caps)))
         if e.story and (not e.followup or p.tale.get("title") != e.story):
             p.tale = dict(id=e.id, title=e.story, path=[], vars={}, fx={})   # a story begins (Pet.resolve)
         elif not e.story:
@@ -413,7 +435,7 @@ def closure(events: dict[str, E.Event], forged: dict) -> tuple[dict, dict]:
                     nxt = q.next_step(st)
                     if nxt:
                         enter(q, nxt, e.id)
-                key = state_key(q, items)
+                key = state_key(q, items, caps)
                 if key in seen or len(seen) > MAX_STATES:
                     continue
                 seen.add(key)

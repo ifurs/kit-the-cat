@@ -21,6 +21,7 @@ uses only the standard library, so the same code runs in a Telegram bot, a local
 | `engine.py` | `Pet` dataclass (a JSON document); ageing and decay in `tick()`; event choice (`pick_event`, weights by traits/`aff`, cooldowns, `once`); `resolve()` → `Result` (text, effects, twists); effects `apply()` and requirements `meets()` — the only implementation of the DSL; roles, world events, economy (`care`, `feed`, `buy`, jobs); `plan()` decides what a chat sees next within `BUDGET` |
 | `content/dsl.py` | `ev/ch/o` builders and the contract: `KNOWN_FX`, `KNOWN_REQ`, `ROLES`. The docstring is the human reference (rendered into `docs/DSL.md`) |
 | `content/{life,daily,chains,jobs,species,social,twists}.py` | 313 events, aggregated in `content/events.py` (`ALL`) |
+| `content/series.py` | serials: episodes years apart, scores `ss=` kept for the life, `recap=` shown as `{recap_<id>}`, endings picked by `then=([…])`; `SERIES` holds titles and endings |
 | `content/economy.py` | `FOOD`, `JOBS`, `EDUCATION`, prices |
 | `content/persona.py` | temperaments, dreams, fears, quirks (names/text for `{dream}` etc.) |
 | `content/validate.py` | contract check: unknown keys, label/text lengths, duplicate ids |
