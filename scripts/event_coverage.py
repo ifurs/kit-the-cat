@@ -134,6 +134,9 @@ def fit(p: E.Pet, req: dict, *, story: bool = True) -> E.Pet | None:
             p.money = -v - 1
         elif k == "job" and (story or v in ("none", "any") or natural("job", _first(v))):
             p.job = "" if v == "none" else "atb" if v == "any" else _first(v)
+        elif k == "tenure":   # a job taken just now (hired «tenure[0]» years ago at the latest)
+            p.job = p.job or "atb"
+            p.flags["_job_y"] = round(p.years - v[0], 3)
         elif k == "edu" and story:
             p.edu = [v]
         elif k == "has" and (story or natural("has", v)):

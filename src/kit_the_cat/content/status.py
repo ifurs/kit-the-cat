@@ -94,7 +94,7 @@ MONEY = [
           auto="party"),
        ch("Нагодувати всю родину", o("Стіл ломився. Бабуся сказала, що ти «її {найкращий|найкраща}».", glutton=2, love=3,
                                     money=-150), auto="glutton"),
-       req=dict(stage=(3, 3), job="any"), once=True, bg="kitchen"),
+       req=dict(stage=(3, 3), job="any", tenure=(0, 2)), once=True, w=4, bg="kitchen"),
     ev("st_crypto_kum", "Кум каже, що є крипта «КумКоїн». «Інвестуй зараз — у понеділок будеш на Мальдівах».",
        ch("Вкласти все", o("КумКоїн злетів! На день. {Встиг|Встигла} продати.", money_mult=2.5, gambler=2, w=0.3),
           o("КумКоїн впав у понеділок. Кум зник у вівторок.", money_mult=0.2, fin=4, mood=-20), auto="gambler"),
