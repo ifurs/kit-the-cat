@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-11-03
+
 ### Added
 - Mystic arcs in `arcs_soul.py` (8 events): a mirror in the stairwell and its advice, a magpie that predicts guests,
   Tarot on a night train, a staircase dream and a blue candle during a blackout.
@@ -443,7 +445,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.15.2...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/ifurs/kit-the-cat/compare/v0.15.2...v0.16.0
 [0.15.2]: https://github.com/ifurs/kit-the-cat/compare/v0.15.1...v0.15.2
 [0.15.1]: https://github.com/ifurs/kit-the-cat/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/ifurs/kit-the-cat/compare/v0.14.0...v0.15.0
