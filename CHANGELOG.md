@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- Mystic arcs in `arcs_soul.py` (8 events): a mirror in the stairwell and its advice, a magpie that predicts guests,
+  Tarot on a night train, a staircase dream and a blue candle during a blackout.
+
+### Changed
+- Stories: the rare special endings are now reachable (about 30% of random playthroughs instead of 6–13%): the fox raid
+  («greed»), the dog show («Золотий нашийник»), the pickup fundraiser («reach»).
+- 54 choices that already granted the **mystic** or **patriot** trait now carry the matching `auto=`, so pets of that
+  temperament act in character more often; the personality gaps of `content_stats.py` are closed.
+
 ## [0.15.2] — 2026-11-03
 
 ### Changed

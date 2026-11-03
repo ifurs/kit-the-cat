@@ -227,7 +227,7 @@ STORIES = [
        ch("Відкрити банку й написати пост", o("Пост чесний, банка відкрита, перші сотні вже капають.", fame=1,
                                               sv={"reach": 1}, step="st_pickup_2"), auto="patriot"),
        ch("Задонатити першим", o("Триста від тебе — і друзі підтягуються.", money=-300, patriot=2,
-                                 sv={"reach": 1}, step="st_pickup_2"), req=dict(money=300), auto="love"),
+                                 sv={"reach": 2}, step="st_pickup_2"), req=dict(money=300), auto="love"),
        ch("Організувати розіграш", o("Розіграш картини місцевої художниці розлетівся по місту.", cha=1,
                                      sv={"reach": 2}, step="st_pickup_2"), check=("cha", 30),
           fail=[o("Розіграш помітили лише друзі. Але й це гроші.", sv={"reach": 1}, step="st_pickup_2")],
