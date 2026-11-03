@@ -2,7 +2,7 @@
 
 > Згенеровано `scripts/gen_dsl_docs.py` з коду — не редагуй вручну. Як писати гарні пригоди: [CONTENT_GUIDE.md](CONTENT_GUIDE.md).
 
-Контракт: **55 ефектів**, **33 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
+Контракт: **58 ефектів**, **35 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
 
 ## Синтаксис (з `content/dsl.py`)
 
@@ -74,6 +74,13 @@ Effects (o(..., **fx)):
                                        req (usually sv=) holds; the last one is the fallback. Steps are
                                        ev(..., story="Назва", followup=True); the first step has story= only
   sv={"kind": 1, "risk": 2}            story variables: hidden scores the later steps and the ending read (sv=)
+  ss={"bus.trust": 1}                  series scores: "<series>.<score>" is kept for the whole life, between episodes,
+                                       unlike sv= (episodes are far apart in time; see content/series.py)
+  recap=("bus", "пустили на ніч")      one line of «Раніше в серіалі» (≤ 90 chars, no name needed); a later episode shows
+                                       the last four through {recap_bus} at the start of its text
+  finale=("bus", "good")               the series (season) ends with this ending tag (a key of its `ends`)
+  then=(["bus_end_a", "bus_end"], "1y")  a list of ids picks, right now, the first whose req holds (ss= first!);
+                                       the last is the fallback (no ss= in its req): the ending depends on the scores
   # social events only:
   rel=+10  status="friend|bestie|rival|enemy|crush|partner|ex"  other={...effects for the other pet}
   baby=True                            the couple gets an heir egg (hybrid genes)
@@ -89,6 +96,8 @@ Requirements (req=dict(...)):
   life={"fame": 40} (life stat at least)   tier={"fame": 2, "money": 3} (tier at least; money tiers too)
   tier_max={"auth": 0}   years=(18, 60) (age in years)   goal="mayor" (the pet's dream, persona.GOALS)
   sv={"kind": (2, 9)} (story variables of the story being played, at least / within a range)
+  ss={"bus.trust": 2} | {"bus.trust": (2, 9)} (series scores, at least / within a range)
+  finale={"bus": "good"} | {"bus": "any"} (the series has ended with that ending / with any)
   phase="young" | ["young", "middle"]   life phase by age: kid 0–12, teen 12–18, young 18–30, middle 30–60, grand 60+
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
          independence malanka vyshyvanka pokrova) | list of those | month numbers (real Kyiv date)
@@ -121,6 +130,7 @@ Requirements (req=dict(...)):
 | `{food_ins}` | орудний (з чим? — «шаурмою») |
 | `{food_loc}` | місцевий, без прийменника (на чому? — «шаурмі») |
 | `{other_gen}…{other_voc}` | ті самі відмінки для імені іншого пета (лише social) |
+| `{recap_hut}` | «Раніше в серіалі…» — до чотирьох останніх рядків `recap=` серіалу `hut` (порожньо до першої серії) |
 | `{він\|вона}` | слово за статтю пета: перша частина для хлопчика, друга для дівчинки («{вилупився\|вилупилася}») |
 | `{other:він\|вона}` | те саме за статтю іншого пета (лише social; без іншого пета — перша частина) |
 

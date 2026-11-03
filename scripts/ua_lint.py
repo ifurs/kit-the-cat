@@ -96,7 +96,7 @@ def check(text: str, fragment: bool = False) -> tuple[list[str], list[str]]:
         if CYR.search(w) and re.search(r"[’ʼ`´]", w):
             errors.append(f"typographic apostrophe in «{w}» → «{re.sub('[’ʼ`´]', chr(39), w)}»")
     for ph in re.findall(r"\{([a-z_]+)\}", text):
-        if ph not in PLACEHOLDERS:
+        if ph not in PLACEHOLDERS and not ph.startswith("recap_"):  # recap_<series>: validate.py knows the series
             errors.append(f"unknown placeholder {{{ph}}}")
     if not fragment and text.count("«") != text.count("»"):
         errors.append("unbalanced «»")

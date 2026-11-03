@@ -207,7 +207,7 @@ a { color: var(--cyan); }
 .dialog, .result { background: var(--dialog); border: 3px solid var(--frame); box-shadow: 0 0 0 3px var(--bg), 0 0 0 6px var(--ring);
   margin: 16px 10px 6px; padding: 12px 12px 10px; border-radius: 0; white-space: normal; }
 .result { white-space: pre-wrap; }
-.dialog > p { margin: 6px 0 10px; font-size: 17px; line-height: 1.55; }
+.dialog > p { margin: 6px 0 10px; font-size: 17px; line-height: 1.55; white-space: pre-line; }
 .story-head { font-size: 14px; color: var(--cyan); margin: 0; }
 .story-head b { color: var(--cyan); font-weight: 600; }
 .prev { color: var(--muted); font-size: 14.5px; margin-top: 6px; }
@@ -482,7 +482,10 @@ function resultHtml(r) {
   const verdict = r.ok === null ? "" : (r.crit === "win" ? "🌟 Критичний успіх" : r.crit === "fail" ? "💥 Критичний провал" : r.ok ? "✅ Успіх" : "❌ Провал");
   const notes = (r.notes || []).concat(r.tail_notes || []);
   return `<div class="result">${r.twist ? "🌀 <b>Сюжетний поворот!</b>\n" : ""}<b>${esc(r.label)}</b>${verdict ? ` — ${verdict} <small class="muted">(🎲 ${r.roll}, шанс ${Math.round(r.chance * 100)}%)</small>` : ""}
-${esc(r.text)}${r.tail ? `\n🌀 ${esc(r.tail)}` : ""}${r.died ? `\n⚰️ <b>${esc(r.name)} помер.</b> ${esc(r.cause)}` : ""}${notes.length ? `<div class="notes">${esc(notes.join(" · "))}</div>` : ""}${recapHtml(r.story)}</div>`;
+${esc(r.text)}${r.tail ? `\n🌀 ${esc(r.tail)}` : ""}${r.died ? `\n⚰️ <b>${esc(r.name)} помер.</b> ${esc(r.cause)}` : ""}${notes.length ? `<div class="notes">${esc(notes.join(" · "))}</div>` : ""}${recapHtml(r.story)}${seriesHtml(r.series)}</div>`;
+}
+function seriesHtml(sr) {  // a season of a serial has just ended: its ending
+  return sr && sr.ending ? `<div class="story-head">📺 <b>${esc(sr.title)}</b> · ${esc(sr.ending)}</div>` : "";
 }
 function recapHtml(st) {  // the end of a multi-step story: every decision and what it all added up to
   if (!st || !st.steps) return "";
@@ -497,7 +500,7 @@ function renderAdv() {
   }
   if (ev) {
     el.innerHTML = `<img class="event-img" src="/img/event/${S.owner}.png?e=${esc(ev.id)}" alt="">
-      <div class="dialog">${ev.story ? `<div class="story-head"><b>${esc(ev.story.title)}</b> · крок ${ev.story.step}</div>` : ""}
+      <div class="dialog">${ev.story ? `<div class="story-head"><b>${esc(ev.story.title)}</b> · крок ${ev.story.step}</div>` : ""}${ev.series ? `<div class="story-head">📺 <b>${esc(ev.series.title)}</b> · серія ${ev.series.ep}</div>` : ""}
       ${ev.story && lastResult && lastResult.next === ev.id ? `<div class="prev">«${esc(lastResult.label)}» — ${esc(lastResult.text)}</div>` : ""}
       <p>${ev.twist ? "🌀 " : ""}${ev.other ? `👥 <b>${esc(ev.other)}</b> · ` : ""}${esc(ev.text)}</p>
       ${ev.voice ? `<p class="voice" title="Голос характеру">🎭 <b>${esc(p.persona.temper)}</b>: «${esc(ev.voice)}»</p>` : ""}
