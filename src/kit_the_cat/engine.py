@@ -134,6 +134,8 @@ DEBT_HARD = 3000                   # deeper debt hurts health faster
 EVENT_ENERGY = 0          # energy is automatic (kept for hosts that still check it); pace adventures with cooldowns
 FOLLOWUP_MAX = 3         # a follow-up (e.g. a dream step after a failure) is scheduled at most this often per life
 RECENT = 40              # last N events of a pet are not offered again (unless nothing else fits)
+SOCIAL_LIFE_MAX = 2      # a social event is offered at most this often per life (the pool is small: then a solo event comes)
+INFANT_YEARS = 3         # younger pets only live events written for their age (baby_*, an explicit stage/years/phase)
 REPEAT_DECAY = 0.3       # weight × this per earlier time the pet lived the event: fresh content first
 CAST_BOOST = 2.5         # weight × for events about the recurring characters (content/cast.py): people come back
 STORY_MAX = 10           # highlights kept for the life summary
@@ -1258,6 +1260,7 @@ class Pet:
                 if v and v in JOBS:
                     if self.job != v:
                         self.job, self.job_days = v, 0
+                        self.flags["_job_y"] = round(self.years, 3)  # req tenure=
                         for it in JOBS[v]["items"]:
                             self.give(it)
                         notes.append(f"💼 {JOBS[v]['name']}")
@@ -1267,6 +1270,7 @@ class Pet:
                     notes.append(f"🔥 {self.g('звільнений', 'звільнена')}: {self.job_name()}")
                     self.note("job", f"🔥 {self.called_in('acc')} звільнили з роботи")
                     self.job = ""
+                    self.flags.pop("_job_y", None)
             elif k == "edu":
                 if v not in self.edu:
                     self.edu.append(v)
@@ -1492,6 +1496,10 @@ class Pet:
                 if (v == "any" and not self.job) or (v == "none" and self.job) or \
                         (v not in ("any", "none") and self.job not in ([v] if isinstance(v, str) else v)):
                     return False
+            elif k == "tenure":
+                since = self.flags.get("_job_y")
+                if not self.job or since is None or not v[0] <= self.years - since <= v[1]:
+                    return False
             elif k == "edu" and v not in self.edu:
                 return False
             elif k == "noedu" and v in self.edu:
@@ -1594,6 +1602,8 @@ class Pet:
             return False
         if e.once and self.flags.get(f"seen_{e.id}"):
             return False
+        if self.years < INFANT_YEARS and not e.followup and not any(k in e.req for k in ("stage", "years", "phase", "age")):
+            return False  # no pranks, gossip or АТБ queues for a baby: an event without an age is for grown-ups
         return self.meets(e.req, other) and bool(self.options(e, other))
 
     def candidates(self, other: "Pet | None", kind: str = "", twist: bool = False) -> tuple[list[Event], list[float]]:
@@ -1649,9 +1659,12 @@ class Pet:
         if kind == "solo":
             other = None
         cands, ws = self.candidates(other, kind, twist)
-        fresh = [i for i, e in enumerate(cands) if e.id not in self.recent and not (other and e.id in other.recent)]
+        fresh = [i for i, e in enumerate(cands) if e.id not in self.recent and not (other and e.id in other.recent)
+                 and not (e.social and kind in ("", "solo") and self.seen.get(e.id, 0) >= SOCIAL_LIFE_MAX)]
         if fresh:  # a recent event comes back only when nothing else fits
             cands, ws = [cands[i] for i in fresh], [ws[i] for i in fresh]
+        elif other and not kind and cands:  # the pool of social events is small: live a solo event instead of a repeat
+            return self.pick_event(others, rng, "solo")
         if not cands:
             if kind == "date":
                 e = EVENTS["_date"]

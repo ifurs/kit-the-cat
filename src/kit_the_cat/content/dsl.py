@@ -87,6 +87,8 @@ Effects (o(..., **fx)):
 
 Requirements (req=dict(...)):
   stage=2 | (2, 3)   species="pig"   flag="crime" | flag={"crime": 2}   noflag="crime"
+  tenure=(0, 1.5)    years in the CURRENT job (min, max): «перший тиждень на новій роботі» needs it, else it would come
+                     after thirty years of work; a pet without a job (or hired before 0.18) never meets it
   trait={"toxic": 10}   skill={"int": 30}   money=100   job="it"|"any"|"none"   edu="kpi"   noedu="kpi"
   has="sabre"   partner=True|False   night=True   jail=True (only while jailed)
   status=["crush"] (social: relation with the other pet)   other_stage=2   age=(min_days, max_days)
@@ -121,7 +123,7 @@ KNOWN_REQ = {
     "stage", "species", "flag", "noflag", "trait", "skill", "money", "debt", "job", "edu", "noedu", "has", "partner",
     "night", "jail", "age", "low", "status", "nostatus", "other_stage", "other_partner", "role", "norole", "other_role",
     "season", "other_stage_max", "life", "tier", "tier_max", "years", "goal", "phase", "sv", "ss", "finale", "cast",
-    "cast_state", "cast_for", "nocast",
+    "cast_state", "cast_for", "nocast", "tenure",
 }
 UNITS = {"d": 1 / 365, "w": 7 / 365, "m": 1 / 12, "y": 1.0}
 

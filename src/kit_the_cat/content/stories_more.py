@@ -105,7 +105,7 @@ STORIES_MORE = [
                                          sv={"work": 2}, step="st_job_2"), auto="dark"),
        ch("Принести всім печиво", o("Печиво з'їли до обіду. Ірина вперше усміхнулася.", glutton=1,
                                     sv={"team": 1}, step="st_job_2"), auto="glutton"),
-       req=dict(stage=(3, 4), job="any"), once=True, w=1.5, bg="office", story=T_JOB, time="1w"),
+       req=dict(stage=(3, 4), job="any", tenure=(0, 1.5)), once=True, w=4, bg="office", story=T_JOB, time="1w"),
     ev("st_job_2", "Середа. Начальник дає перше завдання «на вчора», а колеги кличуть на обід у нову "
        "шаурмичну.",
        ch("Залишитися й зробити завдання", o("Завдання здано о сьомій вечора. Начальник кивнув.", int=1,

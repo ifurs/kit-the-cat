@@ -14,7 +14,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   browser bridge `card_png`); `tests/test_card.py` checks the PNG and that no letter the game writes is missing from
   the font.
 
+- **Integrity of stories** (`scripts/integrity_audit.py`, `tests/test_integrity.py`): lives of simulated pets are read
+  for events that disagree with the state of the pet or come back too often.
+- New requirement `tenure=(min, max)`: years in the current job. «Перший тиждень на новій роботі» and «Перша зарплата»
+  came 30 years into a job (a hire stamps `flags["_job_y"]`; a pet hired before this version simply never meets them).
+- Five jail events (`jail_library`, `jail_lawyer`, `jail_kitchen`, `jail_letter`, `jail_yard`): there were three, so
+  every second event behind bars was a repeat.
+
 ### Changed
+- Baby events (`baby_*`) have an age window: «перше слово» no longer comes at ten years old, after the first class.
+- A pet younger than 3 (`INFANT_YEARS`) lives only events written for its age (an explicit stage, years or phase):
+  no pranks, gossip or queues at АТБ for a baby.
+- A social event is offered at most twice per life (`SOCIAL_LIFE_MAX`); when the pool of fresh ones is empty the pet lives
+  a solo event instead of the same prank again (a third of all social events were repeats).
+- «Шлюб врятовано» → «Стосунки врятовано» (a pair is not always married).
 - `life_summary` tells a repeating highlight once («мав загинути, але вижив» no longer fills the list three times).
 
 ## [0.17.0] — 2026-11-03
