@@ -66,6 +66,6 @@
 Біля села мотор здався. | about a recurring character (content/cast.py), not the pet
 «З цього й починав би». | about a recurring character (content/cast.py), not the pet
 Сам лікар сидить у приймальні й роздає с | about a recurring character (content/cast.py), not the pet
-Довідку видав — разом із призначенням на | about a recurring character (content/cast.py), not the pet
+Довідку видав, але разом з оглядом: за г | about a recurring character (content/cast.py), not the pet
 Танцював гірше, ніж лікував. | about a recurring character (content/cast.py), not the pet
 Потім сказав: «Старий звик. | about a recurring character (content/cast.py), not the pet
