@@ -88,7 +88,10 @@ def fit(s: str, cols: int, max_lines: int) -> list[str]:
         lines = lines[:max_lines]
         while len(lines[-1]) > cols - 1 and " " in lines[-1]:
             lines[-1] = lines[-1].rsplit(" ", 1)[0]
-        lines[-1] = lines[-1][:cols - 1].rstrip(" ,.;:-—") + "…"
+        words = lines[-1][:cols - 1].split(" ")
+        while len(words) > 1 and len(words[-1]) <= 2:  # not «…, але в цьому всесвіті вижив. В…»
+            words.pop()
+        lines[-1] = " ".join(words).rstrip(" ,.;:-—") + "…"
     return lines
 
 

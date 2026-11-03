@@ -39,6 +39,23 @@ def mirror(rows: list[int], w: int) -> list[int]:
     return [int(format(r, f"0{w}b")[::-1], 2) for r in rows]
 
 
+REDRAWN = {  # Spleen draws «т» as an italic «m» and «я» with straight legs, so a «підняти» reads as «підмами»
+    0x442: ["#####.", "..#...", "..#...", "..#...", "..#...", "..#..."],
+    0x44F: [".####.", "#...#.", "#...#.", ".####.", "..#.#.", ".#..#."],
+}
+
+
+def redraw(w: int, h: int, ascent: int, g: dict) -> dict[int, list[int]]:
+    """Lower-case letters of six rows (x-height) sit on the baseline: rows ascent-6 .. ascent-1."""
+    out = {}
+    for c, rows in REDRAWN.items():
+        cell = [0] * h
+        for i, r in enumerate(rows):
+            cell[ascent - len(rows) + i] = int(r.replace(".", "0").replace("#", "1").ljust(w, "0"), 2)
+        out[c] = cell
+    return out
+
+
 def punctuation(w: int, h: int, ascent: int, g: dict) -> dict[int, list[int]]:
     """Spleen has no dashes, ellipsis, typographic apostrophe or bullet: drawn here, same cell."""
     def at(*rows: tuple[int, int]) -> list[int]:  # (row above the baseline, bits)
@@ -59,6 +76,7 @@ def main() -> None:
     w, h, ascent, g = parse(src.read_text())
     g[0x454], g[0x404] = mirror(g[0x44D], w), mirror(g[0x42D], w)  # є Є = flipped э Э
     g.update(punctuation(w, h, ascent, g))
+    g.update(redraw(w, h, ascent, g))
     g = {c: g[c] for c in sorted(KEEP) if c in g}
     missing = sorted(KEEP - set(g))
     lic = (src.parent / "LICENSE-spleen").read_text().strip() if (src.parent / "LICENSE-spleen").exists() else ""
