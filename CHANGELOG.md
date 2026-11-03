@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-11-03
+
 ### Added
 - **Recurring characters** («постійні персонажі», `content/cast.py`): seven people who live next to every pet and
   remember how they were treated — баба Галя (neighbour), лікар Остап (vet), двірняга Гаврик, Оксана з АТБ, пан Богдан
@@ -32,6 +34,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 - `Pet.series` (id → ep, vars, recap, end; a new field with a default: old documents load as is), `Result.series`
   (`id`, `title`, `ep`, `finale`, `ending`), the sandbox shows «📺 серія N» on an episode and the ending of a season.
 - `validate.py` checks series (ids, endings, recap length, every outcome of an episode goes on or ends).
+
+### Changed
+- **Economy: money is a choice, not an accident.** A choice whose every outcome loses money now has a *price*
+  (`Pet.price(choice)`): a pet that cannot pay does not get it among `Pet.options()`. `Pet.locked(event, other)` lists
+  those choices with the ₴ missing, and the sandbox shows them as locked buttons («🔒 … бракує N ₴»). An autopilot pet
+  never picks a choice it cannot pay for. Hosts that draw buttons from `options()` need no change; showing locked ones is
+  optional.
+- Losses stop at `DEBT_FLOOR` (−500 ₴): what could not be taken becomes consequences (mood, sometimes an item). Debt
+  deeper than that exists only as a deliberate loan: the new effect `credit=-1500` (iPhone on credit, mortgage, a new
+  loan to close the old one, the café opened on credit, a failed crypto bet), which sets the flag `loan` until the pet is
+  back above zero. A dying pet is treated on credit (the doctor does not turn it away).
+- `WELFARE` 40 → 65 ₴/day: an unemployed adult can pay the cost of living and slowly climb out of a small debt.
+- Every event keeps a choice that costs nothing (`validate.py` checks it; 6 events got one). `arc_wallet_camera`: denying
+  everything now costs 70% of the savings and a day in custody instead of a fixed bill of 20 000 ₴.
+- `scripts/balance.py` targets: debt share ≤ 10%, median wallet ≥ 500 ₴.
+- **Names in the text.** Events and the journal call a pet by its short name («Мурчик»); the tail («Великий»,
+  «з Троєщини») stays on the card. The whole name returns only when it would be confusing: the other pet in the scene
+  has the same short name, or the pet shares a name with a character it knows. New: `persona.short_name`,
+  `Pet.called()`, `Pet.called_in(case)`. New pets get a tail in 30% of cases (was ~80%) and, when possible, a name whose
+  short form is not taken by a neighbour.
 
 ## [0.16.0] — 2026-11-03
 
@@ -473,7 +495,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/ifurs/kit-the-cat/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/ifurs/kit-the-cat/compare/v0.15.2...v0.16.0
 [0.15.2]: https://github.com/ifurs/kit-the-cat/compare/v0.15.1...v0.15.2
 [0.15.1]: https://github.com/ifurs/kit-the-cat/compare/v0.15.0...v0.15.1

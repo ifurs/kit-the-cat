@@ -29,11 +29,11 @@ TARGETS = {
     "life_years": (65, 95),                  # median age at death, years
     "life_real_days": (22, 42),              # …and how many real days such a life takes
     "early_death_share": (0.0, 0.25),        # died before 40 years (debt, events, sickness)
-    "debt_share": (0.0, 0.25),               # living adults in debt at the end
+    "debt_share": (0.0, 0.10),               # living adults in debt at the end (accidents stop at DEBT_FLOOR; credit is a choice)
     "tier2_share": (0.35, 1.0),              # lives that reached tier 2 of some life stat (the new content fires)
     "check_success": (0.45, 0.70),           # dice checks: hopeful, not trivial
     "event_coverage": (0.55, 1.0),           # share of content that actually fires in the run
-    "money_median": (150, 6000),             # living pets' wallets
+    "money_median": (500, 6000),             # living pets' wallets
     "event_deaths_share": (0.0, 0.25),       # deaths by events and reckless choices (vs debt/age): dramatic
     "dream_share": (0.25, 0.85),             # lives in which the dream came true: reachable, not guaranteed
 }

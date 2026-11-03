@@ -2,7 +2,7 @@
 
 > Згенеровано `scripts/gen_dsl_docs.py` з коду — не редагуй вручну. Як писати гарні пригоди: [CONTENT_GUIDE.md](CONTENT_GUIDE.md).
 
-Контракт: **60 ефектів**, **39 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
+Контракт: **61 ефектів**, **39 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
 
 ## Синтаксис (з `content/dsl.py`)
 
@@ -49,7 +49,11 @@ Effects (o(..., **fx)):
   time="5y"                            extra life time this outcome costs (coma, a sentence, cryosleep)
   str int cha luck                     skill deltas
   toxic gambler dark party patriot glutton love mystic   trait deltas
-  money xp lifespan                    ₴, experience, years of life
+  money xp lifespan                    ₴, experience, years of life. A loss never digs deeper than engine.DEBT_FLOOR (−500):
+                                       the rest is written off (mood, sometimes an item). A choice whose every outcome
+                                       loses money is a PRICE: the pet cannot pick it without the money (engine.price)
+  credit=-1500                         a loan the pet takes on purpose: ignores the debt floor and marks the pet as
+                                       «у кредиті». Only in events/choices about кредит/борг/позика/розстрочка
   item="cowboy@6" | ["a", "b"]         give & equip;  item_slot="head" → random item for slot
   lose_item="random" | "id"            take away
   unequip="head" | "all"               take off what is worn in that slot (or everything); items stay owned

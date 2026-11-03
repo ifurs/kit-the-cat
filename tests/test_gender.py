@@ -79,8 +79,8 @@ def test_make_name_uses_the_pool_and_the_tail_of_the_gender():
         for g in ("m", "f"):
             names = {E.make_name(species, set(), random.Random(i), g) for i in range(120)}
             assert all(any(n.startswith(b) for b in by_gender[g]) for n in names), (species, g)
-    girls = {E.make_name("cat", set(), random.Random(i), "f") for i in range(300)}
-    boys = {E.make_name("cat", set(), random.Random(i), "m") for i in range(300)}
+    girls = {E.make_name("cat", set(), random.Random(i), "f") for i in range(6000)}
+    boys = {E.make_name("cat", set(), random.Random(i), "m") for i in range(6000)}
     assert "Мурка Велика" in girls and "Мурчик Великий" in boys
     assert not any(n.endswith(("ий", "ій")) for n in girls) and not any(n.endswith(("а", "я")) for n in boys if " " in n and " з " not in n and " Із " not in n)
 

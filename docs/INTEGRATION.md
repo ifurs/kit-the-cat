@@ -6,7 +6,7 @@ worth reading first.
 ## Install and pin
 
 ```bash
-uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat@v0.16.0"
+uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat@v0.17.0"
 ```
 
 Always pin a tag. Extras: `images` (Pillow, for GIF/PNG), `sandbox` (aiohttp server).
@@ -16,7 +16,7 @@ Always pin a tag. Extras: `images` (Pillow, for GIF/PNG), `sandbox` (aiohttp ser
 Stable within a minor version (see [CONTRIBUTING.md](../CONTRIBUTING.md#versioning)):
 
 - `engine`: `Pet` (`from_dict`, `to_dict`, `tick`, `pick_event`, `options`, `chance`, `start`, `auto_choice`,
-  `resolve`, `look`, `fmt`, `give`, `cooldown_left`, `mark_cool`), `new_pet`, `EVENTS`, `ROLES`, `WORLD`, `BUDGET`,
+  `resolve`, `look`, `fmt`, `give`, `cooldown_left`, `mark_cool`, `price`, `locked`, `called`), `new_pet`, `EVENTS`, `ROLES`, `WORLD`, `BUDGET`,
   `chat_state`, `plan`, `live_silently`, `care`, `feed`, `buy`, `shop_stock`, `job_offers`, `apply_job`,
   `fix_partners`, `mourn`, `chat_daily`, `world_start`, `world_claim`, `card`, `clock` (patchable), `SPEED`.
   Recurring characters (0.17): `Pet.cast` (a JSON dict inside the pet document, missing in old documents) and
@@ -37,6 +37,7 @@ out = E.plan(state, pets, last_seen, rng)   # one auto post per pass, within the
 for p in out["dm"] + ([out["target"]] if out["action"] == "event" else []):
     e, other = p.pick_event(pets, rng)
     p.start(e, other)                       # pending; show p.fmt(e.text, other) + p.options(e, other) as buttons
+                                        # (p.locked(e, other) → [(idx, ₴ missing)]: optional greyed-out buttons)
 for p in out["silent"]:
     E.live_silently(p, pets, rng)           # owner away: the pet decides alone, journal only
 # out["action"] == "world" → E.world_start(...); out["expired"] → resolve with p.auto_choice(...)

@@ -240,10 +240,10 @@ def test_fmt_substitutes_every_case_for_the_pet_and_for_the_other():
     p.name, other.name = "Крилатий з Троєщини", "Мурка"
     t = p.fmt("До {name_gen} прийшов {other}: «Ей, {name_voc}! {other_dat} {name_dat}, з {other_ins}, на {name_loc}, "
               "{other_acc}, {name_acc}, {other_gen}, {other_voc}, {name_ins}»", other)
-    assert t == ("До Крилатого з Троєщини прийшов Мурка: «Ей, Крилатий з Троєщини! Мурці Крилатому з Троєщини, "
-                 "з Муркою, на Крилатому з Троєщини, Мурку, Крилатого з Троєщини, Мурки, Мурко, "
-                 "Крилатим з Троєщини»")
-    assert p.fmt("Привіт, {name}!") == "Привіт, Крилатий з Троєщини!"
+    assert t == ("До Крилатого прийшов Мурка: «Ей, Крилатий! Мурці Крилатому, з Муркою, на Крилатому, Мурку, "
+                 "Крилатого, Мурки, Мурко, Крилатим»")  # the text says «Крилатий», not «Крилатий з Троєщини»
+    assert p.name_in("gen") == "Крилатого з Троєщини"  # the whole name is still there for cards
+    assert p.fmt("Привіт, {name}!") == "Привіт, Крилатий!"
     assert p.name_in("gen") == "Крилатого з Троєщини"
     # no other pet: a stand-in word in the right case, never a placeholder
     assert p.fmt("З {other_ins}, для {other_gen}, {other}") == "З кимось, для когось, хтось"
@@ -280,7 +280,7 @@ def test_the_pets_own_notes_decline_the_name():
     p.name, q.name = "Крилатий з Троєщини", "Мурка"
     q.owner_id = 2
     p.set_status_one(q, "crush")
-    assert p.log[-1][2] == "😳 Крилатий з Троєщини закохався в Мурку"
+    assert p.log[-1][2] == "😳 Крилатий закохався в Мурку"
 
 
 def test_no_text_puts_the_nominative_right_after_a_preposition():

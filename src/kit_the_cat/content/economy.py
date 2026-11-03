@@ -101,7 +101,7 @@ ROLE_FOOD = {"blood": "vampire", "brains": "zombie"}
 
 POCKET = 60          # ₴/day for babies and teens ("бабуся передала")
 PENSION = 90         # ₴/day for unemployed elders
-WELFARE = 40         # ₴/day for unemployed adults (≈ living costs of a poor student + khrushchovka)
+WELFARE = 65         # ₴/day for unemployed adults: covers the cost of living (35) and slowly pays a small debt off
 WEALTH_TAX = (3000, 0.02)   # above 3000 ₴ — 2%/day goes to «податкова»
 MYSTERY_BOX = 300
 POTION = 3500

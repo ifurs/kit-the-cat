@@ -63,6 +63,7 @@ def main() -> None:
             if "goal" in r and r["goal"] not in GOALS:
                 errors.append(f"{e.id}: unknown goal {r['goal']!r}")
     errors += cast_errors()
+    errors += economy_errors()
     by_id = {e.id: e for e in ALL}
     targets = set()
     for e in ALL:
@@ -90,6 +91,26 @@ def main() -> None:
     print(f"{len(ALL)} events, {sum(len(e.choices) for e in ALL)} choices")
     print("\n".join(errors) or "OK")
     raise SystemExit(1 if errors else 0)
+
+
+CREDIT_WORDS = ("кредит", "борг", "позик", "позич", "розстроч", "іпотек")
+
+
+def economy_errors() -> list[str]:
+    """A priced choice (every outcome loses money) is locked for a pet that cannot pay, so every event keeps a choice
+    that costs nothing and asks for no money; `credit=` (debt on purpose) belongs only to talk about loans."""
+    errors = []
+    for e in ALL:
+        def free(c):
+            priced = bool(c.outs) and all(isinstance(o.fx.get("money", 0), (int, float)) and o.fx.get("money", 0) < 0
+                                          for o in c.outs)
+            return not priced and not c.req.get("money")
+        if e.choices and not any(free(c) for c in e.choices):
+            errors.append(f"{e.id}: every choice costs money — a broke pet would be stuck; add a free choice")
+        for c in e.choices:
+            if any("credit" in o.fx for o in c.outs + c.fail) and not any(w in (e.text + c.label).lower() for w in CREDIT_WORDS):
+                errors.append(f"{e.id}/{c.label}: credit= only for loans (кредит, борг, позика, розстрочка in the text or label)")
+    return errors
 
 
 def cast_errors() -> list[str]:
