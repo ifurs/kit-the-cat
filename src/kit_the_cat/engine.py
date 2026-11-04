@@ -1240,6 +1240,30 @@ class Pet:
                 out.append(sprites.GENES[gene][self.genes[gene]][0])
         return out
 
+    SWAP_DAYS = 3
+
+    def _swap_marks(self, other: "Pet") -> None:
+        """Remember a body swap for SWAP_DAYS game days (`flags["_swap"] = [other_pid, until_day, other_gender]`),
+        which `swap_label` shows under the name. Swapping back while it is still on undoes it."""
+        back = self.swap_with() == other.pid and other.swap_with() == self.pid
+        for a, b in ((self, other), (other, self)):
+            if back:
+                a.flags.pop("_swap", None)
+            else:
+                a.flags["_swap"] = [b.pid, game_day() + self.SWAP_DAYS, b.gender]
+
+    def swap_with(self) -> str:
+        """pid of the pet whose body this one is in right now (a swap in the last SWAP_DAYS game days), or ''."""
+        m = self.flags.get("_swap")
+        return m[0] if m and m[1] > game_day() else ""
+
+    def swap_label(self, names: dict[str, str]) -> str:
+        """«🔄 У тілі Сосиски» while the swap is fresh (names: pid -> pet name); '' otherwise."""
+        pid = self.swap_with()
+        if not pid or pid not in names:
+            return ""
+        return f"🔄 У тілі {inflect(short_name(names[pid]), 'gen', self.flags['_swap'][2])}"
+
     def transform(self, species: str, rng: random.Random) -> bool:
         if species == "random":
             species = rng.choice([s for s in sprites.SPECIES if s != self.species])
@@ -1471,7 +1495,10 @@ class Pet:
                         self.ach("Багатодітний")
             elif k == "swap_genes":
                 if v:
+                    # The BODY moves (all genes, so species too: `species` is read from genes — looks, battle bonuses,
+                    # species events, emoji all follow); the SOUL stays (name, persona, skills, bonds, items).
                     self.genes, other.genes = other.genes, self.genes
+                    self._swap_marks(other)
                     notes.append(f"🔄 {self.called(other)} і {other.called(self)} помінялися тілами")
                     for p in (self, other):
                         p.note("twist", f"🔄 {self.called(other)} і {other.called(self)} прокинулися в тілах одне одного!")
@@ -2924,6 +2951,7 @@ def card(p: Pet, names: dict[str, str]) -> str:
         return obituary(p, names, 1020, f"\n🥚 «Нове яйце» — покоління {p.gen + 1}" + (" (є спадкоємець від пари!)" if p.heir else ""))
     lines = [
         f"{emoji} <b>{_esc(p.name)}</b> · {phase_name(p.phase(), p.gender)} · {int(p.years)} р. · рів. {p.level}",
+        *([_esc(sw)] if (sw := p.swap_label(names)) else []),
         f"👤 {_esc(p.owner_name)} · {tier}" + (f" · 👑 {_esc(p.dynasty)} ({p.gen})" if p.gen > 1 else ""),
     ]
     if p.role:
