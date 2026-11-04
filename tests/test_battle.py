@@ -1,6 +1,8 @@
 """Battle engine: fights end, favourites usually win, no one dies, brackets are well-formed."""
 import random
 
+import pytest
+
 from kit_the_cat import battle as B
 from kit_the_cat import engine as E
 
@@ -57,3 +59,142 @@ def test_bracket_shapes():
         assert len(entrants) == min(n, 16) and len(set(entrants)) == len(entrants)
         assert len(rounds[-1]) == 1
         assert not any(m == [0, 0] for m in rounds[0])  # byes only pair a seed with an empty slot
+
+
+# --- task 09: a readable fight, one decision, a reason to fight ------------------------------------------------
+
+def _pair(seed):
+    rng = random.Random(seed)
+    a, b = _pets(2, rng)
+    return a, b, rng
+
+
+def test_paused_fight_plus_resume_equals_one_call():
+    paused = 0
+    for seed in range(60):
+        a, b, rng = _pair(seed)
+        one = B.fight(B.Fighter.of(a, "aggressive"), B.Fighter.of(b, "careful"), random.Random(seed + 1000))
+        r2 = random.Random(seed + 1000)
+        st = B.fight(B.Fighter.of(a, "aggressive"), B.Fighter.of(b, "careful"), r2, stop_at=B.STOP_AT)
+        assert isinstance(st, B.FightState)
+        paused += st.paused
+        two = st.result if st.done else B.resume(st, None, None, r2)
+        assert (two.winner, two.rounds, [e["text"] for e in two.log]) == (one.winner, one.rounds, [e["text"] for e in one.log])
+        if st.paused:
+            assert not st.log[-1]["text"].startswith("🏆")
+    assert paused > 30   # most fights have a decision point
+
+
+def test_the_pause_happens_once_below_half_health():
+    for seed in range(20):
+        a, b, _ = _pair(seed)
+        r = random.Random(seed)
+        st = B.fight(B.Fighter.of(a), B.Fighter.of(b), r, stop_at=0.5)
+        if st.paused:
+            assert st.low in (0, 1) and st.fighters[st.low].hp < st.fighters[st.low].max_hp * 0.5
+            assert B.resume(st, "defend", "allin", r).log[-1]["text"].startswith("🏆")
+            assert st.done and B.resume(st, "allin", None, r) is st.result   # resuming twice changes nothing
+
+
+def test_tactics_change_the_numbers_and_say_so():
+    a, b, _ = _pair(3)
+    f1, f2 = B.Fighter.of(a), B.Fighter.of(b)
+    st = B.fight(f1, f2, random.Random(1), stop_at=0.5)
+    assert st.paused
+    atk, dfn = f1.atk, f1.dfn
+    B.resume(st, "allin", None, random.Random(1))
+    assert f1.atk == pytest.approx(atk * 1.3) and f1.dfn == pytest.approx(dfn * 0.7)
+    assert any(e["k"] == "tactic" and "ва-банк" in e["text"] for e in st.log)
+
+
+def test_surrender_loses_now_and_keeps_the_health():
+    for seed in range(20):
+        a, b, rng = _pair(seed)
+        st = B.fight(B.Fighter.of(a), B.Fighter.of(b), random.Random(seed), stop_at=0.5)
+        if not st.paused:
+            continue
+        res = B.resume(st, "surrender", "allin", random.Random(seed))
+        assert res.winner == 1 and res.surrendered == 0
+        assert [e["k"] for e in res.log if e["k"] == "tactic"] == []   # nobody bothers with tactics now
+        assert res.log[-2]["k"] == "surrender" and res.log[-1]["text"].startswith("🏆")
+        health = a.health
+        wn, ln = B.aftermath(b, a, rng, surrender=True)
+        assert a.health == health and a.flags["losses"] == 1 and any("без травм" in n for n in ln)
+        c, d, rng = _pair(seed)
+        hp = d.health
+        B.aftermath(c, d, rng)   # a normal defeat costs 8 health
+        assert d.health == hp - 8
+        # surrendering side b
+        a2, b2, _ = _pair(seed)
+        st = B.fight(B.Fighter.of(a2), B.Fighter.of(b2), random.Random(seed), stop_at=0.5)
+        assert B.resume(st, None, "surrender", random.Random(seed)).winner == 0
+        return
+    pytest.fail("no paused fight found")
+
+
+def test_highlights_are_short_and_end_with_the_last_line():
+    rng = random.Random(9)
+    pets = _pets(12, rng)
+    long = 0
+    for _ in range(80):
+        a, b = rng.sample(pets, 2)
+        r = B.fight(B.Fighter.of(a, rng.choice(list(B.STRATEGIES))), B.Fighter.of(b, rng.choice(list(B.STRATEGIES))), rng)
+        h = r.highlights
+        assert 1 <= len(h) <= B.HIGHLIGHTS and h[-1] is r.log[-1] and h[0] is r.log[0]
+        assert [e["i"] for e in h] == sorted(e["i"] for e in h) and all(r.log[e["i"]] is e for e in h)
+        assert len(h) >= min(5, len(r.log))
+        long += len(r.log) > B.HIGHLIGHTS
+    assert long > 40   # the cut really cuts
+
+
+def test_log_lines_have_kinds():
+    rng = random.Random(4)
+    kinds = set()
+    pets = _pets(10, rng)
+    for _ in range(60):
+        a, b = rng.sample(pets, 2)
+        kinds |= {e["k"] for e in B.fight(B.Fighter.of(a), B.Fighter.of(b), rng).log}
+    assert {"crit", "miss", "special"} <= kinds
+
+
+@pytest.mark.parametrize("elo,name", [(1000, "Новачок"), (1049, "Новачок"), (1050, "Боєць"), (1149, "Боєць"),
+                                      (1150, "Гроза району"), (1299, "Гроза району"), (1300, "Легенда арени"), (900, "Новачок")])
+def test_rank_boundaries(elo, name):
+    p = _pets(1, random.Random(1))[0]
+    p.flags["elo"] = elo
+    assert B.rank(p) == name
+    del p.flags["elo"]
+    assert B.rank(p) == "Новачок"
+
+
+def test_record_line_counts_down_to_the_next_achievement():
+    p = _pets(1, random.Random(1))[0]
+    p.flags.update(wins=4, losses=1)
+    assert B.record(p) == "🥊 4–1 · ще 1 перемога до «Бійцівський клуб»"
+    p.flags["wins"] = 15
+    assert "ще 5 перемог до «Гроза району»" in B.record(p)
+    p.flags["wins"] = 52
+    assert B.record(p) == "🥊 52–1" and B.next_goal(p) is None
+
+
+def test_a_win_pays_in_fame_and_notes_say_what_the_fight_gave():
+    rng = random.Random(2)
+    a, b = _pets(2, rng)
+    a.life["fame"] = b.life["fame"] = 0
+    a.life["attr"] = 0
+    wn, ln = B.aftermath(a, b, rng)
+    assert a.life["fame"] == B.FAME_WIN and b.life["fame"] == 0
+    assert wn[0].startswith("🏅 Elo +") and "⭐ +8 XP" in wn and any(n.startswith("💪") for n in wn) and any(n.startswith("😊 +10") for n in wn)
+    assert ln[0].startswith("🏅 Elo −") and any(n.startswith("❤️ −8") for n in ln) and any(n.startswith("😊 −10") for n in ln)
+
+
+def test_five_wins_make_a_known_fighter_and_a_title_makes_a_champion():
+    rng = random.Random(3)
+    a, b = _pets(2, rng)
+    for _ in range(5):
+        B.aftermath(a, b, rng)
+    assert a.flags["arena_vet"] == 1 and "Бійцівський клуб" in a.achievements
+    a.life["fame"], a.life["attr"] = 0, 0
+    B.crown(a, 900, rng)
+    assert a.flags["arena_champ"] == 1 and a.flags["titles"] == 1 and a.life["fame"] == B.FAME_TITLE
+    assert any(i.startswith("crown") for i in a.items)

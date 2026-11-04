@@ -58,6 +58,8 @@ async def dispatch(sb: Sandbox, o: int, b: dict) -> dict:
         msg = "\n".join(parts)
     elif a == "spar":
         return dict(battle=await sb.spar(o, int(b.get("with") or 0), str(x or "careful")))
+    elif a == "spar_tactic":
+        return dict(battle=await sb.spar_tactic(o, str(b.get("fight", "")), str(x or "")))
     elif a == "t_new":
         msg = await sb.tour_new()
     elif a == "t_strategy":
