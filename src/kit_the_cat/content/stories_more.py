@@ -244,7 +244,7 @@ STORIES_MORE = [
                                           sv={"heart": 1, "help": 1}, step="st_jubilee_2"), auto="glutton"),
        ch("Прийти просто до столу", o("{Сів|Сіла} за стіл першим. Тітки переглянулися.", sv={"lazy": 1},
                                       step="st_jubilee_2"), auto="party"),
-       req=ANY, once=True, w=1.5, bg="kitchen", story=T_JUBILEE, time="1d"),
+       req=ANY, once="dynasty", w=1.5, bg="kitchen", story=T_JUBILEE, time="1d"),
     ev("st_jubilee_2", "За столом тітка Люда і дядько Петро знову сперечаються, хто краще садить картоплю. "
        "Бабуся втомлено зітхає.",
        ch("Перевести розмову на бабусю", o("«А розкажіть, як бабуся з дідом познайомились!» Усі затихли й "

@@ -180,7 +180,7 @@ STORIES = [
                                           sv={"fun": 2}, step="st_wedding_2"), auto="party"),
        ch("Допомагати на кухні", o("Сорок кілограмів голубців. Кухарки вже кличуть тебе «синочку».",
                                    glutton=1, sv={"duty": 2}, step="st_wedding_2"), auto="glutton"),
-       req=ADULT, once=True, w=1.5, bg="wedding", story=T_WEDDING, time="1d"),
+       req=ADULT, once="dynasty", w=1.5, bg="wedding", story=T_WEDDING, time="1d"),
     ev("st_wedding_2", "Конкурси тамади: викуп нареченої, «хто швидше з'їсть {food}» і танець із надувною "
        "кулькою.",
        ch("Виграти конкурс на швидкість", o("Перемога! Приз — рушник і повага всього села.", glutton=2,

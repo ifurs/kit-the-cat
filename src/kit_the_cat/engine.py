@@ -2021,6 +2021,7 @@ def new_pet(chat_id: int, owner_id: int, owner_name: str, species: str, others: 
     if predecessor:
         p.gen = predecessor.gen + 1
         p.dynasty = predecessor.dynasty or f"Рід {predecessor.name_in('gen')}"
+        p.flags.update({f"seen_{i}": 1 for i, e in EVENTS.items() if e.once == "dynasty" and predecessor.flags.get(f"seen_{i}")})
         p.ancestors = (predecessor.ancestors + [f"{predecessor.name} ({predecessor.cause or 'зник'})"])[-12:]
         p.money = 100 + max(0, predecessor.money) * 0.3
         relic = [i for i in predecessor.items if i != "cane"]
