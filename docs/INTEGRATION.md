@@ -27,7 +27,7 @@ Stable within a minor version (see [CONTRIBUTING.md](../CONTRIBUTING.md#versioni
   stdlib — no Pillow, so it works in the browser build too. Send it as a document to keep the pixels sharp; as a photo
   Telegram recompresses it (still readable). `engine.life_summary` also works for a living pet (no cause line).
 - `content.economy`: `FOOD`, `JOBS`, `EDUCATION`, `ITEM_SKILL`, `ITEM_SKILL_CAP`
-- `battle`: `Fighter`, `fight`, `win_chance`, `update_elo`, `aftermath`, `eligible`, `bracket`, `item_stats`, `item_label`
+- `battle`: `Fighter`, `fight` (+ `stop_at`, `FightState`, `resume`, `auto_tactic`), `win_chance`, `update_elo`, `aftermath`, `crown`, `rank`, `record`, `eligible`, `bracket`, `item_stats`, `item_label`
 
 Progress you can show (0.20):
 - `engine.income_preview(pet) -> dict` — what a game day brings, without changing anything:
