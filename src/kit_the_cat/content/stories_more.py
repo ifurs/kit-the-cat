@@ -310,7 +310,7 @@ STORIES_MORE = [
           auto="love"),
        ch("Виманити ковбасою", o("Ковбаса перемогла страх.", glutton=1, sv={"search": 2}, step=DOG_END),
           auto="glutton"),
-       ch("Схопити, поки не {втік|втекла}", o("Барон вирвався й побіг… прямо додому.", str=1, sv={"search": 1},
+       ch("Схопити, поки не втік", o("Барон вирвався й побіг… прямо додому.", str=1, sv={"search": 1},
                                      step=DOG_END), auto="party"),
        followup=True, bg="khrushchovka", story=T_DOG, time="1d"),
     ev("st_dog_end_found", "Сусідка обіймає Барона й тебе по черзі. Увечері під дверима — пиріг і записка: «Від "

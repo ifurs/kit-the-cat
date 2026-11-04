@@ -44,11 +44,20 @@ LIMITS = dict(solo=0.06, social=0.30, jail=0.45, story=0.04, same_text=0.12)   #
 BABY_MAX_YEARS = 6
 SCHOOL_MAX_YEARS = 25    # a present-tense school scene is for a pet at most this old (a student, a young parent)
 LATE_YEARS = 3           # a follow-up this many years after it was due is reported
-WORK = re.compile(r"офіс|начальник|колег|на роботі|співбесід|зарплат|дедлайн|звільнил|звільнен|випробувальн", re.I)
+WORK = re.compile(r"офіс|начальник|колег|на роботі|на роботу|— робота|нарад[аіуо]|співбесід|зарплат|дедлайн|звільнил|звільнен|"
+                  r"випробувальн", re.I)
+# grown-up things a choice or an outcome must not offer below ADULT_YEARS (the event text may still show grown-ups)
+BOOZE = re.compile(r"\bпив[оауі]\b|\bпивом\b|пивк|самогон|горілк|шампанськ|\bвин[оау]\b|коньяк|настоянк|цигар|сигарет|вейп|"
+                   r"похмілл|\bчарк|мікрокредит|іпотек", re.I)
+ADULT_YEARS = 18
 GRAND = re.compile(r"онук|внук", re.I)
 # Reviewed by eye: the words are about somebody else (a character's boss, a ghost's grandsons, the mother's «when will
 # there be grandchildren») or the pet takes the job in the same event.
 OTHERS = {
+    "grown_up": {"job_doctor",           # needs job="doctor": a grown-up
+                 "tw_angel_shawarma",    # a joke about the shawarma («лікує похмілля»); nobody drinks
+                 "dr_dnipro_3",          # the grandfather opens champagne for the swimmer; the pet does not drink
+                 "teen_vape"},           # an anti-vape scene: trying it ends in coughing and a headache
     "work": {"qlc_root", "st_job_by_call", "jail_library", "tw_wolf_vet", "tw_evil_twin", "arc_magpie", "dr_flat_1", "o_meet", "ox_bakery", "tw_demon_tax",
              "hol_vyshyvanka_day", "jail_kitchen", "arc_friend_loan", "teen_cook_dinner", "st_garage_meeting",
              "hire_night_guard"},  # a job offer: declining it talks about the job the pet never took
@@ -137,6 +146,37 @@ def age_hi(e, par: dict, seen: frozenset = frozenset()) -> float:
     return hi
 
 
+def age_lo(e, par: dict, steps: dict, seen: frozenset = frozenset()) -> float:
+    """The youngest age (years) at which the event can be lived: its own gate, the baby guard (engine.for_infants), and
+    for a follow-up the youngest age of what leads to it (a `then=` parent + the delay, or the story's opening event)."""
+    w = C.age_window(e.req)
+    lo = w[0] if w else 0.0
+    if not e.followup and not E.for_infants(e):
+        lo = max(lo, E.INFANT_YEARS)
+    if e.followup and e.id not in seen:
+        via = [age_lo(E.EVENTS[p], par, steps, seen | {e.id}) + d for p, d in par.get(e.id, []) if p in E.EVENTS]
+        via += [age_lo(x, par, steps, seen | {e.id}) for x in steps.get(e.story, []) if x.id != e.id]
+        if via:
+            lo = max(lo, min(via))
+        if (m := re.fullmatch(r"dr_(\w+)_\d+", e.id)) and f"dr_{m[1]}_1" in E.EVENTS:   # a dream's later steps
+            lo = max(lo, age_lo(E.EVENTS[f"dr_{m[1]}_1"], par, steps, seen | {e.id}))
+    return lo
+
+
+def grown_up_words(e, par: dict, steps: dict) -> list[str]:
+    """«choice label: word» for the alcohol / tobacco / credit words a pet under ADULT_YEARS could be offered."""
+    lo, out = age_lo(e, par, steps), []
+    for c in e.choices:
+        w = C.age_window(c.req) if any(k in c.req for k in ("stage", "years", "phase")) else None
+        if max(lo, w[0] if w else 0.0) >= ADULT_YEARS:
+            continue
+        for t in [c.label] + [pick(o.text, "m", "m") for o in c.outs + c.fail]:
+            if m := BOOZE.search(t):
+                out.append(f"«{c.label[:40]}»: {m.group(0)}")
+                break
+    return out
+
+
 def school_words(e) -> list[str]:
     return sorted({m.group(0).lower() for t in texts_of(e) for m in SCHOOL.finditer(t)})
 
@@ -144,6 +184,18 @@ def school_words(e) -> list[str]:
 def static() -> list[str]:
     bad = []
     par = parents_of()
+    steps: dict[str, list] = defaultdict(list)   # story title -> its opening events (not follow-ups)
+    for e in E.EVENTS.values():
+        if e.story and not e.followup:
+            steps[e.story].append(e)
+    for e in E.EVENTS.values():
+        if e.id not in OTHERS["grown_up"] and (words := grown_up_words(e, par, steps)):
+            bad.append(f"{e.id}: grown-up things offered from {age_lo(e, par, steps):.0f}y ({'; '.join(words)}) — gate the "
+                       f"choice (req stage=(3, 4)), rewrite it, or add it to OTHERS['grown_up'] with the reason")
+    for t in E.TAILS:
+        w = C.age_window(t[3]) if len(t) > 3 else None
+        if (w[0] if w else 0.0) < ADULT_YEARS and (m := BOOZE.search(t[0])):
+            bad.append(f"tail «{t[0][:40]}»: {m.group(0)} at any age — give the tail a req (years=(18, 999))")
     for i in OTHERS["school"]:
         if i not in E.EVENTS:
             bad.append(f"OTHERS['school'] lists an event that does not exist: {i}")

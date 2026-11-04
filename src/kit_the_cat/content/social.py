@@ -1,7 +1,7 @@
 """Two-pet events (social=True). Placeholders: {other}, {other_owner}. The owner of {name} decides.
 
 Relations: rel ≥30 friend, ≥70 bestie, ≤-30 rival, ≤-70 enemy (computed from rel); crush/partner/ex are set
-explicitly with status=… and survive rel changes. status=[""] means «barely know each other».
+explicitly with status=… and survive rel changes. status=[""] means «never met»: the engine skips a pet this one already knows (Pet.rel).
 """
 from .dsl import ch, ev, o
 
@@ -20,7 +20,7 @@ MEET = [
           o("{other} {other:розповів|розповіла} біографію з 1998 року. Тепер ви знайомі ближче, ніж "
             "хотілося.", rel=15, mood=-5),
           auto="toxic"),
-       ch("Запропонувати по пиву", o("Пиво зблизило. До ранку співали «Червону руту».", rel=35, party=2, health=-5),
+       ch("Запропонувати по компоту", o("Компот зблизив. До вечора співали «Червону руту».", rel=35, party=1),
           auto="party"),
        ch("Продати {other:йому|їй} насіння назад", o("{other} {other:купив|купила}. Бізнес-зв'язок налагоджено.", rel=10, money=20,
                                           other={"money": -20}), auto="gambler"),
@@ -88,7 +88,7 @@ FRIENDSHIP = [
             "акордеоном.", rel=20, party=4, item="notes"), auto="party"),
        ch("Взяти з собою {food}", o("Закусь врятувала вечір. {other} кличе тебе {братом|сестрою}.", rel=40, glutton=1,
                                     hunger=10), auto="glutton"),
-       ch("Відмовитись: завтра на роботу", o("{other} сумно {other:зітхнув|зітхнула}. Відповідальність — це "
+       ch("Відмовитись: завтра рано вставати", o("{other} сумно {other:зітхнув|зітхнула}. Відповідальність — це "
                                              "самотньо.", rel=-5, int=1)),
        ch("Влаштувати філософську дискусію", o("До ранку з'ясовували, чи існує Житомир. Не з'ясували.", rel=25,
                                                mystic=2, int=1), auto="mystic"),
@@ -255,7 +255,7 @@ FRIENDSHIP = [
 
 PRANKS = [
     ev("soc_prank_paint", "{other} спить на сонечку. Поруч стоїть відро пастельної фарби. Доля?",
-       ch("Облити фарбою", o("{other} {other:прокинувся|прокинулася} ніжно-пастельним. Як "
+       ch("Облити фарбою", o("{other} {other:прокинувся ніжно-пастельним|прокинулася ніжно-пастельною}. Як "
                              "зефірка.", rel=-20, toxic=2, party=1,
                              other={"gene": {"color": "pastel"}, "mood": -10}),
           o("{other} {other:прокинувся|прокинулася} раніше. Тепер пастельний — "
@@ -322,7 +322,7 @@ RIVALRY = [
        ch("Двобій на поглядах", o("Дивились одне на одного 6 годин. Обидва заснули. Нічия.", dark=2, rel=10),
           auto="dark"),
        ch("Помиритися", o("Потиснули руки. Стало навіть ніяково від тепла.", rel=40, love=3), auto="love"),
-       ch("Найняти бабусю-кілера", o("Бабуся засудила {other_acc} так, що той {переїхав|переїхала}.", rel=-20, gambler=2,
+       ch("Найняти бабусю-кілера", o("Бабуся засудила {other_acc} так, що {other:той переїхав|та переїхала}.", rel=-20, gambler=2,
                                      money=-200, other={"mood": -30}), auto="gambler"),
        social=True, req=dict(status=FOES, stage=ANY_UP, other_stage=2), bg="ruins"),
     ev("soc_rival_sabotage", "{other} {other:хвалився|хвалилася} новою роботою на весь чат. {name} має план.",
@@ -357,7 +357,7 @@ RIVALRY = [
        ch("Висловити все в обличчя", o("{Висловив|Висловила}. {other} теж. Обидва полегшено "
                                        "видихнули.", rel=30, toxic=1),
           o("{Висловив|Висловила}. Бабуся тепер теж ворог.", rel=-20, toxic=3), auto="toxic"),
-       ch("Запропонувати дружнє пиво", o("Пиво з ворогом — найкраще пиво.", rel=45, party=2), auto="party"),
+       ch("Запропонувати чай із чабрецем", o("Чай з ворогом — найкращий чай. Говорили до ночі.", rel=45, party=1), auto="party"),
        social=True, req=dict(status=FOES), bg="khrushchovka"),
 ]
 
@@ -381,14 +381,15 @@ ROMANCE = [
           auto="glutton"),
        social=True, req=dict(status=FRIENDLY, stage=ANY_UP, other_stage=2, partner=False, other_partner=False),
        bg="love"),
-    ev("soc_date", "Перше побачення {name_gen} і {other_gen}. Куди йдете?",
-       ch("Андріївський узвіз", o("Купили одна одному магнітики й поцілувались біля Замку Річарда.", rel=20,
+    ev("soc_date", "Побачення {name_gen} і {other_gen}. Куди йдете?",
+       ch("Андріївський узвіз", o("Купили одне одному магнітики й поцілувались біля Замку Річарда.", rel=20,
                                   love=3, mood=20, item="flower"), auto="love"),
        ch("Шаурмична на вокзалі", o("Романтика по-київськи. Обоє вижили. Це зближує.", rel=15, glutton=2,
                                     hunger=40), o("Шаурма була сумнівна. Друге побачення — в лікарні.", rel=10,
                                                   hospital=6, w=0.4), auto="glutton"),
        ch("Нічний клуб", o("Танцювали до ранку. {other} в захваті.", rel=20, party=3),
-          o("{other} {other:пішов|пішла} з барменом. Ти — з похміллям.", status="ex", mood=-30, w=0.3), auto="party"),
+          o("{other} {other:пішов|пішла} з барменом. Ти — з похміллям.", status="ex", mood=-30, w=0.3), auto="party",
+          req=dict(stage=(3, 4))),
        ch("Кладовище при місяці", o("Готичніше не буває. {other} {other:вражений|вражена} і трохи "
                                     "{other:наляканий|налякана}.", rel=15, dark=3),
           auto="dark"),
@@ -438,7 +439,7 @@ ROMANCE = [
        ch("Почекати до квартири без іпотеки", o("Тобто ніколи. Логічно.", int=2, dark=1), auto="dark"),
        ch("Піти по капусту — раптом там", o("Знайшли в капусті яйце. Ніхто не питає, звідки.", baby=True,
                                             twist=True, mystic=3, rel=15), auto="mystic"),
-       social=True, req=dict(status=["partner"], stage=3, other_stage=3), bg="love"),
+       social=True, req=dict(status=["partner"], stage=(3, 3), other_stage=(3, 3)), bg="love"),
     ev("soc_ikea", "{name} і {other} збирають шафу з IKEA. Інструкція — тільки картинки. Залишилось 14 зайвих гвинтиків.",
        ch("Збирати разом мовчки", o("Шафа стоїть! Стосунки — теж.", rel=15, int=2), check=("int", 25),
           fail=[o("Шафа впала. Ви досі не розмовляєте.", rel=-20, mood=-15)]),

@@ -5,6 +5,40 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.22.0] — 2026-11-05
+
+### Fixed (an automated playtest: 140 whole lives, journals read by Haiku, findings verified by Sonnet and by scripts)
+- **Grown-up things for kids.** Beer on the bench for 3-year-olds (`soc_meet_bench` → компот), «дружнє пиво» with a
+  foe (→ чай), champagne at the prom, cigarettes behind the school, a beer heist (`crime_shoplift` → energy drinks),
+  самогон for the pig's uncle and the grandmother's liqueur for appendicitis (now grown-ups only), the night club on a
+  15-year-old's date, a positive «try the vape». The kum's самогон tail and the lottery tail need `years=(18, …)`.
+- **Romance stays within an age bracket.** `engine.same_bracket`: every event that can start or deepen a romance
+  (`engine.ROMANCE`: dates, crush/partner statuses, a baby) is for two teens or two grown-ups; the built-in `_date`
+  keeps the proposal and «think about kids» for grown-ups. `soc_baby` is for two adults of working age, not 80-year-olds.
+- **Newborns live newborn events.** The baby guard (`engine.for_infants`): under INFANT_YEARS only `baby*` events and
+  events whose `years`/`age` start below that age; `family.py`'s age caps no longer open an event to newborns. The
+  teacher Соломія Андріївна meets the pet at 6–17, not at 0.
+- **«🔒 потрібно 0 ₴ (є −731)»** in debt → «бракує 1031 ₴».
+- **«First meetings» only with strangers.** `status=[""]` (the eight `soc_meet_*`) now means never met: a cooled-down
+  acquaintance is not a stranger.
+- **Tails** may have a req (`(text, fx, weight, req)`): the boss tail needs a job, «коли вже онуки» is for 20–50, and
+  «{застряг|застрягла} у ліфті» has a feminine form. «Покликати маму» in a fight is for kids and teens; grown-ups call
+  the кум. A random `_date` no longer happens with a rival, an enemy or an ex (the owners can still arrange one).
+- Work words for a pet without a job (the alarm story, «завтра на роботу», «продати сало колегам»); a dream event after
+  the dream came true; the parents' chat for a pet with no kids; a teen's microcredit shawarma business (grown-ups).
+- Text: «Синку»/«синочку» to a girl, «Тихо зник», Барон «{втік|втекла}», «{name} записано», «той {налив|налила}»,
+  «грате», «найкращою деревом», «одна одному» for two boys, «ніжно-пастельним» for a girl, the job and the new
+  temperament in notes in the pet's gender; money in notes is always whole hryvnias.
+
+### Added
+- `scripts/integrity_audit.py --static`: alcohol, tobacco, vape, microcredit and mortgage words a pet under 18 could
+  be offered (the youngest age comes from the event's gate, the baby guard, follow-up parents, story openings and
+  dream chains), the same for tails; a wider WORK regex (роботу, нарада, «— робота»). Reviewed exceptions:
+  `OTHERS["grown_up"]`.
+- `scripts/playtest_lives.py` (whole lives through the sandbox → one readable journal per life, 100 lives in ~2 min)
+  and `scripts/playtest_checks.py --strict` (deterministic checks over the journals); how to run them and how to brief
+  an LLM read: `docs/PLAYTEST.md`.
+
 ## [0.21.0] — 2026-11-04
 
 ### Added
@@ -659,7 +693,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/ifurs/kit-the-cat/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/ifurs/kit-the-cat/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/ifurs/kit-the-cat/compare/v0.19.1...v0.20.0
 [0.19.1]: https://github.com/ifurs/kit-the-cat/compare/v0.19.0...v0.19.1

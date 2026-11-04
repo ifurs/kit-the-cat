@@ -103,6 +103,6 @@ HEALTH = [
                                  hospital=48),
           o("Виявилося, просто {переїв|переїла} гарбузового пирога.", health=-5, w=0.3), auto="dark", time="1d"),
        ch("Випити бабусину настоянку", o("Настоянка не лікує апендицит. Хірург теж так сказав.", health=-35,
-                                         hospital=48, glutton=1), auto="glutton", time="1d"),
+                                         hospital=48, glutton=1), auto="glutton", time="1d", req=dict(stage=(3, 4))),
        req=dict(stage=UP), bg="hospital"),
 ]

@@ -69,6 +69,9 @@ def guard(events) -> None:
             _narrow(e, caps[e.story])
 
 
+INFANT = 3   # engine.INFANT_YEARS: a lower bound below it lets a newborn live the event, so a cap must not add one
+
+
 def _narrow(e, cap: int) -> None:
-    lo, hi = e.req.get("years", (0, 999))
+    lo, hi = e.req.get("years", (0 if e.id.startswith("baby") else INFANT, 999))
     e.req["years"] = (lo, min(hi, cap))
