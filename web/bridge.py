@@ -47,6 +47,36 @@ def dump() -> str:
     return DB.dump()
 
 
+MAX_SAVE = 5 * 1024 * 1024
+
+
+async def restore(text: str) -> bool:
+    """Replace the game with a save file (untrusted: parsed as JSON, never run). The file is checked on a scratch
+    store first: the format, the shapes and that every pet loads. On any failure the current game is left as it is."""
+    global SB
+    if not isinstance(text, str) or len(text) > MAX_SAVE:
+        return False
+    probe = MemoryStore()
+    if not probe.load(text):
+        return False
+    shapes = ((probe.pets, dict), (probe.logs, list), (probe.graves, list), (probe.chats, dict), (probe.next_id, int))
+    if not all(isinstance(v, t) for v, t in shapes) or not all(isinstance(d, dict) for d in probe.pets.values()):
+        return False
+    try:
+        for d in probe.pets.values():
+            E.Pet.from_dict(d)
+        sb = Sandbox(probe)
+        await sb.init()
+        await sb.view(1)
+    except Exception:
+        return False
+    DB.load(text)
+    SB = Sandbox(DB)
+    await SB.init()
+    _cache.clear()
+    return True
+
+
 # --- pixels ------------------------------------------------------------------------------------
 
 def _rgb(cv) -> bytes:
