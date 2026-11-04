@@ -34,6 +34,7 @@ class Sandbox:
         self.offset = 0.0
         self.lock = asyncio.Lock()
         self.world_feed: list[str] = []
+        self.news: dict[int, list[str]] = {}  # owner -> things that happened to their pet while they were not looking
         E.clock = (lambda: time.time() + self.offset) if epoch is None else (lambda: epoch + self.offset)
 
     # --- persistence ---------------------------------------------------------------------------
@@ -106,6 +107,7 @@ class Sandbox:
             genes=sprites.describe(p.genome), dna=sprites.dna_code(p.genome), rarity=sprites.rarity(p.genome)[1],
             gen=p.gen, dynasty=p.dynasty, achievements=[p.ach_name(a) for a in p.achievements[-12:]], heir=bool(p.heir), look=_look_key(p),
             persona=dict(temper=p.temper_name(), dream=p.dream_text(), fear=p.persona.get("fear", "")), emoji=E.SPECIES_EMOJI.get(p.species, "🐾"),
+            swap=p.swap_label(names), news=self.news.pop(owner, []),
             cast=p.cast_list(), perk=E.perk_text(p), goal_step=p.goal_step(), dream_done=bool(p.flags.get("dream_done")),
             power={k: round(p.skill(k)) for k in E.SKILLS},
             egg_left=max(0, round((E.EGG_HOURS * E.hour() - (E.now() - p.born)) / 60)) if p.state == "egg" else 0,
@@ -272,13 +274,23 @@ class Sandbox:
             if idx is None or idx not in {i for i, _ in p.options(e, other)}:
                 idx, _ = p.auto_choice(e, other, self.rng)
             text = p.fmt(e.text, other)
+            g0, g_other = dict(p.genes), dict(other.genes) if other else None
             res = p.resolve(e, idx, other, self.rng)
+            swapped = other is not None and g0 != g_other and p.genes == g_other  # the bodies changed places
             await self.save(p, other)
         if not res.died:
             await self._pass(res.time)
         r = asdict(res)
         r.pop("time")  # the player never learns how much of the life a decision took
         r.update(event=text, other=other.name if other else "", name=p.name, cause=p.cause if res.died else "")
+        if swapped:
+            r["swap"] = dict(emoji=E.SPECIES_EMOJI.get(p.species, "🐾"),
+                             text=f"{p.name} {p.g('прокинувся', 'прокинулася')} в тілі {other.called_in('gen', p)} "
+                                  f"{E.SPECIES_EMOJI.get(p.species, '🐾')}!")
+            if other.owner_id < NPC_BASE and other.owner_id != owner:  # the other player's pet changed too
+                self.news.setdefault(other.owner_id, []).append(
+                    f"{other.name} {other.g('прокинувся', 'прокинулася')} в тілі {p.called_in('gen', other)} "
+                    f"{E.SPECIES_EMOJI.get(other.species, '🐾')}!")
         return r
 
     # --- wardrobe / shop / homes / jobs ----------------------------------------------------------
@@ -451,6 +463,7 @@ class Sandbox:
                     st["gday"] = gd
                 E.mourn(pets)
                 t = E.now()
+                swap0 = {p.pid: p.flags.get("_swap") for p in pets}
                 for p in pets:
                     if not p.alive or p.stage < 1:
                         continue
@@ -490,6 +503,13 @@ class Sandbox:
                     self.world_feed.append(f"{E.kyiv():%d.%m %H:%M} {E.WORLD[key]['title']}")
                     summary["world"].append(E.WORLD[key]["title"])
                 E.mourn(pets)
+                for p in pets:  # a swap started by a neighbour or the autopilot must not go unnoticed: tell the player
+                    if p.owner_id < NPC_BASE and p.alive and p.flags.get("_swap") != swap0.get(p.pid):
+                        o = next((x for x in pets if x.pid == p.swap_with()), None)
+                        news = self.news.setdefault(p.owner_id, [])
+                        news.append(f"{p.name} {p.g('прокинувся', 'прокинулася')} в тілі {o.called_in('gen', p)} "
+                                    f"{E.SPECIES_EMOJI.get(p.species, '🐾')}!" if o else f"{p.name} знову у своєму тілі")
+                        del news[:-5]
                 for p in pets:
                     if p.state == "dead" and p.died >= t - 3600:
                         summary["deaths"].append(f"{p.name}: {p.cause}")
