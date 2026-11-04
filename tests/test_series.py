@@ -31,7 +31,7 @@ def _play(sid: str, seed: int, adult_coda: bool = True) -> tuple[E.Pet, list[E.R
         out.append(p.resolve(e, idx, None, rng))
         if not p.followups:
             break
-        fid, due = p.followups.pop(0)
+        fid, due, *_ = p.followups.pop(0)
         p.years = max(p.years, due)
         if adult_coda:
             p.stage = max(p.stage, 3)
@@ -136,7 +136,7 @@ def test_episodes_show_what_happened_before_and_leave_no_placeholders():
                 q.resolve(e, rng.choice([i for i, _ in q.options(e, None)]), None, rng)
                 if not q.followups:
                     break
-                fid, due = q.followups.pop(0)
+                fid, due, *_ = q.followups.pop(0)
                 q.years, q.stage = max(q.years, due), max(q.stage, 3)
                 q.start(E.EVENTS[fid], None, "manual")
             assert texts[0][1].find("Раніше") == -1

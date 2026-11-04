@@ -1,8 +1,12 @@
 """Stories must agree with the pet who lives them: age, job, repeats."""
 import random
+import sys
+from pathlib import Path
 
 from kit_the_cat import engine as E
 from test_perks_dreams_health import _pet
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 
 def adult(years: float = 30.0) -> E.Pet:
@@ -94,7 +98,7 @@ def test_the_new_social_events_fit_the_ages_they_tell_about():
     """Sandboxes for kids, prom for teens, weddings and trips for adults — never the other way round."""
     from kit_the_cat.content.social_more import KIDS, TEENS
     assert KIDS and all(e.req["stage"] == 1 and e.req["other_stage"] == 1 for e in KIDS)
-    assert TEENS and all(e.req["stage"] == 2 and e.req["other_stage"] == 2 for e in TEENS)
+    assert TEENS and all(e.req["stage"] == (2, 2) and e.req["other_stage"] == (2, 2) for e in TEENS)
     for i in ("soc_partner_anniversary", "soc_partner_dinner", "soc_partner_trip", "soc_ex_wedding"):
         assert E.EVENTS[i].req["stage"] == (3, 4), i
 
@@ -165,3 +169,53 @@ def test_the_family_celebrates_the_grandmothers_jubilee_once_not_in_every_genera
     assert E.EVENTS["st_jubilee"].once == "dynasty" and E.EVENTS["st_job"].once is True
     grandheir = E.new_pet(1, 1, "Ти", "cat", [], rng, predecessor=heir)
     assert grandheir.flags.get("seen_st_jubilee")
+
+
+def _next_followup(p: E.Pet, years: float):
+    p.years = years
+    e, _ = p.pick_event([p], random.Random(1), "solo")
+    return e.id if e else None
+
+
+def test_a_followup_comes_within_its_grace_window_and_not_after():
+    """«In 8 years» may come until 4 years after it is due: the last bell does not ring for a 30-year-old."""
+    p = adult(7.0)
+    p.apply({"then": ("fu_pigeon_ticket", "8y")}, None, random.Random(1))
+    assert p.followups == [["fu_pigeon_ticket", 15.0, 4.0]]
+    assert E.followup_grace(0.1) == 1.0 and E.followup_grace(2.0) == 1.0 and E.followup_grace(20.0) == 10.0
+    assert _next_followup(p, 14.9) != "fu_pigeon_ticket" and p.followups                 # not due yet
+    assert _next_followup(p, 19.0) == "fu_pigeon_ticket" and not p.followups             # the last day of the window
+    p.followups = [["fu_pigeon_ticket", 15.0, 4.0]]
+    assert _next_followup(p, 19.1) != "fu_pigeon_ticket" and not p.followups             # dropped, not postponed
+
+
+def test_a_followup_saved_before_the_window_existed_keeps_the_old_fifteen_years():
+    p = adult()
+    p.followups = [["fu_pigeon_ticket", 15.0]]                                           # the two-item entry of an old document
+    assert E.followup_window(p.followups[0]) == E.FOLLOWUP_LEGACY_GRACE == 15
+    assert _next_followup(p, 29.0) == "fu_pigeon_ticket"
+    p.followups = [["fu_pigeon_ticket", 15.0]]
+    assert _next_followup(p, 30.5) != "fu_pigeon_ticket" and not p.followups
+    q = E.Pet.from_dict(adult().to_dict() | {"followups": [["fu_pigeon_ticket", 15.0]]})
+    assert q.followups == [["fu_pigeon_ticket", 15.0]]                                   # loads as it was saved
+
+
+def test_the_last_bell_does_not_ring_for_a_pet_of_65():
+    e = E.EVENTS["kid_first_class_fu"]
+    assert e.req["years"] == (13, 19)
+    old = adult(65.0)
+    assert not old.eligible(e, None, fresh=False)
+    for entry in (["kid_first_class_fu", 13.0, 4.0], ["kid_first_class_fu", 13.0]):   # a forced queue, new and old form
+        for _ in range(50):
+            old.followups = [list(entry)]
+            assert _next_followup(old, 65.0) != "kid_first_class_fu"
+    assert adult(15.0).eligible(e, None, fresh=False)
+
+
+def test_the_audit_finds_no_school_scene_for_a_grown_up_pet():
+    import integrity_audit as A
+    assert [p for p in A.static() if "school" in p or "kid/teen" in p] == []
+    assert A.SCHOOL.search("Контрольна з хімії") and A.SCHOOL.search("дорогою до школи")
+    assert not A.SCHOOL.search("Шнурок зізнався") and not A.SCHOOL.search("Урок вивчено.")
+    par = A.parents_of()
+    assert A.age_hi(E.EVENTS["kid_first_class_fu"], par) <= 19 and A.age_hi(E.EVENTS["soc_teen_cheat"], par) <= 18
