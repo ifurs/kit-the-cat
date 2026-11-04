@@ -93,7 +93,7 @@ Effects (o(..., **fx)):
   # social events only:
   rel=+10  status="friend|bestie|rival|enemy|crush|partner|ex"  other={...effects for the other pet}
   baby=True                            the couple gets an heir egg (hybrid genes)
-  swap_genes=True                      body swap: the two pets exchange looks
+  swap_genes=True                      body swap: the bodies (genes and species) change places, the souls stay
 
 Requirements (req=dict(...)):
   stage=2 | (2, 3)   species="pig"   flag="crime" | flag={"crime": 2}   noflag="crime"
