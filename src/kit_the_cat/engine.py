@@ -22,8 +22,8 @@ from .content import events as event_content
 from .content.dsl import years as parse_years
 from .content.cast import BOND_MAX, BOND_MIN, CAST, bond_word
 from .content.dsl import CAST_STATES, KNOWN_REQ, Choice, Event, Out, ch, ev, o
-from .content.economy import (BACKGROUND_PRICES, EDUCATION, FOOD, HOME_UPKEEP, JOBS, MYSTERY_BOX, PENSION, POCKET,
-                              POTION, PRICES, ROLE_FOOD, WEALTH_TAX, WELFARE)
+from .content.economy import (BACKGROUND_PRICES, EDUCATION, FOOD, HOME_UPKEEP, ITEM_SKILL, ITEM_SKILL_CAP, JOBS,
+                              MYSTERY_BOX, PENSION, POCKET, POTION, PRICES, ROLE_FOOD, WEALTH_TAX, WELFARE)
 from .content.series import SERIES
 from .content.persona import (EPITAPHS, FEARS, FOOD_CASES, FOODS, GOALS, NAME_SUFFIX, NAMES, PERKS, QUIRKS, TEMPER_F,
                               short_name,
@@ -412,6 +412,14 @@ def item_name(item: str) -> str:
         return item.split("@")[0]
 
 
+def item_skill(item: str) -> dict:
+    """Skill bonus of one worn item: {skill: n} from ITEM_SKILL; a generated (`gen:`) item gives +1 to a skill
+    picked from its seed. Tints (`sabre@3`) do not matter. Unknown items give nothing."""
+    if item.startswith("gen:"):
+        return {random.Random(item).choice(list(SKILLS)): 1}
+    return dict(ITEM_SKILL.get(item.split("@")[0], {}))
+
+
 def bg_base(bg: str) -> str:
     return (bg or "").split("~")[0]
 
@@ -518,6 +526,16 @@ class Result:
     next: str = ""               # story: id of the step that is pending now (hosts show it right away)
     story: dict = field(default_factory=dict)  # story: {title, step} mid-way; {title, steps, notes} at the end
     series: dict = field(default_factory=dict)  # series: {id, title, ep, finale, ending} of the episode just lived
+    check: dict = field(default_factory=dict)   # a skill check: {skill, value, item, diff, parts}; empty without one
+    helped: str = ""             # the check passed only thanks to a worn item: «🗡 Шабля — дуже до речі»
+
+
+def _plain_sum(xs) -> float:
+    """Left-to-right sum (the builtin `sum` compensates floats, which would move the golden chances by 1e-16)."""
+    t = 0
+    for x in xs:
+        t += x
+    return t
 
 
 @dataclass
@@ -708,21 +726,33 @@ class Pet:
     def top_traits(self, n: int = 3) -> list[str]:
         return [t for t in sorted(TRAITS, key=lambda t: -self.traits.get(t, 0)) if self.traits.get(t, 0) >= 3][:n]
 
-    def skill(self, s: str) -> float:
-        """Effective skill: base + role bonuses (+ night bonuses, alien chaos)."""
-        v = self.skills.get(s, 10) + self.perk().get(s, 0)
+    def item_bonus(self, s: str) -> int:
+        """Skill bonus from the items the pet wears right now (ITEM_SKILL), at most ITEM_SKILL_CAP per skill."""
+        return min(ITEM_SKILL_CAP, sum(item_skill(it).get(s, 0) for it in self.equipped.values()))
+
+    def _skill_terms(self, s: str, items: bool = True) -> list[tuple[str, float]]:
+        """What `skill` adds up: [(key, n)] with keys base / temper / role / health / mood / items."""
+        t: list[tuple[str, float]] = [("base", self.skills.get(s, 10)), ("temper", self.perk().get(s, 0))]
         r = ROLES.get(self.role)
         if r:
-            v += r.get("bonus", {}).get(s, 0)
+            v = r.get("bonus", {}).get(s, 0)
             if is_night():
                 v += r.get("night_bonus", {}).get(s, 0)
             if r.get("rand_bonus"):
                 v += random.Random(f"{self.pid}:{game_day()}:{s}").randint(-10, 20)
+            t.append(("role", v))
         if self.health < 30:
-            v -= 10
+            t.append(("health", -10))
         if self.mood > 80:
-            v += 5
-        return v
+            t.append(("mood", 5))
+        if items:
+            t.append(("items", self.item_bonus(s)))
+        return t
+
+    def skill(self, s: str, items: bool = True) -> float:
+        """Effective skill: base + temperament + role bonuses (+ night bonuses, alien chaos) + worn items
+        (ITEM_SKILL, capped), −10 when sick, +5 in a great mood. `items=False` leaves the worn items out."""
+        return _plain_sum(v for _, v in self._skill_terms(s, items))
 
     def phase(self) -> str:
         """kid / teen / young / middle / grand by age in years (PHASES)."""
@@ -1017,16 +1047,51 @@ class Pet:
             self.pending, self.tale = {}, {}  # outgrown while nobody answered: a teen no longer teethes
         return True
 
+    def _wage(self, pay: int) -> int:
+        """What a job pays on a day for a rolled `pay`: +2% per day of tenure (up to +60%), «блат» up to +50%,
+        half in hospital."""
+        inc = int(pay * (1 + min(self.job_days, 30) * 0.02) * (1 + self.life.get("blat", 0) / 200))
+        return inc // 2 if self.in_hospital else inc
+
+    def _base_income(self, roll) -> tuple[int, str, str]:
+        """(₴, why, kind) of the day before extras. kind: job / pocket / pension / welfare, or "" for no income
+        (a jailed adult). `roll(lo, hi)` picks the job's pay in its range: rng.randint for a payout, `lambda lo, hi:
+        lo` / `hi` for the preview. Demons earn ×1.3."""
+        if self.job in JOBS and not self.jailed:
+            lo, hi = JOBS[self.job].get("pay_range", (JOBS[self.job]["pay"],) * 2)
+            inc, why, kind = self._wage(roll(lo, hi)), self.job_name(), "job"
+        elif self.stage <= 2:
+            inc, why, kind = POCKET, "кишенькові від бабусі", "pocket"
+        elif not self.job and not self.jailed:
+            inc, why, kind = (PENSION, "пенсія", "pension") if self.stage == 4 else (WELFARE, "соцдопомога", "welfare")
+        else:
+            inc, why, kind = 0, "", ""
+        if self.role == "demon" and inc > 0:
+            inc = int(inc * 1.3)
+        return inc, why, kind
+
+    def _extras(self) -> list[tuple[str, int]]:
+        """Daily extras of a reputation: advertising (fame), «дах» (authority), interest (financial literacy)."""
+        L, extra = self.life, []
+        if not self.jailed and self.tier("fame") >= 2:
+            extra.append(("реклама", int(L["fame"] * 4)))
+        if not self.jailed and self.tier("auth") >= 2:
+            extra.append(("«дах»", int(L["auth"] * 3)))
+        if self.money > 0 and L.get("fin", 0) >= 20:
+            extra.append(("відсотки", int(self.money * 0.004 * L["fin"] / 100)))
+        return extra
+
+    def _upkeep(self) -> tuple[int, int]:
+        """(cost of living, wealth tax) a day."""
+        cost = HOME_UPKEEP.get(self.home, int(BACKGROUND_PRICES.get(self.home, 500) * 0.01))
+        cost += UPKEEP[self.tier("money")] if self.stage >= 3 else 0
+        return cost, int(max(0, self.money - WEALTH_TAX[0]) * WEALTH_TAX[1])
+
     def _daily(self, rng: random.Random) -> None:
         """Once per game day: money in/out, role passives, achievements, twist roll."""
-        inc, why = 0, ""
-        if self.job in JOBS and not self.jailed:
+        inc, why, kind = self._base_income(rng.randint)
+        if kind == "job":
             j = JOBS[self.job]
-            lo, hi = j.get("pay_range", (j["pay"], j["pay"]))
-            inc = int(rng.randint(lo, hi) * (1 + min(self.job_days, 30) * 0.02) * (1 + self.life.get("blat", 0) / 200))
-            if self.in_hospital:
-                inc //= 2
-            why = self.job_name()
             self.job_days += 1
             self.xp += 3
             for k, v in j["drift"].items():
@@ -1038,24 +1103,11 @@ class Pet:
                 self.note("jail", f"⛓ {self.called()} {self.g('спалився', 'спалилася')} на роботі ({self.job_name()}) і {self.g('сів', 'сіла')} на добу")
             if self.job_days == 30:
                 self.ach("Ветеран праці")
-        elif self.stage <= 2:
-            inc, why = POCKET, "кишенькові від бабусі"
-        elif not self.job and not self.jailed:
-            inc, why = (PENSION, "пенсія") if self.stage == 4 else (WELFARE, "соцдопомога")
-        if self.role == "demon" and inc > 0:
-            inc = int(inc * 1.3)
-        L, extra = self.life, []
-        if not self.jailed and self.tier("fame") >= 2:
-            extra.append(("реклама", int(L["fame"] * 4)))
-        if not self.jailed and self.tier("auth") >= 2:
-            extra.append(("«дах»", int(L["auth"] * 3)))
-        if self.money > 0 and L.get("fin", 0) >= 20:
-            extra.append(("відсотки", int(self.money * 0.004 * L["fin"] / 100)))
+        extra = self._extras()
         inc += sum(v for _, v in extra)
-        cost = HOME_UPKEEP.get(self.home, int(BACKGROUND_PRICES.get(self.home, 500) * 0.01))
-        cost += UPKEEP[self.tier("money")] if self.stage >= 3 else 0
-        tax = int(max(0, self.money - WEALTH_TAX[0]) * WEALTH_TAX[1])
+        cost, tax = self._upkeep()
         self.money += inc - cost - tax
+        self.flags["_last_pay"] = [game_day(), inc, cost, tax]   # the hosts show it: «💰 Зарплата: +432 ₴ · побут −60 ₴»
         self.note("money", f"💰 {why or 'без доходу'}" + "".join(f" + {w}" for w, _ in extra)
                   + f": {inc:+d} ₴, побут −{cost} ₴" + (f", податок −{tax} ₴" if tax else ""))
         self._life_daily(rng)
@@ -1106,9 +1158,13 @@ class Pet:
     def _life_daily(self, rng: random.Random) -> None:
         """Life stats fade a little, and high tiers bring their own trouble."""
         L = self.life
-        for k, fade, floor in (("fame", 0.4, 10), ("auth", 0.3, 5), ("attr", 0.3, 15)):
+        worn = len(self.equipped)
+        style = 15 + 2 * worn   # worn items count toward «стиль»: they lift its floor and slowly build it up to it
+        for k, fade, floor in (("fame", 0.4, 10), ("auth", 0.3, 5), ("attr", 0.3, style)):
             if L.get(k, 0) > floor:
                 L[k] = max(floor, L[k] - fade)
+        if worn and L.get("attr", 0) < style:
+            L["attr"] = min(style, L.get("attr", 0) + 0.1 * worn)
         a = L.get("auth", 0)
         if a >= 45 and not self.jailed and rng.random() < (a - 40) / 500:
             self.apply({"jail": 24, "money_mult": 0.85, "auth": 3}, None, rng)
@@ -1725,15 +1781,64 @@ class Pet:
         return [(i, self.price(c) - int(self.money)) for i, c in enumerate(e.choices)
                 if i not in open_ and self.meets(c.req, other) and not self.can_pay(c)]
 
-    def chance(self, c: Choice) -> float | None:
+    def _chance_terms(self, c: Choice, items: bool = True) -> list[tuple[str, float]]:
+        """The pieces of a check, in order: the skill's own pieces, luck, level, difficulty, «у своїй стихії».
+        Their sum is the pre-clamp value of `chance` (v); every consumer reads the number from here."""
+        skill, diff = c.check
+        scale = {0: 0.6, 1: 0.6, 2: 0.8}.get(self.stage, 1.0)   # content difficulty is written for adults
+        t = self._skill_terms(skill, items)
+        if skill != "luck":
+            t.append(("luck", self.skill("luck", items) * 0.15))
+        t += [("level", (self.level - 1) * 1.5), ("diff", -diff * scale)]
+        if self.in_character(c):
+            t.append(("lean", LEAN_BONUS))
+        return t
+
+    def chance(self, c: Choice, items: bool = True) -> float | None:
+        """Success chance of a choice with a check (None without one): 0.5 + v/50 clamped to 0.2…0.95, where v is
+        the sum of `_chance_terms`. `items=False` is what it would be without the worn items."""
         if not c.check:
             return None
-        skill, diff = c.check
-        luck = self.skill("luck") if skill != "luck" else 0
-        scale = {0: 0.6, 1: 0.6, 2: 0.8}.get(self.stage, 1.0)   # content difficulty is written for adults
-        v = self.skill(skill) + luck * 0.15 + (self.level - 1) * 1.5 - diff * scale
-        v += LEAN_BONUS if self.in_character(c) else 0
+        v = _plain_sum(x for _, x in self._chance_terms(c, items))
         return max(0.2, min(0.95, 0.5 + v / 50))
+
+    def chance_parts(self, c: Choice) -> list[tuple[str, int]]:
+        """What `chance` added up, as [(label, n)] for a tooltip: base skill, items, temperament, role, health/mood,
+        luck, level, «🎭 у своїй стихії», difficulty (negative). The ints are rounded so that they sum to
+        round(v) exactly; zero pieces are left out. Empty for a choice without a check."""
+        if not c.check:
+            return []
+        skill = c.check[0]
+        names = {"base": f"{SKILLS[skill]} {SKILL_NAMES[skill]}", "temper": "🎭 темперамент", "role": "🌟 роль",
+                 "health": "🤒 здоров'я", "mood": "😊 настрій", "items": "🎒 речі", "luck": f"{SKILLS['luck']} удача",
+                 "level": "⭐ рівень", "lean": "🎭 у своїй стихії", "diff": "🎯 складність"}
+        out, cum, prev = [], 0.0, 0
+        for k, x in self._chance_terms(c):
+            cum += x
+            r = round(cum)
+            if r != prev:
+                out.append((names[k], r - prev))
+            prev = r
+        return out
+
+    def _check_info(self, c: Choice) -> dict:
+        """The numbers behind a check for the result line: «💪 сила 42 (річ +3) проти складності 30»."""
+        skill, diff = c.check
+        scale = {0: 0.6, 1: 0.6, 2: 0.8}.get(self.stage, 1.0)
+        return dict(skill=skill, value=round(self.skill(skill)), item=self.item_bonus(skill), diff=round(diff * scale),
+                    parts=self.chance_parts(c))
+
+    def _helper_item(self, skill: str) -> str:
+        """«🗡 Шабля — дуже до речі»: the worn item that gives the most to `skill` (or to luck), or ""."""
+        best, n = "", 0
+        for sk in (skill, "luck"):
+            for it in self.equipped.values():
+                v = item_skill(it).get(sk, 0)
+                if v > n:
+                    best, n = it, v
+            if best:
+                break
+        return f"{item_name(best)} — дуже до речі" if best else ""
 
     def start(self, e: Event, other: "Pet | None", mode: str = "auto") -> None:
         """mode: auto (scheduler post), manual (🎲 button), invite (date/fight)."""
@@ -1779,12 +1884,17 @@ class Pet:
         if c.check:
             res.chance = self.chance(c)
             res.roll = rng.randint(1, 20)
+            drawn = 1.0
             if res.roll == 20:
                 res.ok, res.crit = True, "win"
             elif res.roll == 1:
                 res.ok, res.crit = False, "fail"
             else:
-                res.ok = rng.random() < res.chance
+                drawn = rng.random()
+                res.ok = drawn < res.chance
+            res.check = self._check_info(c)
+            if res.ok and not res.crit and drawn >= self.chance(c, items=False):
+                res.helped = self._helper_item(c.check[0])   # it would have failed without the worn item
             if not res.ok:
                 outs = c.fail or [o("Не вийшло. {name} лише {змарнував|змарнувала} час і нерви.", mood=-6)]
         lean = self.persona.get("lean", "")
@@ -1812,6 +1922,8 @@ class Pet:
             self.tale["path"].append(res.label)
         if self.in_character(c):
             res.notes.insert(0, f"🎭 {self.temper_name()}: у своїй стихії")
+        if res.helped:
+            res.notes.insert(0, res.helped)
         if self.alive and self.health <= 0:
             if -fx.get("health", 0) >= LETHAL_HIT:  # only a really risky choice kills
                 self.die(f"{self.g('не пережив', 'не пережила')} пригоду «{res.label}»", rng)
@@ -2750,6 +2862,42 @@ def goal_text(p: Pet) -> str:
     return f"🎯 Мрія: {dream} {'▰' * n}{'▱' * (3 - n)}"
 
 
+def income_preview(p: Pet) -> dict:
+    """What a game day brings the pet, without changing anything (`Pet._daily` uses the same pieces):
+    {"job": (lo, hi) | None, "kind": "job" | "pocket" | "pension" | "welfare" | "", "why": str,
+     "extra": [(label, n)], "upkeep": n, "tax": n, "net": (lo, hi)}.
+    "job" is the base income range (a job's pay range, the allowance, the pension or the pocket money) with tenure,
+    «блат», hospital and demon bonuses applied, None when there is none (jailed); "extra" is advertising, «дах» and
+    interest; "net" is everything minus the cost of living and the wealth tax. Exact when the job pays a fixed amount
+    (lo == hi), otherwise the two ends of the range; a job's own drift can move the extras by a little."""
+    lo, why, kind = p._base_income(lambda a, b: a)
+    hi = p._base_income(lambda a, b: b)[0]
+    extra, (cost, tax) = p._extras(), p._upkeep()
+    ex = sum(v for _, v in extra)
+    return dict(job=(lo, hi) if kind else None, kind=kind, why=why, extra=extra, upkeep=cost, tax=tax,
+                net=(lo + ex - cost - tax, hi + ex - cost - tax))
+
+
+INCOME_KIND = {"pocket": "кишенькові", "pension": "пенсія", "welfare": "соцдопомога"}
+
+
+def income_line(p: Pet) -> str:
+    """«💼 Касир АТБ · ≈ +420 ₴/день, побут −60 ₴» (or «💶 соцдопомога +65 ₴/день, …») for the card and the UIs."""
+    pv = income_preview(p)
+    kind = pv["kind"]
+    ex = sum(v for _, v in pv["extra"])
+    if not kind and not ex:
+        return "⛓ без доходу" if p.jailed else ""
+    lo, hi = (pv["job"] or (0, 0))
+    lo, hi = lo + ex, hi + ex
+    amount = (f"{lo:+d}" if lo == hi else f"{lo:+d}…{hi:+d}").replace("-", "−")
+    tail = f", побут −{pv['upkeep']} ₴" + (f", податок −{pv['tax']} ₴" if pv["tax"] else "")
+    if kind == "job":
+        head, _, rest = p.job_name().partition(" ")   # «💼 Касир АТБ», not «💼 🛒 Касир АТБ»
+        return f"💼 {rest if rest and not any(x.isalpha() for x in head) else p.job_name()} · ≈ {amount} ₴/день{tail}"
+    return f"💶 {INCOME_KIND.get(kind, 'доходи')} {amount} ₴/день{tail}"
+
+
 def card(p: Pet, names: dict[str, str]) -> str:
     """Status caption (<1024 chars). names: pid -> pet name for relations."""
     _, tier = p.rarity
@@ -2762,7 +2910,7 @@ def card(p: Pet, names: dict[str, str]) -> str:
     if p.state == "dead":
         return obituary(p, names, 1020, f"\n🥚 «Нове яйце» — покоління {p.gen + 1}" + (" (є спадкоємець від пари!)" if p.heir else ""))
     lines = [
-        f"{emoji} <b>{_esc(p.name)}</b> · {phase_name(p.phase(), p.gender)} · {int(p.years)} р. · ур. {p.level}",
+        f"{emoji} <b>{_esc(p.name)}</b> · {phase_name(p.phase(), p.gender)} · {int(p.years)} р. · рів. {p.level}",
         f"👤 {_esc(p.owner_name)} · {tier}" + (f" · 👑 {_esc(p.dynasty)} ({p.gen})" if p.gen > 1 else ""),
     ]
     if p.role:
@@ -2775,8 +2923,9 @@ def card(p: Pet, names: dict[str, str]) -> str:
         " ".join(f"{SKILLS[s]}{SKILL_NAMES[s]} {int(p.skill(s))}" for s in SKILLS)
         + (" · " + " ".join(f"{TRAITS[t]} {int(p.traits[t])}" for t in p.top_traits()) if p.top_traits() else ""),
     ]
-    work = [p.job_name() if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else "",
-            bg_name(p.home)]
+    if income_line(p):
+        lines.append(income_line(p))
+    work = [EDUCATION.get(p.edu[-1], "") if p.edu else "", bg_name(p.home)]
     lines.append(" · ".join(x for x in work if x))
     pr = p.persona
     lines.append(f"🎭 {_esc(p.temper_name())} ({perk_text(p)}), боїться {_esc(pr.get('fear'))}")
