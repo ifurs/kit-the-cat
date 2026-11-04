@@ -2,7 +2,7 @@
 
 Time (hidden from the player): every module has a base cost; a choice without its own `time` costs
 `infer_time(choice, base)` — what the choice does adds to the base, so the choices of one event differ.
-CHOICE_TIME hand-tunes common and big older events. FOLLOWUPS links choices of older events to their consequences (content/consequences.py): an earlier choice comes
+CHOICE_TIME hand-tunes common and big older events. GATED (gated.py) adds choices that need a skill or an item. FOLLOWUPS links choices of older events to their consequences (content/consequences.py): an earlier choice comes
 back years later. New content writes `then=` inline instead.
 """
 from .ages import AGES
@@ -23,6 +23,7 @@ from .daily import DAILY
 from .dreams import DREAMS_CONTENT
 from .dsl import infer_time
 from .family import guard as _guard_family
+from .gated import GATED
 from .health import HEALTH
 from .holidays import HOLIDAY_EVENTS
 from .jobs import JOBS_LIFE
@@ -92,6 +93,8 @@ FOLLOWUPS = {
     ("st_charity_stream", 0): ("fu_drone_thanks", "1y"), ("st_startup", 1): ("fu_startup_exit", "3y"),
 }
 _by_id = {e.id: e for e in ALL}
+for _id, _choices in GATED.items():   # gated.py: extra choices for a skilled / equipped pet, after the ones an event has
+    _by_id[_id].choices.extend(_choices)
 for (_id, _i), _then in FOLLOWUPS.items():
     for _o in _by_id[_id].choices[_i].outs + _by_id[_id].choices[_i].fail:
         _o.fx.setdefault("then", _then)

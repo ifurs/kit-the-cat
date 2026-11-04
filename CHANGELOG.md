@@ -19,6 +19,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   💪 сила 42 (річ +3) проти складності 30», and when a worn item decided a check the result says «🗡 Шабля — дуже до речі»
   (`Result.check`, `Result.helped`).
 
+- **Skills and items open choices in adventures.** 83 new choices on existing events (`content/gated.py`, appended after the
+  old choices): 50 behind a skill (13 🧠, 13 😎, 12 💪, 12 🍀; kids 19–22, teens 21–30, adults 28–52 — set from where real
+  pets' skills are) and 33 behind an item the shop sells (guitar, sabre, helmet, book, sunglasses, mic, laptop, monocle…).
+  They skip the dice, give a slightly better reward and name the skill or the item in the text.
+- **Locked buttons for them.** `Pet.locked_why(e, other) -> [(idx, reason)]` (at most `LOCK_MAX` = 2) lists the choices that
+  only a skill, an item or money separate the pet from («потрібно 🧠 40 (зараз 31)», «потрібна річ: 🗡 Шабля», «бракує 300 ₴»);
+  role, cast, flag and every other requirement stay hidden. Both browser UIs draw «🔒 label» with the reason under it
+  (`pending.locked` is `{i, label, why}` now, was `{i, label, need}`). `Pet.locked` keeps its money-only form.
+- **A hint that skills matter.** `Result.hint`: after an event that had a locked choice, 1 time in 3 and at most once per game
+  day, «🔒 З 🧠 40 тут був би ще один варіант».
+
 ### Changed
 - **Body swap is now visible.** `swap_genes` exchanges the bodies (genes, so the species too — emoji, battle bonuses and
   species events follow the body) and leaves the souls (name, skills, bonds, items). For 3 game days both pets carry

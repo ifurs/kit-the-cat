@@ -227,6 +227,7 @@ a { color: var(--cyan); }
 .empty .primary { width: calc(100% - 6px); }
 .result b { color: var(--accent); }
 .notes, .result .notes { font-family: var(--ui); font-size: 13.5px; color: var(--warn); }
+.result .notes.hint { color: var(--muted); font-style: italic; }
 .recap { padding-left: 22px; }
 .journal div { border-bottom: 2px dotted var(--line); }
 .journal time { color: var(--cyan); }
@@ -502,7 +503,7 @@ function resultHtml(r) {
   const notes = (r.notes || []).concat(r.tail_notes || []), ck = r.check && r.check.skill ? r.check : null;
   const how = r.ok === null ? "" : ` <small class="muted" title="${esc(ck ? partsTip(ck.parts) : "")}">(🎲 ${r.roll} · шанс ${Math.round(r.chance * 100)}% → ${r.ok ? "вдалося" : "не вийшло"}${ck ? ` · ${SK[ck.skill]} ${SKN[ck.skill]} ${ck.value}${ck.item ? ` (річ +${ck.item})` : ""} проти складності ${ck.diff}` : ""})</small>`;
   return `<div class="result">${r.twist ? "🌀 <b>Сюжетний поворот!</b>\n" : ""}<b>${esc(r.label)}</b>${verdict ? ` — ${verdict}${how}` : ""}
-${esc(r.text)}${r.tail ? `\n🌀 ${esc(r.tail)}` : ""}${r.died ? `\n⚰️ <b>${esc(r.name)} помер.</b> ${esc(r.cause)}` : ""}${notes.length ? `<div class="notes">${esc(notes.join(" · "))}</div>` : ""}${recapHtml(r.story)}${seriesHtml(r.series)}</div>`;
+${esc(r.text)}${r.tail ? `\n🌀 ${esc(r.tail)}` : ""}${r.died ? `\n⚰️ <b>${esc(r.name)} помер.</b> ${esc(r.cause)}` : ""}${notes.length ? `<div class="notes">${esc(notes.join(" · "))}</div>` : ""}${r.hint ? `<div class="notes hint">${esc(r.hint)}</div>` : ""}${recapHtml(r.story)}${seriesHtml(r.series)}</div>`;
 }
 function swapBanner() {  // a body swap is loud: the avatar changed, and the player must see why
   const t = (lastResult && lastResult.swap ? [lastResult.swap.text] : []).concat(swapNews);
@@ -529,7 +530,7 @@ function renderAdv() {
       ${ev.story && lastResult && lastResult.next === ev.id ? `<div class="prev">«${esc(lastResult.label)}» — ${esc(lastResult.text)}</div>` : ""}
       <p>${ev.twist ? "🌀 " : ""}${ev.other ? `👥 <b>${esc(ev.other)}</b> · ` : ""}${esc(ev.text)}</p>
       ${ev.voice ? `<p class="voice" title="Голос характеру">🎭 <b>${esc(p.persona.temper)}</b>: «${esc(ev.voice)}»</p>` : ""}
-      <div class="choices">${ev.choices.map(c => `<button data-ch="${c.i}"${c.chance != null ? ` title="${esc(partsTip(c.parts))}"` : ""}><span>${esc(c.label)}</span>${c.chance != null ? `<small class="muted">${SK[c.skill] || ""} ${Math.round(c.chance * 100)}%</small>` : ""}</button>`).join("")}${(ev.locked || []).map(c => `<button class="ghost" disabled title="Бракує ${c.need} ₴"><span>🔒 ${esc(c.label)}</span><small class="muted">бракує ${c.need} ₴</small></button>`).join("")}
+      <div class="choices">${ev.choices.map(c => `<button data-ch="${c.i}"${c.chance != null ? ` title="${esc(partsTip(c.parts))}"` : ""}><span>${esc(c.label)}</span>${c.chance != null ? `<small class="muted">${SK[c.skill] || ""} ${Math.round(c.chance * 100)}%</small>` : ""}</button>`).join("")}${(ev.locked || []).map(c => `<button class="ghost" disabled title="${esc(c.why)}"><span>🔒 ${esc(c.label)}</span><small class="muted">${esc(c.why)}</small></button>`).join("")}
         <button data-ch="auto" class="ghost muted">Хай вирішить сам</button></div></div>`;
     el.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => act("choose", b.dataset.ch === "auto" ? null : +b.dataset.ch));
     return;
