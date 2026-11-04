@@ -50,7 +50,8 @@ GRAND = re.compile(r"онук|внук", re.I)
 # there be grandchildren») or the pet takes the job in the same event.
 OTHERS = {
     "work": {"qlc_root", "st_job_by_call", "jail_library", "tw_wolf_vet", "tw_evil_twin", "arc_magpie", "dr_flat_1", "o_meet", "ox_bakery", "tw_demon_tax",
-             "hol_vyshyvanka_day", "jail_kitchen", "arc_friend_loan", "teen_cook_dinner", "st_garage_meeting"},
+             "hol_vyshyvanka_day", "jail_kitchen", "arc_friend_loan", "teen_cook_dinner", "st_garage_meeting",
+             "hire_night_guard"},  # a job offer: declining it talks about the job the pet never took
     "kids": {"baby_first_birthday", "tw_vamp_garlic", "old_ancestor_ghost", "st_mortgage", "st_startup", "shelter_corridor",
              "g_meet", "ox_bakery", "ox_basket", "o_meet", "sp2_horse_wedding", "hol_halloween_pumpkin", "teen_tutor", "st_border"},
     # Reviewed by eye: why a school word is fine for a grown-up pet.
