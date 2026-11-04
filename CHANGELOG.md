@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **30 new dates** (`content/dates.py`, ids `dt_*`) and 3 short follow-ups a year later (`fu_dt_*`): strangers and friends
+  (5 teen: a school disco, an АТБ queue, a joint project, a rink, the last row of a cinema; 5 grown-up: a blind date,
+  a 2017 photo, salsa, a shelter, the night train), a crush (4 teen, 7 grown-up: the Carpathians in the rain, a dinner
+  by candles during a blackout, dumplings, IKEA, a dance for the 60+, meteors, a cat café), partners (6: a renovation,
+  a ficus, the parents, a day without phones, the place they met, the dacha) and exes (3). Romance stays teen+, couples
+  grown-up; a teen date is innocent (nothing above `party=1`, no alcohol, a teen's date is a teen).
+- New event attribute `ev(..., date=True)`: marks a romantic scene as a member of the date pool (`engine.is_date_event`).
+  `soc_proposal`, `soc_valentine` and `soc_ex_things` are marked; `DATE_HINTS` stays as a fallback for old ids.
+- The pair remembers its dates (`Pet.had_date`, flags `dt:<pid>`, 60 per pair): `pick_event(kind="date")` offers a date the
+  pair has not had yet before it repeats one, and once they have had all of them, the one longest ago.
+
+### Changed
+- `/pet_date` and the date pool: the built-in `_date` no longer competes with real dates (it was drawn at full weight and
+  was the repeat players saw). It is a fallback only for a pair with nothing to do, and now has three variants
+  (`_date`, `_date2`, `_date3`) picked at random.
+
 ## [0.19.1] — 2026-11-04
 
 ### Fixed

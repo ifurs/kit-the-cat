@@ -420,7 +420,7 @@ ROMANCE = [
                                   achievement="Одружений", cha=3), auto="party"),
        ch("Ще не час", o("Каблучка лежить у шухляді. Чекає.", dark=1), auto="dark"),
        social=True, req=dict(status=["crush"], stage=(3, 4), other_stage=3, partner=False, other_partner=False),
-       bg="love"),
+       bg="love", date=True),
     ev("soc_wedding", "Весілля {name_gen} і {other_gen}! Тамада, конкурси, дядько Толік вже знімає піджак.",
        ch("Традиційне весілля", o("Рушник, коровай і бійка дядьків. Ідеально.", item=["vinok", "korali"], rel=20,
                                   patriot=3, money=3000, other={"money": 3000}), auto="patriot"),
