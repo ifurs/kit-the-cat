@@ -33,6 +33,23 @@ SPECIES_PASSIVE = {
 ITEM_POWER = {"sabre": (6, 0), "helmet": (0, 5), "bronik": (0, 7), "cape": (1, 2), "horns": (3, 0),
               "crown": (2, 2), "medal": (1, 1), "eyepatch": (2, 0), "scar": (2, 0), "mustache": (1, 1),
               "wand": (3, 0), "guitar": (2, 0), "chain": (1, 1), "halo": (0, 3), "sunglasses": (1, 0)}
+
+
+def item_stats(item: str) -> dict:
+    """What a worn item gives: {"atk": n, "dfn": n, "skills": {skill: n}} (battle power from ITEM_POWER, a skill
+    bonus for adventures from engine.item_skill). A generated item gives +0.5 to both battle stats."""
+    a, d = ITEM_POWER.get(item.split("@")[0], (0.5, 0.5) if item.startswith("gen:") else (0, 0))
+    return dict(atk=a, dfn=d, skills=E.item_skill(item))
+
+
+def item_label(item: str) -> str:
+    """«🗡️+6 · 🛡️+5 · 💪+3»: battle attack, defence and skill bonuses of an item; "" when it gives nothing."""
+    st = item_stats(item)
+    parts = [f"{icon}+{v:g}" for icon, v in (("🗡️", st["atk"]), ("🛡️", st["dfn"])) if v]
+    parts += [f"{E.SKILLS[k]}+{v}" for k, v in st["skills"].items() if v]
+    return " · ".join(parts)
+
+
 # trait -> (move name, cooldown turns)
 SPECIALS = {
     "toxic": ("🤬 Токсичний коментар", 3), "gambler": ("🎰 Ва-банк", 3), "dark": ("💀 Прокляття", 4),

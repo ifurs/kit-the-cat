@@ -97,7 +97,7 @@ class Sandbox:
             age=round(p.age_days, 1), years=int(p.years),
             life=[dict(key=k, icon=v[0], name=v[1], value=round(p.life.get(k, 0)), tier=p.tier_name(k)[2:])
                   for k, v in E.LIFE.items()],
-            money_tier=p.tier_name("money"),
+            money_tier=p.tier_name("money"), income=E.income_line(p), pay=_pay_view(p), last_pay=_last_pay(p),
             casino=[dict(id=k, name=E.CASINO[k][0], lo=E.CASINO[k][2], hi=min(E.CASINO[k][3], int(p.money)))
                     for k in E.casino_venues(p)],
             role=p.role_name() if p.role in E.ROLES else "", job=p.job_name() if p.job in JOBS else "",
@@ -108,6 +108,7 @@ class Sandbox:
             persona=dict(temper=p.temper_name(), dream=p.dream_text(), fear=p.persona.get("fear", "")), emoji=E.SPECIES_EMOJI.get(p.species, "🐾"),
             cast=p.cast_list(), perk=E.perk_text(p), goal_step=p.goal_step(), dream_done=bool(p.flags.get("dream_done")),
             power={k: round(p.skill(k)) for k in E.SKILLS},
+            item_bonus={k: p.item_bonus(k) for k in E.SKILLS},
             egg_left=max(0, round((E.EGG_HOURS * E.hour() - (E.now() - p.born)) / 60)) if p.state == "egg" else 0,
             cause=p.cause,
             summary=E.life_summary(p, {x.pid: x.name for x in pets}) if p.state == "dead" else None,
@@ -120,7 +121,8 @@ class Sandbox:
                 voice=p.inner_voice(e, other), twist=E.is_twist_event(e), mode=p.pending.get("mode", ""),
                 story=dict(title=p.fmt(e.story), step=len(p.tale.get("path", [])) + 1 if e.followup else 1) if e.story else None,
                 series=dict(title=E.SERIES[e.series]["title"], ep=p.series.get(e.series, {}).get("ep", 0) + 1) if e.series else None,
-                choices=[dict(i=i, label=p.button(e, i, other), chance=p.chance(c)) for i, c in p.options(e, other)],
+                choices=[dict(i=i, label=p.button(e, i, other), chance=p.chance(c), skill=c.check[0] if c.check else "",
+                              parts=p.chance_parts(c)) for i, c in p.options(e, other)],
                 locked=[dict(i=i, label=p.button(e, i, other), need=need) for i, need in p.locked(e, other)])
         rows = await self.db.pet_log(SANDBOX, owner, p.gen, 40)
         out["journal"] = [dict(ts=E.kyiv(r["ts"]).strftime("%d.%m %H:%M"), kind=r["kind"], text=r["text"])
@@ -285,7 +287,8 @@ class Sandbox:
     async def wardrobe(self, owner: int) -> list[dict]:
         p = await self.pet(owner, tick=False)
         eq = set(p.equipped.values()) if p else set()
-        return [dict(i=i, name=E.item_name(it), slot=E.item_slot(it), on=it in eq) for i, it in enumerate(p.items if p else [])]
+        return [dict(i=i, name=E.item_name(it), slot=E.item_slot(it), on=it in eq, stats=B.item_label(it))
+                for i, it in enumerate(p.items if p else [])]
 
     async def equip(self, owner: int, i: int) -> str:
         async with self.lock:
@@ -305,7 +308,8 @@ class Sandbox:
 
     def stock(self) -> list[dict]:
         day = E.kyiv().strftime("%Y-%m-%d")
-        return [dict(i=i, **{k: s[k] for k in ("name", "price", "kind")}) for i, s in enumerate(E.shop_stock(SANDBOX, day))]
+        return [dict(i=i, stats=B.item_label(s["id"]) if s["kind"] == "item" else "", **{k: s[k] for k in ("name", "price", "kind")})
+                for i, s in enumerate(E.shop_stock(SANDBOX, day))]
 
     async def buy(self, owner: int, i: int) -> str:
         stock = E.shop_stock(SANDBOX, E.kyiv().strftime("%Y-%m-%d"))
@@ -337,7 +341,8 @@ class Sandbox:
 
     async def jobs(self, owner: int) -> list[dict]:
         p = await self.pet(owner, tick=False)
-        return [dict(id=j, name=p.job_name(j), pay=JOBS[j]["pay"]) for j in E.job_offers(p)] if p else []
+        return [dict(id=j, name=p.job_name(j), pay=JOBS[j]["pay"], range=list(JOBS[j].get("pay_range") or []))
+                for j in E.job_offers(p)] if p else []
 
     async def apply_job(self, owner: int, jid: str) -> str:
         async with self.lock:
@@ -792,6 +797,18 @@ class Sandbox:
             return None
         return await asyncio.to_thread(sprites.render_group, [p.look() for p in pets], "meadow", 4, "",
                                        [p.name[:12] for p in pets])
+
+
+def _pay_view(p: E.Pet) -> dict:
+    """The income preview as JSON for the browser: base range, extras, upkeep, tax and net."""
+    pv = E.income_preview(p)
+    return dict(pv, job=list(pv["job"]) if pv["job"] else None, net=list(pv["net"]), extra=[list(x) for x in pv["extra"]])
+
+
+def _last_pay(p: E.Pet) -> dict | None:
+    """The last daily payout [game_day, income, cost of living, tax] from the pet's flags, with the money after it."""
+    lp = p.flags.get("_last_pay")
+    return dict(day=lp[0], inc=lp[1], cost=lp[2], tax=lp[3], money=int(p.money)) if lp else None
 
 
 def _look_key(p: E.Pet) -> str:
