@@ -308,6 +308,29 @@ BUILTIN = [
                                     mood=20, other=dict(love=3, mood=20)), req=dict(status=["partner"]), auto="love"),
        ch("Втекти через вікно туалету", o("Класика. {other} досі чекає з компотом.", rel=-12, toxic=1), auto="toxic"),
        social=True, bg="love", req=dict(stage=(2, 4), other_stage=2)),
+    ev("_date2", "{name} і {other} гуляють Маріїнським парком. Лавка, морозиво, незручна пауза.",
+       ch("Взяти за руку", o("Долоні спітніли в обох, але це нікому не заважало. До фонтана дійшли, не відпускаючи рук.", rel=15,
+                             mood=15, love=1, other=dict(mood=15, love=1)), check=("cha", 30),
+          fail=[o("{name} {схопив|схопила} {other_acc} за рукав. Рукав залишився в руці. Незручно.", rel=-3, mood=-10)],
+          auto="love"),
+       ch("Розповісти жарт", o("{other} {other:сміявся|сміялася} так, що голуби розлетілись. Вечір вдався!", rel=12, cha=1,
+                               mood=10), check=("cha", 25),
+          fail=[o("Жарт про бабусю й маршрутку не зайшов. Пауза була довгою.", rel=-4, mood=-8)], auto="party"),
+       ch("Купити два морозива", o("Одне з'їли, друге розтануло. Романтика коштує ціле морозиво.", rel=10, money=-60,
+                                  glutton=1), auto="glutton"),
+       ch("Піти «в туалет»", o("Туалет у парку зачинений, тож {name} просто {пішов|пішла} додому. {other} {other:чекав|чекала} на лавці до темряви.", rel=-12, toxic=1), auto="toxic"),
+       social=True, bg="love", req=dict(stage=(2, 4), other_stage=2)),
+    ev("_date3", "{name} і {other} сидять у кав'ярні навпроти одне одного. На столі два капучино й один телефон на двох.",
+       ch("Поговорити по-справжньому", o("Дві години розмови, а кава охолола. Ніхто не помітив.", rel=18, love=1, mood=12,
+                                          other=dict(mood=12)), check=("cha", 28),
+          fail=[o("Розмова скотилась до погоди. Потім до погоди в Дніпрі. Потім до тиші.", rel=-3, mood=-8)],
+          auto="love"),
+       ch("Зробити спільне селфі", o("Фото вийшло смішне: {name} із заплющеними очима, {other} з піною на носі. "
+                                     "Обоє в захваті.", rel=15, mood=10, cha=1), auto="party"),
+       ch("Заплатити за каву", o("Дві кави, кешбек 1 %. Жест оцінено.", rel=12, money=-120), auto="love"),
+       ch("Дивитися в телефон", o("Новини, мемчики, ще мемчики. {other} {other:вдав|вдала}, що не "
+                                  "{other:образився|образилась}.", rel=-10, mood=-5), auto="dark"),
+       social=True, bg="love", req=dict(stage=(2, 4), other_stage=2)),
     ev("_fight", "{name} і {other} зустрілися за гаражами. Повітря пахне насінням і бійкою.",
        ch("Битися до кінця", o("{name} {переміг|перемогла}! {other} {other:втік|втекла}, ображено "
                                "сопучи.", rel=-10, xp=10, str=2, cha=1,
@@ -338,7 +361,16 @@ BUILTIN = [
 ]
 for _e in BUILTIN:
     EVENTS[_e.id] = _e
-DATE_HINTS = ("date", "love", "crush", "kiss", "romance", "flirt", "wedding", "partner", "dating")
+DATE_HINTS = ("date", "love", "crush", "kiss", "romance", "flirt", "wedding", "partner", "dating")  # fallback for events not marked date=True
+DATE_FALLBACKS = ("_date", "_date2", "_date3")  # the built-in dates: only for a pair with nothing else to do (see pick_event)
+DATE_PAIR_KEEP = 60      # dates a pair remembers having had (per pet, per partner), oldest forgotten first
+DATE_PAIRS_KEEP = 40     # pairs a pet remembers dates with
+
+
+def is_date_event(e: Event) -> bool:
+    """A romantic scene of two pets: marked `date=True`, or (older events) named or tagged like one."""
+    return (e.social and not e.followup and not e.id.startswith("_")
+            and (e.date or any(h in e.id for h in DATE_HINTS) or "love" in e.aff))
 FIGHT_HINTS = ("fight", "duel", "beef", "rival", "enemy", "war", "brawl", "battle", "bully")
 
 # --- twist tails: (text, fx, weight) --------------------------------------------------------------
@@ -1626,8 +1658,10 @@ class Pet:
         for e in EVENTS.values():
             if e.followup or (twist and e.id not in TWIST_IDS):
                 continue
-            if kind == "date" and not (any(h in e.id for h in DATE_HINTS) or "love" in e.aff):
+            if kind == "date" and not is_date_event(e):
                 continue
+            if e.id in DATE_FALLBACKS[1:]:
+                continue    # the spare built-in dates are picked by pick_event, never drawn from the pool
             if kind == "fight" and not (any(h in e.id for h in FIGHT_HINTS) or "toxic" in e.aff):
                 continue
             if not self.eligible(e, other, fresh=False):
@@ -1653,6 +1687,27 @@ class Pet:
             ws.append(w)
         return cands, ws
 
+    def dates_had(self, other: "Pet") -> list[str]:
+        """Date events this pair has lived, the longest ago first (kept on both pets, under flags `dt:<pid>`)."""
+        mine, theirs = self.flags.get(f"dt:{other.pid}", []), other.flags.get(f"dt:{self.pid}", [])
+        return [i for i in theirs if i not in mine] + list(mine)
+
+    def had_date(self, other: "Pet", eid: str) -> None:
+        """Remember that this pair has lived the date `eid` (it moves to the end: the freshest memory)."""
+        key = f"dt:{other.pid}"
+        self.flags[key] = [i for i in self.flags.pop(key, []) if i != eid][-(DATE_PAIR_KEEP - 1):] + [eid]
+        for old in [k for k in self.flags if k.startswith("dt:")][:-DATE_PAIRS_KEEP]:
+            del self.flags[old]
+
+    def unseen_dates(self, cands: list[Event], ws: list[float], other: "Pet") -> tuple[list[Event], list[float]]:
+        """Narrow the date pool: what the pair has not had yet; when it has had everything, the one longest ago."""
+        had = self.dates_had(other)
+        idx = [i for i, e in enumerate(cands) if e.id not in had]
+        if not idx:
+            oldest = min(had.index(e.id) for e in cands)
+            idx = [i for i, e in enumerate(cands) if had.index(e.id) == oldest]
+        return [cands[i] for i in idx], [ws[i] for i in idx]
+
     def pick_event(self, others: list["Pet"], rng: random.Random, kind: str = "") -> tuple[Event | None, "Pet | None"]:
         """kind: "" any, "solo", "social", "twist", "date", "fight". Others = other pets in the chat."""
         if kind in ("", "solo") and self.followups:  # an earlier choice comes back
@@ -1673,6 +1728,8 @@ class Pet:
         if kind == "solo":
             other = None
         cands, ws = self.candidates(other, kind, twist)
+        if kind == "date" and other and cands:  # dates this pair has not had yet come first; then the longest ago
+            cands, ws = self.unseen_dates(cands, ws, other)
         fresh = [i for i, e in enumerate(cands) if e.id not in self.recent and not (other and e.id in other.recent)
                  and not (e.social and kind in ("", "solo") and self.seen.get(e.id, 0) >= SOCIAL_LIFE_MAX)]
         if fresh:  # a recent event comes back only when nothing else fits
@@ -1681,7 +1738,7 @@ class Pet:
             return self.pick_event(others, rng, "solo")
         if not cands:
             if kind == "date":
-                e = EVENTS["_date"]
+                e = EVENTS[rng.choice(DATE_FALLBACKS)]
             elif kind == "fight":
                 e = EVENTS["_fight"]
             elif twist:
@@ -1863,6 +1920,9 @@ class Pet:
             line = f"з {other.called_in('ins', self)}: " + line
             other.note("social", f"{self.called(other)} і {other.called(self)}: {res.text}")
             other.lived(e.id)
+            if is_date_event(e):
+                self.had_date(other, e.id)
+                other.had_date(self, e.id)
         if res.tail:
             line += f" 🌀 {res.tail}"
         self.note(kind, line)
