@@ -26,8 +26,29 @@ Stable within a minor version (see [CONTRIBUTING.md](../CONTRIBUTING.md#versioni
   picture (portrait, title, cause, facts, highlights, family, epitaph; 792 px wide, taller for a longer life). Pure
   stdlib — no Pillow, so it works in the browser build too. Send it as a document to keep the pixels sharp; as a photo
   Telegram recompresses it (still readable). `engine.life_summary` also works for a living pet (no cause line).
-- `content.economy`: `FOOD`, `JOBS`, `EDUCATION`
-- `battle`: `Fighter`, `fight`, `win_chance`, `update_elo`, `aftermath`, `eligible`, `bracket`
+- `content.economy`: `FOOD`, `JOBS`, `EDUCATION`, `ITEM_SKILL`, `ITEM_SKILL_CAP`
+- `battle`: `Fighter`, `fight`, `win_chance`, `update_elo`, `aftermath`, `eligible`, `bracket`, `item_stats`, `item_label`
+
+Progress you can show (0.20):
+- `engine.income_preview(pet) -> dict` — what a game day brings, without changing anything:
+  `{"job": (lo, hi) | None, "kind": "job"|"pocket"|"pension"|"welfare"|"", "why": str, "extra": [(label, n)],
+  "upkeep": n, "tax": n, "net": (lo, hi)}`. `job` is the base income range (a fixed pay gives lo == hi), `extra` the daily
+  advertising / «дах» / interest, `net` everything minus cost of living and wealth tax. It uses the same pieces as the
+  daily payout, so the two cannot drift apart. `engine.income_line(pet)` is the ready card line:
+  «💼 Касир АТБ · ≈ +420 ₴/день, побут −60 ₴» (`engine.card` shows it too).
+- `pet.flags["_last_pay"] = [game_day, income, cost, tax]` — the last payout, written by the daily step. Show it once per
+  game day: «💰 Зарплата: +432 ₴ · побут −60 ₴ → 💰 {pet.money} ₴» and remember the shown `game_day` in the host.
+- `Pet.chance_parts(choice) -> [(label, n)]` — what the success chance adds up from (skill, items, temperament, role,
+  health/mood, luck, level, «🎭 у своїй стихії», difficulty); the ints sum to the pre-clamp value `v` of
+  `chance = 0.5 + v/50` (clamped to 0.2…0.95). Good for a button tooltip; `chance(choice)` stays the number to show.
+  `Pet.chance(choice, items=False)` is the chance without the worn items.
+- `Result.check = {skill, value, item, diff, parts}` (a skill check: skill 💪 `value` with `item` bonus against difficulty
+  `diff`) and `Result.helped` (non-empty, and repeated in `Result.notes`, when the check passed only thanks to a worn item).
+- Items: `ITEM_SKILL = {item: {skill: n}}` is a small bonus (+2…+5) of an item **while it is worn** (`pet.equipped`); a
+  generated `gen:` item gives +1. `Pet.skill(s)` includes it (capped at `ITEM_SKILL_CAP` = +8 per skill, see
+  `Pet.item_bonus(s)`); `engine.item_skill(item)` is one item's bonus. `battle.item_stats(item)` →
+  `{"atk", "dfn", "skills"}` and `battle.item_label(item)` → «🗡️+6 · 💪+3» for a wardrobe or shop row. Every worn item also
+  lifts the floor of «стиль» (`attr`) by 2.
 
 ## A turn of the game
 

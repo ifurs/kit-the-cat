@@ -294,7 +294,7 @@ a { color: var(--cyan); }
       <dt>41%</dt><dd>шанс успіху перевірки: залежить від навичок, удачі й рівня</dd>
       <dt>❤️ 😊</dt><dd>здоров'я й настрій. Швидко не відновлюються, тож бережи</dd>
       <dt>🧠+9 😎−5</dt><dd>бонуси й штрафи характеру до навичок у кожній перевірці</dd>
-      <dt>ур. 3</dt><dd>рівень: росте від пригод</dd>
+      <dt>рів. 3</dt><dd>рівень: росте від пригод</dd>
       <dt>⚪ Звичайний</dt><dd>рідкість генів: чим рідше, тим цінніша зовнішність</dd>
       <dt>▰▱▱</dt><dd>кроки до мрії (їх три)</dd>
       <dt>💖 +2 · 😊+5</dt><dd>що змінилося після вибору: настрій, навички, риси, гроші</dd>
@@ -332,6 +332,9 @@ const store = { get: k => { try { return localStorage.getItem(k); } catch { retu
                 set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 let S, L, T, tab = store.get("ks-tab") || "adv", more = "", lastResult = null, battle = null, openNb = 0, busy = false;
 const me = () => +($("#as").value || 1);
+const SK = {str: "💪", int: "🧠", cha: "😎", luck: "🍀"}, SKN = {str: "сила", int: "розум", cha: "харизма", luck: "удача"};
+const num = n => Math.round(n).toLocaleString("uk-UA"), sgn = n => (n < 0 ? "−" : "+") + num(Math.abs(n));
+const partsTip = parts => (parts || []).map(([l, v]) => `${l} ${sgn(v)}`).join("\n");  // what the chance adds up from
 const strat = () => store.get("ks-strat") || "careful";
 
 function toast(t) { if (!t) return; const el = $("#toast"); el.textContent = t; el.classList.add("show");
@@ -391,7 +394,7 @@ function renderPet() {
     + `<div class="species">${S.species.map(([id, e, n]) => `<button data-sp="${id}">${e}<br><small>${esc(n)}</small></button>`).join("")}</div>`;
   if (!p) el.innerHTML = `<div class="name">Заведи пета</div><p class="muted">Гени, характер і доля випадуть випадково. Стать можна обрати.</p>${speciesGrid}`;
   else {
-    const tags = [`💰 ${p.money} ₴`, `ур. ${p.level}`, p.rarity, p.role, p.job].filter(Boolean).map(esc).join(" · ");
+    const tags = [`💰 ${p.money} ₴`, `рів. ${p.level}`, p.rarity, p.role, p.job].filter(Boolean).map(esc).join(" · ");
     let h = `<div class="pet-head"><img class="sprite" src="/img/pet/${S.owner}.gif?k=${p.look}" alt="${esc(p.name)}">
       <div><div class="name">${esc(p.name)}<span class="sex" title="${p.gender === "f" ? "дівчинка" : "хлопчик"}">${p.gender === "f" ? "♀" : "♂"}</span></div><div class="meta">${p.state === "egg" ? esc(p.stage) : `${esc(p.stage)} · ${p.years} р. · ${tags}`}</div></div></div>`;
     if (p.state === "egg") h += `<p class="muted">🎭 ${esc(p.persona.temper)} · мріє ${esc(p.persona.dream)}</p><button class="primary" id="hatch" style="width:100%">🐣 Вилупити</button>`;
@@ -403,9 +406,10 @@ function renderPet() {
         : `Мрія: ${esc(p.persona.dream)} <span title="крок ${p.goal_step} з 3">${"▰".repeat(p.goal_step)}${"▱".repeat(3 - p.goal_step)}</span>`;
       h += `<div class="meta" style="margin-top:6px" title="Риса характеру діє в кожній пригоді">Характер: ${esc(p.persona.temper)} · ${esc(p.perk)}</div>
         <div class="meta">${dream}</div>
+        ${p.income ? `<div class="meta income" title="Рахунок за добу: робота, надбавки, побут і податок">${esc(p.income)}</div>` : ""}
         <div class="bars">${bar("здоров'я", s.health, "hp")}${bar("настрій", s.mood, "mp")}</div>
         <div class="stats ${statsOpen() ? "open" : ""}"><button class="ghost stats-toggle" aria-expanded="${statsOpen()}">Навички й статус</button><div class="stats-body">
-        <div class="life">${[["сила", "str"], ["розум", "int"], ["харизма", "cha"], ["удача", "luck"]].map(([n, k]) => `<span class="stat">${n} <b>${p.power[k]}</b></span>`).join("")}</div>
+        <div class="life">${[["сила", "str"], ["розум", "int"], ["харизма", "cha"], ["удача", "luck"]].map(([n, k]) => `<span class="stat"${p.item_bonus[k] ? ` title="речі дають +${p.item_bonus[k]}"` : ""}>${n} <b>${p.power[k]}</b>${p.item_bonus[k] ? ` <small>(річ +${p.item_bonus[k]})</small>` : ""}</span>`).join("")}</div>
         <div class="meta">${esc(p.money_tier)}</div>
         <div class="life">${p.life.map(l => `<span class="stat" title="${esc(l.tier)}">${esc(l.name)} <b>${l.value}</b> <small>${esc(l.tier)}</small></span>`).join("")}</div>
         ${p.cast.length ? `<div class="life" title="Люди, з якими ${esc(p.name)} живе пліч-о-пліч: що ближчі стосунки, то частіше вони допомагають">${p.cast.map(c => `<span class="stat" title="${esc(c.who)}">${c.icon} ${esc(c.name)} <small>${c.state === "here" ? esc(c.word) : c.state === "away" ? "далеко" : "лише спогад"}</small></span>`).join("")}</div>` : ""}</div></div>
@@ -452,11 +456,12 @@ function renderMore() {
   if (more === "casino") list = S.pet.casino.length ? S.pet.casino.map(v => `<div class="row"><span>${esc(v.name)} <small class="muted">${v.lo}–${v.hi} ₴</small></span>
       <span class="bet"><input type="number" inputmode="numeric" min="${v.lo}" max="${v.hi}" value="${v.lo}" data-stake="${v.id}"><button data-bet="${v.id}">Ставка</button></span></div>`).join("")
     : `<p class="muted">Казино — лише для дорослих при грошах. Автомати в переході пускають від 20 ₴.</p>`;
-  if (more === "wardrobe") list = L.wardrobe.length ? L.wardrobe.map(w => row((w.on ? "✅ " : "") + esc(w.name), "", `<button data-eq="${w.i}">${w.on ? "Зняти" : "Одягти"}</button>`)).join("") : `<p class="muted">Поки порожньо — загляни на базар.</p>`;
-  if (more === "shop") list = L.stock.map(x => row(esc(x.name), x.price + " ₴" + (x.price > S.pet.money ? " · не вистачає" : ""), `<button data-buy="${x.i}" ${x.price > S.pet.money ? "disabled" : ""}>Купити</button>`)).join("");
+  if (more === "wardrobe") list = L.wardrobe.length ? L.wardrobe.map(w => row((w.on ? "✅ " : "") + esc(w.name), esc(w.stats), `<button data-eq="${w.i}">${w.on ? "Зняти" : "Одягти"}</button>`)).join("") : `<p class="muted">Поки порожньо — загляни на базар.</p>`;
+  if (more === "shop") list = L.stock.map(x => row(esc(x.name), x.price + " ₴" + (x.stats ? " · " + esc(x.stats) : "") + (x.price > S.pet.money ? " · не вистачає" : ""), `<button data-buy="${x.i}" ${x.price > S.pet.money ? "disabled" : ""}>Купити</button>`)).join("");
   if (more === "homes") list = L.homes.map(x => row((x.here ? "📍 " : "") + esc(x.name), "", x.here ? "" : `<button data-mv="${x.i}">Сюди</button>`)).join("");
-  if (more === "jobs") list = (S.pet.job ? row("Зараз: " + esc(S.pet.job), "", `<button data-quit>Звільнитися</button>`) : "") +
-    (L.jobs.length ? L.jobs.map(j => row(esc(j.name), (j.pay || "??") + " ₴/день", `<button data-job="${j.id}">Спробувати</button>`)).join("") : `<p class="muted">Вакансій нема — підрости або вляпайся в історію.</p>`);
+  if (more === "jobs") list = (S.pet.job ? row("Зараз: " + esc(S.pet.job), esc(S.pet.income.replace(/^💼 [^·]*· /, "")), `<button data-quit>Звільнитися</button>`) : "") +
+    `<p class="muted" style="margin:2px 0">Зарплата росте: +2% за кожен день стажу (до +60%).</p>` +
+    (L.jobs.length ? L.jobs.map(j => row(esc(j.name), (j.range.length ? j.range[0] + "…" + j.range[1] : j.pay) + " ₴/день", `<button data-job="${j.id}">Спробувати</button>`)).join("") : `<p class="muted">Вакансій нема — підрости або вляпайся в історію.</p>`);
   if (more === "dna") list = `<p class="muted">🧬 ${esc(S.pet.dna)}</p>` + S.pet.genes.map(g => row(esc(g))).join("") +
     row("🦶 Копнути свого пета", "темна сторона", `<button data-care="kick">🦶</button>`);
   if (more === "name") list = `<div class="row"><input type="text" id="newName" maxlength="24" value="${esc(S.pet.name)}" style="flex:1;min-width:0"><button id="saveName">OK</button></div>`;
@@ -490,8 +495,9 @@ function renderTabs() {
 function resultHtml(r) {
   if (!r) return "";
   const verdict = r.ok === null ? "" : (r.crit === "win" ? "🌟 Критичний успіх" : r.crit === "fail" ? "💥 Критичний провал" : r.ok ? "✅ Успіх" : "❌ Провал");
-  const notes = (r.notes || []).concat(r.tail_notes || []);
-  return `<div class="result">${r.twist ? "🌀 <b>Сюжетний поворот!</b>\n" : ""}<b>${esc(r.label)}</b>${verdict ? ` — ${verdict} <small class="muted">(🎲 ${r.roll}, шанс ${Math.round(r.chance * 100)}%)</small>` : ""}
+  const notes = (r.notes || []).concat(r.tail_notes || []), ck = r.check && r.check.skill ? r.check : null;
+  const how = r.ok === null ? "" : ` <small class="muted" title="${esc(ck ? partsTip(ck.parts) : "")}">(🎲 ${r.roll} · шанс ${Math.round(r.chance * 100)}% → ${r.ok ? "вдалося" : "не вийшло"}${ck ? ` · ${SK[ck.skill]} ${SKN[ck.skill]} ${ck.value}${ck.item ? ` (річ +${ck.item})` : ""} проти складності ${ck.diff}` : ""})</small>`;
+  return `<div class="result">${r.twist ? "🌀 <b>Сюжетний поворот!</b>\n" : ""}<b>${esc(r.label)}</b>${verdict ? ` — ${verdict}${how}` : ""}
 ${esc(r.text)}${r.tail ? `\n🌀 ${esc(r.tail)}` : ""}${r.died ? `\n⚰️ <b>${esc(r.name)} помер.</b> ${esc(r.cause)}` : ""}${notes.length ? `<div class="notes">${esc(notes.join(" · "))}</div>` : ""}${recapHtml(r.story)}${seriesHtml(r.series)}</div>`;
 }
 function seriesHtml(sr) {  // a season of a serial has just ended: its ending
@@ -514,7 +520,7 @@ function renderAdv() {
       ${ev.story && lastResult && lastResult.next === ev.id ? `<div class="prev">«${esc(lastResult.label)}» — ${esc(lastResult.text)}</div>` : ""}
       <p>${ev.twist ? "🌀 " : ""}${ev.other ? `👥 <b>${esc(ev.other)}</b> · ` : ""}${esc(ev.text)}</p>
       ${ev.voice ? `<p class="voice" title="Голос характеру">🎭 <b>${esc(p.persona.temper)}</b>: «${esc(ev.voice)}»</p>` : ""}
-      <div class="choices">${ev.choices.map(c => `<button data-ch="${c.i}"><span>${esc(c.label)}</span>${c.chance != null ? `<small class="muted">${Math.round(c.chance * 100)}%</small>` : ""}</button>`).join("")}${(ev.locked || []).map(c => `<button class="ghost" disabled title="Бракує ${c.need} ₴"><span>🔒 ${esc(c.label)}</span><small class="muted">бракує ${c.need} ₴</small></button>`).join("")}
+      <div class="choices">${ev.choices.map(c => `<button data-ch="${c.i}"${c.chance != null ? ` title="${esc(partsTip(c.parts))}"` : ""}><span>${esc(c.label)}</span>${c.chance != null ? `<small class="muted">${SK[c.skill] || ""} ${Math.round(c.chance * 100)}%</small>` : ""}</button>`).join("")}${(ev.locked || []).map(c => `<button class="ghost" disabled title="Бракує ${c.need} ₴"><span>🔒 ${esc(c.label)}</span><small class="muted">бракує ${c.need} ₴</small></button>`).join("")}
         <button data-ch="auto" class="ghost muted">Хай вирішить сам</button></div></div>`;
     el.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => act("choose", b.dataset.ch === "auto" ? null : +b.dataset.ch));
     return;
@@ -642,11 +648,21 @@ function renderLog() {
 }
 
 /* ---------- glue ---------- */
+function payToast() {  // once per game day: what the last payout was
+  const lp = S.pet && S.pet.state === "alive" && S.pet.last_pay;
+  if (!lp) return;
+  const key = "ks-pay-" + S.owner;
+  if (store.get(key) === String(lp.day)) return;
+  store.set(key, String(lp.day));
+  const kind = S.pet.pay.kind, name = {job: "Зарплата", welfare: "Соцдопомога", pension: "Пенсія", pocket: "Кишенькові"}[kind] || "Дохід";
+  const text = `💰 ${name}: ${sgn(lp.inc)} ₴ · побут −${num(lp.cost)} ₴${lp.tax ? ` · податок −${num(lp.tax)} ₴` : ""} → 💰 ${num(lp.money)} ₴`;
+  setTimeout(() => toast(text), $("#toast").classList.contains("show") ? 3200 : 0);  // do not cover the message of the action
+}
 async function refresh() {
   [S, L, T] = await Promise.all([api("/api/state"), api("/api/lists"), api("/api/tour")]);
   if (!$("#as").options.length) $("#as").innerHTML = Object.entries(L.humans).map(([id, n]) => `<option value="${id}">👤 ${esc(n)}</option>`).join("");
   $("#clock").textContent = `🕰 ${S.clock}`;
-  renderPet(); renderTabs(); renderDock();
+  renderPet(); renderTabs(); renderDock(); payToast();
   if (!S.pet && !store.get("ks-intro") && !refresh.shown) { refresh.shown = 1; showHelp(); }  // first visit: explain once
 }
 function place(pop) {  // keep the dropdown inside the screen (on phones the header wraps and buttons move left)

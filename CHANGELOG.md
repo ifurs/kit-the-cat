@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **Income you can see.** `engine.income_preview(pet)` and `engine.income_line(pet)`; the daily step stores the last payout
+  in `pet.flags["_last_pay"]`. `_daily` and the preview share one set of functions (`_base_income`, `_extras`, `_upkeep`),
+  the numbers are unchanged. The card and both browser UIs show «💼 Касир АТБ · ≈ +420 ₴/день, побут −60 ₴» (or the
+  allowance, pension, pocket money), a toast «💰 Зарплата: +432 ₴ · побут −60 ₴ → 💰 1 872 ₴» once per game day, and the
+  job centre says «+2% за кожен день стажу (до +60%)».
+- **Items with visible stats and a small effect in adventures.** `content.economy.ITEM_SKILL` (30 items, +2…+5; a generated
+  item gives +1), counted by `Pet.skill` while the item is worn, at most +8 per skill (`ITEM_SKILL_CAP`). The wardrobe, the
+  shop and the skill chips show «🗡️+6 · 💪+3» (`battle.item_label`). Worn items lift the floor of «стиль» by 2 each.
+- **Skills you can read on every check.** Choice buttons show «💪 65%» with a tooltip from `Pet.chance_parts`;
+  `chance()` is built from the same pieces (the number is unchanged). The result line reads «🎲 14 · шанс 65% → вдалося ·
+  💪 сила 42 (річ +3) проти складності 30», and when a worn item decided a check the result says «🗡 Шабля — дуже до речі»
+  (`Result.check`, `Result.helped`).
+
+### Changed
+- «ур.» (a russism) became «рів.» in the card and both UIs.
+
 ## [0.19.1] — 2026-11-04
 
 ### Fixed
