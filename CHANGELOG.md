@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.20.0] — 2026-11-04
+
 ### Added
 - **Income you can see.** `engine.income_preview(pet)` and `engine.income_line(pet)`; the daily step stores the last payout
   in `pet.flags["_last_pay"]`. `_daily` and the preview share one set of functions (`_base_income`, `_extras`, `_upkeep`),
@@ -641,7 +643,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.19.1...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/ifurs/kit-the-cat/compare/v0.19.1...v0.20.0
 [0.19.1]: https://github.com/ifurs/kit-the-cat/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/ifurs/kit-the-cat/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/ifurs/kit-the-cat/compare/v0.17.0...v0.18.0
