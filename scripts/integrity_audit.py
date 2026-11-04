@@ -56,6 +56,8 @@ OTHERS = {
     # Reviewed by eye: why a school word is fine for a grown-up pet.
     "school": {
         "old_reunion": "a class reunion of old pets",
+        "arena_kid": "a kid from the yard asks the champion to train him: the kid's homework, not the pet's",
+        "arena_coach": "«урок» is a boxing lesson from an old coach, not school",
         "army_letter": "schoolchildren write to the defender",
         "sp2_horse_school": "the horse is the riding school's instructor",
         "soc_zombie": "a test paper as a gift item",
