@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from kit_the_cat import battle as B
 from kit_the_cat import engine as E
 from kit_the_cat.content.events import ALL
 from kit_the_cat.content.persona import EPITAPHS, NAME_SUFFIX, NAMES
@@ -215,6 +216,7 @@ def _achievement_keys() -> set[str]:
             for m in re.finditer(rx, text):
                 keys.update(g for g in m.groups() if g)
     keys.update(t[2][4] for t in E.LIFE.values())
+    keys.update(B.ACH_WINS.values())   # the arena's wins ladder
     keys.add(E.MONEY_TIERS[4][1][2:])
     return keys
 

@@ -34,6 +34,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
+from kit_the_cat import battle as B
 from kit_the_cat import engine as E
 from kit_the_cat.content.economy import JOBS
 from kit_the_cat.tz import TZ
@@ -293,7 +294,9 @@ def producers(events: dict[str, E.Event]) -> dict:
 
 def natural(kind: str, key) -> bool:
     """State that needs no story: roles that spread by a bite (Engine.chat_daily), items from the bazaar, open jobs
-    whose own requirements are natural."""
+    whose own requirements are natural; the flags the arena sets (battle.ARENA_FLAGS)."""
+    if kind == "flag":
+        return key[0] in B.ARENA_FLAGS and key[1] == 1
     if kind == "role":
         return key in ("vampire", "zombie")
     if kind == "has":

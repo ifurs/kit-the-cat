@@ -191,7 +191,7 @@ async def test_dead_pet_has_life_summary(client):
 
 async def test_no_time_button_hatch_once_and_actions_move_time(client):
     page = await (await client.get("/")).text()
-    assert "ffBtn" not in page and "⏩" not in page
+    assert "ffBtn" not in page and "⏩ +" not in page and "⏩ Час" not in page   # no time-skip button (⏩ ×2 is the fight speed)
     await do(client, "create", "bird")
     s = await state(client)
     assert s["pet"]["state"] == "egg" and s["pet"]["persona"]["dream"]
@@ -234,3 +234,46 @@ async def test_pending_event_carries_the_inner_voice(client):
         seen.add(bool(pend["voice"]))
         await do(client, "choose", None)
     assert seen == {True, False}
+
+
+async def test_spar_decision_is_single_use_and_belongs_to_the_caller(client):
+    await do(client, "create", "pig")
+    await do(client, "npcs", 1)
+    await ready_for_tournament(client, 2)
+    foe = next(p["owner"] for p in (await state(client))["players"] if p["npc"])
+    for _ in range(12):   # most spars pause at half health
+        b = (await do(client, "spar", "aggressive", **{"with": foe}))["battle"]
+        if b.get("paused"):
+            break
+        assert "error" not in b and b["rec"]
+    assert b.get("paused"), "a spar should stop for the decision"
+    assert b["fight"] and [t[0] for t in b["tactics"]] == ["allin", "defend", "surrender"] and b["seconds"] == 20
+    assert "winner" not in b and b["log"] and b["fighters"][0]["emoji"]
+    stolen = (await do(client, "spar_tactic", "surrender", who=2, fight=b["fight"]))["battle"]
+    assert "error" in stolen   # somebody else's fight id
+    assert "error" in (await do(client, "spar_tactic", "cheat", fight=b["fight"]))["battle"]   # the id survives a bad tactic
+    r = (await do(client, "spar_tactic", "surrender", fight=b["fight"]))["battle"]
+    assert r["winner"] == foe and r["surrendered"] == 0 and r["from"] == len(b["log"])
+    assert r["log"][-1]["text"].startswith("🏆") and r["highlights"][-1]["text"] == r["log"][-1]["text"]
+    assert r["rec"]["1"]["line"].startswith("🥊") and r["rec"]["1"]["rank"]
+    assert any("без травм" in n for n in r["notes"]["1"])   # JSON object keys are strings
+    assert "error" in (await do(client, "spar_tactic", "allin", fight=b["fight"]))["battle"]   # single use
+
+
+async def test_tournament_title_sets_arena_champ_and_fame():
+    import random
+
+    from kit_the_cat.sandbox.game import Sandbox
+    from kit_the_cat.storage import MemoryStore
+    rng = random.Random(1)
+    pets = []
+    for o in (1, 2):
+        p = E.new_pet(-777, o, f"P{o}", "cat", pets, rng)
+        p.hatch(E.now())
+        p.life.update(fame=0, attr=0)
+        pets.append(p)
+    sb = Sandbox(MemoryStore(), seed=1)
+    t = dict(status="running", rounds=[[[1, 2]]], results={"0-0": dict(winner=1)}, prize=600, bets={})
+    champ = sb._finish(t, {p.owner_id: p for p in pets}, {})
+    assert champ["owner"] == 1 and t["status"] == "done"
+    assert pets[0].flags["arena_champ"] == 1 and pets[0].life["fame"] == 5 and "arena_champ" not in pets[1].flags
