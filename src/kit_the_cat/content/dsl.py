@@ -191,7 +191,7 @@ class Event:
     w: float = 1.0
     social: bool = False
     bg: str = ""
-    once: bool = False
+    once: bool | str = False   # True: once in a life; "dynasty": once in a dynasty (the heirs remember it: a grandmother turns 80 once)
     aff: tuple = ()         # traits that make this event more likely
     time: str | float = ""  # base cost of its choices ("" → the module's base)
     followup: bool = False  # only comes as a consequence (`then=`), never at random
@@ -208,6 +208,6 @@ def ch(label: str, *outs: Out, check=None, fail=None, req=None, auto: str = "", 
 
 
 def ev(id: str, text: str, *choices: Choice, req=None, w: float = 1.0, social: bool = False, bg: str = "",
-       once: bool = False, aff: tuple = (), time: str | float = "", followup: bool = False, story: str = "",
+       once: bool | str = False, aff: tuple = (), time: str | float = "", followup: bool = False, story: str = "",
        series: str = "") -> Event:
     return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), time, followup, story, series)

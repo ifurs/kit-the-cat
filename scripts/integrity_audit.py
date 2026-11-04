@@ -10,6 +10,7 @@ a `baby_*` event to a baby's age (`years=`): otherwise a pet meets them decades 
   must need `kids=` — otherwise a pet without a job meets «the boss called» and a childless one «the grandchildren
   came». Those few that are about somebody else (an NPC's boss, a neighbour's grandson) are listed in OTHERS below.
 Dynamic (the sandbox with NPC owners, like balance.py): real lives are lived and counted —
+  · family one-offs (`once="dynasty"`: the grandmother's 80th birthday) lived twice by the heirs of one owner;
   · age: the oldest pet that lived a `baby_*` event; new-job events that came after the first two years of the job;
   · repeats: share of events that a life already had (solo, social, jail, follow-up/story) and the share of events whose
     outcome text is word for word one the same life already read;
@@ -97,7 +98,7 @@ def contradictions(e, fx: dict, before: dict) -> list[str]:
 
 
 async def simulate(pets: int, days: int, seed: int) -> dict:
-    stats = dict(events=0, life=defaultdict(list), texts=defaultdict(list), bad=Counter(), baby_age=[], late_job=Counter())
+    stats = dict(events=0, life=defaultdict(list), texts=defaultdict(list), bad=Counter(), baby_age=[], late_job=Counter(), dynasty=Counter())
     sb = Sandbox(MemoryStore(), seed, epoch=B.epoch(B.START))
     await sb.init()
     rng = random.Random(seed)
@@ -119,6 +120,8 @@ async def simulate(pets: int, days: int, seed: int) -> dict:
         stats["events"] += 1
         stats["life"][key].append(e.id)
         stats["texts"][key].append(res.text)
+        if e.once == "dynasty":
+            stats["dynasty"][(self.owner_id, e.id)] += 1
         if e.id.startswith("baby_"):
             stats["baby_age"].append((before["years"], e.id))
         if NEW_JOB.search(pick(e.text, "m", "m")) and before["since"] is not None and before["years"] - before["since"] > 2 \
@@ -191,6 +194,10 @@ def main() -> None:
         print(f"  oldest pet at a baby_* event: {oldest[0]:.1f}y ({oldest[1]}), limit {BABY_MAX_YEARS}")
         if oldest[0] > BABY_MAX_YEARS:
             problems.append(f"a baby event at {oldest[0]:.1f}y")
+        again = {k: n for k, n in st["dynasty"].items() if n > 1}
+        print(f"  family one-offs lived twice by one dynasty (80th birthday…): {len(again)} of {len(st['dynasty'])}")
+        if again:
+            problems.append(f"a dynasty lived a family one-off twice: {again}")
         if st["late_job"]:
             problems.append(f"new-job events long after hiring: {dict(st['late_job'])}")
         print(f"  new-job events after two years in the job: {sum(st['late_job'].values())}")

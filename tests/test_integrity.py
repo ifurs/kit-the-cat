@@ -152,3 +152,16 @@ def test_the_kettle_comes_back_only_to_those_who_bought_it():
     assert set(sources) == {"avr_end", "avr_end_hoard"}
     for ends in (AVRORA_END, THREAD_END):                  # the last ending is the one without a condition
         assert all(E.EVENTS[i].req.get("sv") for i in ends[:-1]) and not E.EVENTS[ends[-1]].req.get("sv")
+
+
+def test_the_family_celebrates_the_grandmothers_jubilee_once_not_in_every_generation():
+    """An heir of a pet that has seen the 80th birthday does not live it again; a one-off of a single life still repeats."""
+    rng = random.Random(1)
+    first = adult(10)
+    first.flags.update({"seen_st_jubilee": 1, "seen_st_job": 1})
+    heir = E.new_pet(1, 1, "Ти", "cat", [], rng, predecessor=first)
+    assert heir.flags.get("seen_st_jubilee") and "seen_st_job" not in heir.flags
+    assert not heir.eligible(E.EVENTS["st_jubilee"], None, fresh=False)
+    assert E.EVENTS["st_jubilee"].once == "dynasty" and E.EVENTS["st_job"].once is True
+    grandheir = E.new_pet(1, 1, "Ти", "cat", [], rng, predecessor=heir)
+    assert grandheir.flags.get("seen_st_jubilee")

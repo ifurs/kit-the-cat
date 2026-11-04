@@ -157,7 +157,7 @@ ARCS_SOUL = [
                                           then=("arc_vyshyvanka_pattern", "2y")), auto="patriot"),
        ch("Відшукати історію родини", o("Виявилось, прабабуся вишивала для всього села.", int=2, love=3,
                                        then=("arc_vyshyvanka_pattern", "2y"))),
-       req=dict(stage=GROWN), once=True, bg="village"),
+       req=dict(stage=GROWN), once="dynasty", bg="village"),
     ev("arc_vyshyvanka_museum", "Етнографи побачили бабусину вишиванку, яку носить {name}, на святі й просять дозволу її "
        "вивчити.",
        ch("Дозволити", o("Узор назвали «полтавським родовим» і внесли в каталог.", fame=5, patriot=3), auto="patriot"),

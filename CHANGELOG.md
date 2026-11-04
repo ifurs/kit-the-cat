@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.19.1] — 2026-11-04
+
+### Fixed
+- The grandmother's 80th birthday came again in every new life of the same player (a pet dies, the heir hatches and
+  meets «Бабусі вісімдесят!» once more). `once="dynasty"` marks a family one-off that the heirs remember: the jubilee, the
+  cousin's wedding, the two-clubs wedding, the grandmother's recipe, the embroidered shirt in the chest, the
+  grandmother's smartphone. `integrity_audit.py` counts the family one-offs a dynasty lived twice (155 of 200 before the fix, 0 now).
+
 ## [0.19.0] — 2026-11-04
 
 ### Added
@@ -553,7 +561,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.19.1...HEAD
+[0.19.1]: https://github.com/ifurs/kit-the-cat/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/ifurs/kit-the-cat/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/ifurs/kit-the-cat/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/ifurs/kit-the-cat/compare/v0.16.0...v0.17.0

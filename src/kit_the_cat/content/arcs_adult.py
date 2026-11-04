@@ -157,7 +157,7 @@ ARCS_ADULT = [
                                   then=("arc_recipe_viral", "1y"))),
        ch("«Бабусю, є ж доставка»", o("Бабуся мовчки пішла. Рецепт пішов разом з нею.", mood=-8,
                                      then=("arc_recipe_lost", "10y"))),
-       req=dict(stage=GROWN), once=True, bg="kitchen"),
+       req=dict(stage=GROWN), once="dynasty", bg="kitchen"),
     ev("arc_recipe_restaurant", "Бабусин борщ, рецепт якого {name} колись {записав|записала}, хвалять усі гості. Друг "
        "пропонує відкрити ресторан.",
        ch("Відкрити «Борщ від бабусі»", o("Черга з першого дня. На стіні — бабусине фото.", money=3000, fame=8,
