@@ -20,6 +20,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   (`Result.check`, `Result.helped`).
 
 ### Changed
+- **Body swap is now visible.** `swap_genes` exchanges the bodies (genes, so the species too — emoji, battle bonuses and
+  species events follow the body) and leaves the souls (name, skills, bonds, items). For 3 game days both pets carry
+  `flags["_swap"] = [other_pid, until_day, other_gender]`, and the card shows «🔄 У тілі <імені>» (`Pet.swap_label`,
+  `Pet.swap_with`). Swapping back while it is on clears the mark. In the sandbox and the browser build the outcome
+  gets a highlighted banner («Обмін тілами!») and the avatar flashes and reloads at once; a swap started by a neighbour
+  or by the autopilot reaches the other player through `view()["pet"]["news"]` (shown once) instead of going unnoticed.
 - «ур.» (a russism) became «рів.» in the card and both UIs.
 
 ### Fixed
