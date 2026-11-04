@@ -81,7 +81,8 @@ Effects (o(..., **fx)):
   finale=("bus", "good")               the series (season) ends with this ending tag (a key of its `ends`)
   then=(["bus_end_a", "bus_end"], "1y")  a list of ids picks, right now, the first whose req holds (ss= first!);
                                        the last is the fallback (no ss= in its req): the ending depends on the scores
-  # social events only:
+  # social events only (ev(..., date=True) puts a romantic scene into the date pool: /pet_date and the pair's
+  # «not had this date yet» rule; see content/dates.py):
   rel=+10  status="friend|bestie|rival|enemy|crush|partner|ex"  other={...effects for the other pet}
   baby=True                            the couple gets an heir egg (hybrid genes)
   swap_genes=True                      body swap: the bodies (genes and species) change places, the souls stay
@@ -197,6 +198,7 @@ class Event:
     followup: bool = False  # only comes as a consequence (`then=`), never at random
     story: str = ""         # title of the multi-step story this event is a step of (`step=` links the steps)
     series: str = ""        # id of the series (content/series.py SERIES) this event is an episode of (`then=` links them)
+    date: bool = False      # a romantic scene of two pets: the pool /pet_date draws from (see engine.is_date_event)
 
 
 def o(text: str, w: float = 1.0, **fx) -> Out:
@@ -209,5 +211,6 @@ def ch(label: str, *outs: Out, check=None, fail=None, req=None, auto: str = "", 
 
 def ev(id: str, text: str, *choices: Choice, req=None, w: float = 1.0, social: bool = False, bg: str = "",
        once: bool | str = False, aff: tuple = (), time: str | float = "", followup: bool = False, story: str = "",
-       series: str = "") -> Event:
-    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), time, followup, story, series)
+       series: str = "", date: bool = False) -> Event:
+    return Event(id, text, list(choices), dict(req or {}), w, social, bg, once, tuple(aff), time, followup, story, series,
+                 date)

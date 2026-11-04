@@ -391,7 +391,7 @@ COUPLE_MORE = [
                                        hunger=15, patriot=1), auto="glutton"),
        ch("Сказати «Це ж західна традиція»", o("{other} {other:образився|образилась} на п'ять хвилин, потім ви "
                                               "обидва сміялись. Ведмідь залишився.", rel=-5, dark=1), auto="dark"),
-       social=True, req=dict(status=["crush", "partner"], stage=(2, 4), season="valentine"), bg="love"),
+       social=True, req=dict(status=["crush", "partner"], stage=(2, 4), season="valentine"), bg="love", date=True),
     ev("soc_crush_message", "О другій ночі {other} пише «привіт». Просто «привіт». Без пояснень, без смайлика. "
                             "{name} лежить із телефоном і не дихає.",
        ch("Відповісти одразу", o("«Привіт!» — і розмова до ранку. Кохання — це недосип.", rel=30, love=3, energy=-15),
@@ -422,7 +422,7 @@ COUPLE_MORE = [
                                   love=2), auto="love"),
        ch("Продати все на OLX", o("Шкарпетки з оленями продались за 100 гривень. Прибуток є, але й осад.", money=100,
                                   rel=-20, toxic=2, gambler=1), auto="gambler"),
-       social=True, req=dict(status=["ex"], stage=(3, 4)), bg="khrushchovka"),
+       social=True, req=dict(status=["ex"], stage=(3, 4)), bg="khrushchovka", date=True),
 ]
 
 SOCIAL_MORE = KIDS + TEENS + STRANGER_MORE + FRIEND_MORE + FOE_MORE + COUPLE_MORE
