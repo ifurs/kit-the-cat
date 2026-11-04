@@ -132,6 +132,7 @@ DEBT_FLOOR = -500                  # ordinary losses stop here (a pet does not s
 DEBT_SOFT = 1000                   # a small debt only stops healing; collectors start hurting below this
 DEBT_HARD = 3000                   # deeper debt hurts health faster
 EVENT_ENERGY = 0          # energy is automatic (kept for hosts that still check it); pace adventures with cooldowns
+FOLLOWUP_LEGACY_GRACE = 15  # years a follow-up saved without its own grace window may wait (pets saved before the window existed)
 FOLLOWUP_MAX = 3         # a follow-up (e.g. a dream step after a failure) is scheduled at most this often per life
 RECENT = 40              # last N events of a pet are not offered again (unless nothing else fits)
 SOCIAL_LIFE_MAX = 2      # a social event is offered at most this often per life (the pool is small: then a solo event comes)
@@ -155,6 +156,17 @@ IMPORTANCE = {"died": 3, "twist": 3, "role": 3, "heir": 2, "ach": 2, "love": 2, 
               "job": 1,
               "casino": 1,
               "grew": 1, "hatched": 1, "social": 1, "hungry": 1}
+
+
+def followup_grace(delay: float) -> float:
+    """How long after it is due a follow-up may still come: half its delay, at least a year («in 8y» → until +4y)."""
+    return max(1.0, 0.5 * delay)
+
+
+def followup_window(f: list) -> float:
+    """The grace of a queue entry [id, due, grace]; an old two-item entry keeps the old 15-year window."""
+    return f[2] if len(f) > 2 else FOLLOWUP_LEGACY_GRACE
+
 
 # --- supernatural roles -------------------------------------------------------------------------
 # genes/items are applied only to the rendered Look (curing restores the pet); if sprites.py draws
@@ -568,7 +580,7 @@ class Pet:
     recent: list = field(default_factory=list)
     seen: dict = field(default_factory=dict)      # event id -> times lived (this life)
     story: list = field(default_factory=list)     # [ts, kind, text] highlights for the life summary
-    followups: list = field(default_factory=list)  # [event id, due at age in years]: consequences of earlier choices
+    followups: list = field(default_factory=list)  # [event id, due at age in years, grace in years]: consequences of earlier choices
     series: dict = field(default_factory=dict)    # series id -> {ep, vars, recap, end}: serials lived across years
     persona: dict = field(default_factory=dict)
     achievements: list = field(default_factory=list)
@@ -1224,7 +1236,8 @@ class Pet:
                 n = self.counters.get(f"then_{fid}", 0)
                 if fid in EVENTS and n < FOLLOWUP_MAX and all(f[0] != fid for f in self.followups):
                     self.counters[f"then_{fid}"] = n + 1  # retries end: no event comes back forever
-                    self.followups = (self.followups + [[fid, self.years + parse_years(after)]])[-8:]
+                    delay = parse_years(after)
+                    self.followups = (self.followups + [[fid, self.years + delay, followup_grace(delay)]])[-8:]
             elif k == "time":
                 self.years += parse_years(v)  # hidden: the player sees only the age
             elif k == "money_mult":
@@ -1656,7 +1669,7 @@ class Pet:
     def pick_event(self, others: list["Pet"], rng: random.Random, kind: str = "") -> tuple[Event | None, "Pet | None"]:
         """kind: "" any, "solo", "social", "twist", "date", "fight". Others = other pets in the chat."""
         if kind in ("", "solo") and self.followups:  # an earlier choice comes back
-            self.followups = [f for f in self.followups if f[0] in EVENTS and self.years - f[1] < 15]
+            self.followups = [f for f in self.followups if f[0] in EVENTS and self.years - f[1] <= followup_window(f)]
             for f in sorted(self.followups, key=lambda f: f[1]):
                 e = EVENTS[f[0]]
                 if self.years >= f[1] and self.eligible(e, None, fresh=False):

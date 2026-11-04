@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Fixed
+- A pet of 65 got «a lesson at school». Two causes. (1) A follow-up (`then=("id", "8y")`) came any time in the 15 years
+  after it was due, so «the last bell» of a first-grader could ring at 30. Now it has a grace window,
+  `max(1 year, half of its delay)` («in 8y» → until +4y); the queue entry is `[id, due, grace]`, and an old two-item entry
+  of a saved pet keeps the 15 years. `kid_first_class_fu` also has `years=(13, 19)`. (2) A scalar `stage=2` means
+  «12 years and older», not «a teenager»: `teen_vyshyvanka_day`, `soc_teen_cheat/chat/earphone/skip` and
+  `hol_valentine_card` (a note in the school bag) now say `stage=(2, 2)`; `teen_uni`, `teen_hair`, `teen_tattoo`
+  got `years=` (up to 24). `hol_valentine_single` (the Valentine's event for grown-ups) is twice as likely, since the card is
+  for teens now.
+- `integrity_audit.py`: a school scene (lesson, homework, test, «до школи», class chat…) in an event that a pet older than
+  25 can get is a static problem (a follow-up is also bounded by its parent's age + delay + grace); events that are
+  memories, a kid NPC or a classmate met later are listed in `OTHERS["school"]` with the reason. Also: a `kid_`/`teen_`
+  event open to a pet older than 25, the oldest pet that lived a school scene, and follow-ups that came more than 3 years
+  after they were due (the dynamic part).
+
 ## [0.19.1] — 2026-11-04
 
 ### Fixed

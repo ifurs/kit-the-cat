@@ -453,14 +453,14 @@ def closure(events: dict[str, E.Event], forged: dict) -> tuple[dict, dict]:
                 enter(p, e, "start")
         while work:
             q, root, before = work.popleft()
-            # follow-ups it scheduled come due (the age check: the root's window plus the delay, plus the 15 years they wait)
-            for fid, due in list(q.followups):
+            # follow-ups it scheduled come due (the age check: the root's window plus the delay, plus the grace window they wait)
+            for fid, due, *rest in list(q.followups):
                 f = events.get(fid)
                 if not f:
                     continue
                 w_root, w_f = age_window(root.req), age_window(f.req)
                 delay = due - before
-                if w_root and w_f and (w_root[0] + delay > w_f[1] or w_root[1] + delay + 15 < w_f[0]):
+                if w_root and w_f and (w_root[0] + delay > w_f[1] or w_root[1] + delay + (rest[0] if rest else E.FOLLOWUP_LEGACY_GRACE) < w_f[0]):
                     why.setdefault(fid, f"due at {w_root[0] + delay:.0f}–{w_root[1] + delay:.0f} y after {root.id}, "
                                         f"but the event needs {w_f[0]:.0f}–{w_f[1]:.0f} y")
                     continue
