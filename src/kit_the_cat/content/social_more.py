@@ -3,6 +3,7 @@ teens in class, strangers in a queue, friends, foes, couples, exes and the holid
 from .dsl import ch, ev, o
 from .social import ANY_UP, FOES, FRIENDLY, FRIENDS, NOT_FOES, STRANGERS
 
+TEEN = (2, 2)  # a school scene is for a teenager (stage=2 alone would also let a 65-year-old pet go to school)
 KIDS = [
     ev("soc_kid_sandbox", "У пісочниці {other} будує замок і тримає відерце з динозавриком так, що ясно: не віддасть. "
                           "А {name} хоче саме це відерце.",
@@ -67,7 +68,7 @@ TEENS = [
                                          gambler=2), auto="gambler"),
        ch("Пояснити тему після уроку", o("Вдвох розібрались. Чомусь {other:вдячний|вдячна} так, наче ти {врятував|врятувала} світ.",
                                          rel=30, int=2, love=1), auto="love"),
-       social=True, req=dict(stage=2, other_stage=2), bg="school"),
+       social=True, req=dict(stage=TEEN, other_stage=TEEN), bg="school"),
     ev("soc_teen_prom", "Випускний. Вальс. Хореограф ставить пари за зростом, і поруч опиняється {other}: «Тільки "
                         "не наступай».",
        ch("Танцювати красиво", o("Рівно один-два-три. Зал аплодував, мама плакала, директор плакав.", rel=25, cha=2,
@@ -77,7 +78,7 @@ TEENS = [
                                    party=3, rel=15, cha=1), auto="party"),
        ch("Втекти на задній двір", o("Двір, лавка, шашлики від чиїхось батьків. Випускний вийшов кращим, ніж у залі.",
                                      rel=20, glutton=1, hunger=20), auto="glutton"),
-       social=True, req=dict(stage=2, other_stage=2, years=(15, 18)), bg="school"),
+       social=True, req=dict(stage=TEEN, other_stage=TEEN, years=(15, 18)), bg="school"),
     ev("soc_teen_chat", "Вночі {name_acc} і {other_acc} додали в чат класу. До ранку там 114 повідомлень, з них "
                         "шістдесят — стікери.",
        ch("Вийти з чату", o("Тиша і спокій. Вранці всі питають, чому ти «{пішов|пішла}», і це гірше за чат.", rel=-10,
@@ -88,7 +89,7 @@ TEENS = [
                                                              "теж читає.", rel=30, toxic=2, cha=1), auto="toxic"),
        ch("Мовчки читати", o("Три години в телефоні, а що писали — уже не згадаєш. Зате в курсі всіх плітків.",
                              int=1, mood=-5)),
-       social=True, req=dict(stage=2, other_stage=2, status=NOT_FOES), bg="school"),
+       social=True, req=dict(stage=TEEN, other_stage=TEEN, status=NOT_FOES), bg="school"),
     ev("soc_teen_earphone", "У маршрутці в {name_gen} залишився один навушник, а в {other_gen} — другий. Решта шляху "
                             "— спільний плейлист.",
        ch("Поставити свою пісню", o("{other} {other:скривився|скривилась}, а на третьому приспіві вже підспівує.",
@@ -99,7 +100,7 @@ TEENS = [
           auto="toxic"),
        ch("Слухати тишу", o("{Запропонував|Запропонувала} слухати маршрутку. Вона грає краще за будь-який плейлист.", mystic=2, rel=5),
           auto="mystic"),
-       social=True, req=dict(stage=2, other_stage=2, status=FRIENDLY), bg="kyiv"),
+       social=True, req=dict(stage=TEEN, other_stage=TEEN, status=FRIENDLY), bg="kyiv"),
     ev("soc_teen_skip", "Останній урок — алгебра. {other} шепоче: «Може, вшиваємося? Погода така, що гріх сидіти "
                         "за партою».",
        ch("Тікати!", o("Парк, морозиво, лавка. Найкращий день семестру. На завтра — розмова з класною.", rel=30,
@@ -108,7 +109,7 @@ TEENS = [
        ch("Лишитися на уроці", o("Алгебра була не такою страшною. А {other} потім пів тижня {other:згадував|згадувала}, що ти «{занудний|занудна}».", rel=-10, int=2), auto="patriot"),
        ch("Піти разом у бібліотеку", o("Двоє прогульників у читальній залі. Бібліотекарка розчулилась і видала "
                                        "чаю.", rel=25, int=2, love=1), auto="love"),
-       social=True, req=dict(stage=2, other_stage=2, status=FRIENDLY), bg="school"),
+       social=True, req=dict(stage=TEEN, other_stage=TEEN, status=FRIENDLY), bg="school"),
 ]
 
 STRANGER_MORE = [
