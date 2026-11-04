@@ -190,6 +190,12 @@ button.ghost { background: none; box-shadow: none; border-color: transparent; ma
 #help dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; } #help dt { white-space: nowrap; } #help dd { margin: 0; color: var(--muted); }
 #help .helpbar { flex: none; display: flex; justify-content: flex-end; margin: 0; padding: 10px 16px; background: var(--panel); border-top: 2px solid var(--line); }
 @media (max-width: 520px) { #help dl { grid-template-columns: 1fr; gap: 0; } #help dt { white-space: normal; margin-top: 8px; font-weight: 600; } #help dd { margin: 0 0 2px; } #help .helpbar button { width: 100%; } }
+#askImport { width: min(400px, calc(100vw - 24px)); padding: 0; color: var(--ink); background: var(--panel);
+  border: 2px solid var(--frame); border-radius: 0; box-shadow: 0 0 0 2px var(--bg), 0 12px 40px #000a; }
+#askImport::backdrop { background: #0009; } #askImport p { margin: 0; padding: 14px 16px; }
+#askImport form { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 10px 16px; border-top: 2px solid var(--line); }
+#update { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 35; display: flex; gap: 10px; align-items: center;
+  max-width: calc(100% - 32px); padding: 8px 12px; background: var(--dialog); border: 2px solid var(--frame); }
 #helpBtn { min-width: 36px; padding: 6px 10px; font-weight: 700; }
 .sprite, .zoo { border-radius: 0; border: 2px solid var(--line); background: var(--bg); }
 .event-img { border-radius: 0; background: var(--bg); }
@@ -299,6 +305,11 @@ a { color: var(--cyan); }
       <button id="npcs">Заселити 3 сусідів</button>
       <button id="world">Світова подія</button>
       <small class="muted" style="padding:2px">Гра зберігається лише в цьому браузері.</small>
+      <button id="exportSave">💾 Зберегти сейв у файл</button>
+      <button id="importSave">📂 Відновити з файлу</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <button id="installBtn" hidden>📲 Встановити гру</button>
+      <small class="muted" id="iosHint" style="padding:2px" hidden>📲 Щоб встановити гру на iPhone: «Поділитися» → «На екран „Додому“». Гра працює без інтернету.</small>
       <button id="reset">Почати спочатку</button>
       <small class="muted" style="padding:2px">Вільна гра: <a href="https://github.com/ifurs/kit-the-cat/blob/main/LICENSE" target="_blank" rel="noopener">ліцензія MIT</a>, без гарантій і без підтримки.</small>
     </div>
@@ -350,6 +361,11 @@ a { color: var(--cyan); }
 </main>
 <nav class="dock" id="dock" aria-label="Швидкі дії"></nav>
 <div id="toast" role="status"></div>
+<div id="update" role="alert" hidden>Є оновлення гри <button id="updateBtn" class="primary">Перезапустити</button></div>
+<dialog id="askImport" aria-label="Відновити з файлу">
+  <p>📂 Поточна гра буде замінена грою з файлу. Продовжити?</p>
+  <form method="dialog"><button value="no">Скасувати</button><button value="yes" class="primary">Замінити</button></form>
+</dialog>
 <script type="application/json" id="py-sources">/*__PY_SOURCES__*/{}</script>
 <script src="pyodide/pyodide.js"></script>
 <script>
@@ -849,6 +865,68 @@ $("#reset").onclick = e => {
   if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Точно стерти все? Натисни ще раз"; setTimeout(() => { delete b.dataset.sure; b.textContent = "🧹 Почати спочатку"; }, 4000); return; }
   delete b.dataset.sure; b.textContent = "🧹 Почати спочатку"; $("#setPop").hidden = true; lastResult = null; battle = null; act("reset");
 };
+/* ---------- save file (both hosts) ---------- */
+const MAX_SAVE = 5 * 1024 * 1024;
+$("#exportSave").onclick = () => {
+  $("#setPop").hidden = true;
+  try {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([bridge.dump()], {type: "application/json"}));
+    a.download = `kit-the-cat-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch { toast("Не вдалося зберегти файл у цьому браузері"); }
+};
+$("#importSave").onclick = () => { $("#setPop").hidden = true; $("#importFile").value = ""; $("#importFile").click(); };
+$("#importFile").onchange = async e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  if (f.size > MAX_SAVE) return toast("Не вдалося прочитати сейв: файл завеликий");
+  const ask = $("#askImport");
+  const yes = await new Promise(r => { ask.returnValue = ""; ask.addEventListener("close", () => r(ask.returnValue === "yes"), {once: true}); ask.showModal(); });
+  if (!yes) return;
+  try {
+    const text = await f.text();
+    if (!await serial(() => bridge.restore(text))) return toast("Не вдалося прочитати сейв");
+    lastResult = null; swapNews = []; battle = null; more = ""; openNb = 0;
+    save(); await refresh(); toast("Сейв відновлено 🐾");
+  } catch { toast("Не вдалося прочитати сейв"); }
+};
+/* ---------- app install + offline (GitHub Pages only: never on the Artifact host) ---------- */
+const PWA = "serviceWorker" in navigator && !window.claude
+  && (location.protocol === "https:" || ["localhost", "127.0.0.1"].includes(location.hostname));
+let installPrompt = null;
+if (PWA) {  // listen from the start: Chrome may offer the install while Python is still loading
+  addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt = e; $("#installBtn").hidden = false; });
+  addEventListener("appinstalled", () => { $("#installBtn").hidden = true; toast("Гру встановлено. Вона працює без інтернету."); });
+  $("#installBtn").onclick = async () => {
+    $("#setPop").hidden = true;
+    if (!installPrompt) return;
+    installPrompt.prompt(); await installPrompt.userChoice.catch(() => null); installPrompt = null; $("#installBtn").hidden = true;
+  };
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone) $("#iosHint").hidden = false;
+}
+function offline() {  // after the boot: the worker's precache then reuses what the page has just downloaded
+  if (!PWA) return;
+  navigator.storage?.persist?.().catch(() => {});  // Safari evicts unused sites' storage (and the save) otherwise
+  let reloading = false;
+  const offer = w => {  // a new version is waiting: never swap it under a running game, ask first
+    if (!w || !navigator.serviceWorker.controller) return;
+    $("#update").hidden = false;
+    $("#updateBtn").onclick = () => { save(); w.postMessage("SKIP_WAITING"); };
+  };
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!reloading && !$("#update").hidden) { reloading = true; location.reload(); }
+  });
+  navigator.serviceWorker.register("sw.js").then(reg => {
+    offer(reg.waiting);
+    reg.addEventListener("updatefound", () => {
+      const w = reg.installing;
+      w?.addEventListener("statechange", () => { if (w.state === "installed") offer(w); });
+    });
+  }).catch(() => {});
+}
 $("#as").onchange = () => { lastResult = null; swapNews = []; battle = null; more = ""; openNb = 0; refresh(); };
 /* ---------- boot ---------- */
 function step(n, state) { const li = $("#st" + n); if (li) li.className = state; }
@@ -875,6 +953,7 @@ async function start(data) {
     await refresh();
     $("#loader").hidden = true;
     if (restored) toast("З поверненням! Гру відновлено.");
+    offline();
   } catch (e) {
     const err = $("#loadErr"); err.hidden = false;
     err.textContent = "Не вдалося запустити гру: " + (e && e.message ? e.message : e) +

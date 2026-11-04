@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-11-04
+
+### Added
+- **Install as an app, play offline (GitHub Pages build).** `web/manifest.webmanifest`, pixel-cat icons drawn by
+  `scripts/make_icons.py` with the game's sprites (`web/icons/`), and a service worker `web/sw.js`: the page is
+  network-first with a 3 s timeout, `pyodide/*`, the icons and the manifest are cache-first. `build_web.stamp_sw()` names
+  the cache after a hash of the build, so a new deploy drops the old cache; a waiting update is never swapped under a
+  running game: a banner «Є оновлення гри» asks first. «📲 Встановити гру» shows up when the browser offers it, iPhones
+  get a one-time «Поділитися → На екран „Додому“» hint, and `navigator.storage.persist()` asks Safari not to evict the
+  save. All of this runs only on a normal https/localhost origin, never on the Artifact host; the manifest links live in
+  `build_web.standalone(page, pwa=True)`, used by `deploy_pages.py`, which also checks that every precached file exists.
+- **Save file backup (both hosts).** «💾 Зберегти сейв у файл» downloads `kit-the-cat-YYYY-MM-DD.json`; «📂 Відновити з
+  файлу» asks before replacing the game and calls the new `bridge.restore(text)`: the file is untrusted, capped at 5 MB,
+  parsed as JSON and checked on a scratch store (format, shapes, every pet loads) before it replaces anything; a broken
+  file leaves the current game untouched.
+
 ## [0.20.0] — 2026-11-04
 
 ### Added
@@ -643,7 +659,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/ifurs/kit-the-cat/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/ifurs/kit-the-cat/compare/v0.19.1...v0.20.0
 [0.19.1]: https://github.com/ifurs/kit-the-cat/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/ifurs/kit-the-cat/compare/v0.18.0...v0.19.0
