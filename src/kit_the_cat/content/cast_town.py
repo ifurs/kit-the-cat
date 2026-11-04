@@ -286,7 +286,7 @@ TOWN = [
        ch("Спитати: «А навіщо це все?»",
           o("Вона зробила паузу. «Це найкраще запитання за тиждень». І замість відповіді дала книжку: «Прочитай, "
             "потім скажеш».", cast={"solomiya": 2}, int=2, item="book"), auto="mystic"),
-       req=dict(stage=KID, nocast="solomiya"), bg="school"),
+       req=dict(stage=KID, years=(6, 17), nocast="solomiya"), bg="school"),
     ev("sl_olympiad", "Соломія Андріївна лишає {name_acc} після уроку: «У школі олімпіада. Я тебе записала. Не "
        "питаю, чи хочеш. Питаю, коли починаємо готуватися».",
        ch("Готуватися до олімпіади",
@@ -305,7 +305,7 @@ TOWN = [
                   "каже.", cast={"solomiya": -1}, mood=-4)], auto="gambler"),
        ch("Відмовитись",
           o("Вона мовчки закрила папку. Це гірше за крик.", cast={"solomiya": -2}, mood=-3), auto="dark"),
-       req=dict(stage=KID, cast={"solomiya": 0}), bg="school", once=True),
+       req=dict(stage=KID, years=(6, 17), cast={"solomiya": 0}), bg="school", once=True),
     ev("sl_talk", "Після уроків Соломія Андріївна просить {name_acc} лишитися. Без щоденника, без нотацій — просто "
        "чайник і два стільці. «Щось із тобою останнім часом не так. Розкажеш?»",
        ch("Розповісти як є",

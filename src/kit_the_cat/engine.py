@@ -318,11 +318,12 @@ BUILTIN = [
                                     achievement="Весілля року", mood=30, other=dict(mood=30)), check=("cha", 30),
           fail=[o("{other} {other:сказав|сказала}, що ще не {other:готовий|готова}. Каблучку з'їв "
                   "офіціант.", rel=-10, mood=-30, money=-300)],
-          req=dict(status=["crush"], partner=False, other_partner=False), auto="love"),
+          req=dict(status=["crush"], partner=False, other_partner=False, stage=(3, 4), other_stage=(3, 4)), auto="love"),
        ch("Подумати про дітей 🥚", o("Через кілька днів у гнізді з'явилось яйце. Династія росте!", baby=True, love=3,
-                                    mood=20, other=dict(love=3, mood=20)), req=dict(status=["partner"]), auto="love"),
+                                    mood=20, other=dict(love=3, mood=20)), req=dict(status=["partner"], stage=(3, 3), other_stage=(3, 3)),
+          auto="love"),
        ch("Втекти через вікно туалету", o("Класика. {other} досі чекає з компотом.", rel=-12, toxic=1), auto="toxic"),
-       social=True, bg="love", req=dict(stage=(2, 4), other_stage=2)),
+       social=True, bg="love", req=dict(stage=(2, 4), other_stage=(2, 4))),
     ev("_date2", "{name} і {other} гуляють Маріїнським парком. Лавка, морозиво, незручна пауза.",
        ch("Взяти за руку", o("Долоні спітніли в обох, але це нікому не заважало. До фонтана дійшли, не відпускаючи рук.", rel=15,
                              mood=15, love=1, other=dict(mood=15, love=1)), check=("cha", 30),
@@ -334,7 +335,7 @@ BUILTIN = [
        ch("Купити два морозива", o("Одне з'їли, друге розтануло. Романтика коштує ціле морозиво.", rel=10, money=-60,
                                   glutton=1), auto="glutton"),
        ch("Піти «в туалет»", o("Туалет у парку зачинений, тож {name} просто {пішов|пішла} додому. {other} {other:чекав|чекала} на лавці до темряви.", rel=-12, toxic=1), auto="toxic"),
-       social=True, bg="love", req=dict(stage=(2, 4), other_stage=2)),
+       social=True, bg="love", req=dict(stage=(2, 4), other_stage=(2, 4))),
     ev("_date3", "{name} і {other} сидять у кав'ярні навпроти одне одного. На столі два капучино й один телефон на двох.",
        ch("Поговорити по-справжньому", o("Дві години розмови, а кава охолола. Ніхто не помітив.", rel=18, love=1, mood=12,
                                           other=dict(mood=12)), check=("cha", 28),
@@ -345,7 +346,7 @@ BUILTIN = [
        ch("Заплатити за каву", o("Дві кави, кешбек 1 %. Жест оцінено.", rel=12, money=-120), auto="love"),
        ch("Дивитися в телефон", o("Новини, мемчики, ще мемчики. {other} {other:вдав|вдала}, що не "
                                   "{other:образився|образилась}.", rel=-10, mood=-5), auto="dark"),
-       social=True, bg="love", req=dict(stage=(2, 4), other_stage=2)),
+       social=True, bg="love", req=dict(stage=(2, 4), other_stage=(2, 4))),
     ev("_fight", "{name} і {other} зустрілися за гаражами. Повітря пахне насінням і бійкою.",
        ch("Битися до кінця", o("{name} {переміг|перемогла}! {other} {other:втік|втекла}, ображено "
                                "сопучи.", rel=-10, xp=10, str=2, cha=1,
@@ -360,7 +361,9 @@ BUILTIN = [
        ch("Помиритися", o("Обнялися. Тепер найкращі вороги.", rel=18, love=1, other=dict(love=1)), check=("cha", 30),
           fail=[o("{Простягнув|Простягнула} лапу — {отримав|отримала} ляпаса.", rel=-5, mood=-10)], auto="love"),
        ch("Покликати маму", o("Мама прийшла і надавала обом. Справедливо.", rel=5, health=-5, mood=-10,
-                              other=dict(health=-5, mood=-10))),
+                              other=dict(health=-5, mood=-10)), req=dict(stage=(1, 2))),
+       ch("Покликати кума", o("Кум розборонив обох і покликав на шашлик. Конфлікт заморожено до весни.", rel=8, mood=5,
+                              other=dict(mood=5)), req=dict(stage=(3, 4))),
        social=True, bg="kyiv"),
     ev("_hangout", "{name} випадково {зустрів|зустріла} {other_acc} біля кіоску з шаурмою.",
        ch("Пригостити шаурмою", o("{other} {other:оцінив|оцінила}. Тепер вони кенти.", rel=10, money=-70, love=1,
@@ -382,13 +385,35 @@ DATE_PAIR_KEEP = 60      # dates a pair remembers having had (per pet, per partn
 DATE_PAIRS_KEEP = 40     # pairs a pet remembers dates with
 
 
+def for_infants(e: Event) -> bool:
+    """A pet under INFANT_YEARS only lives `baby*` events and events whose `years`/`age` explicitly start below that
+    age; a bare stage=1 or phase="kid" means "a kid", not "a newborn"."""
+    r = e.req
+    return e.id.startswith("baby") or "age" in r or ("years" in r and r["years"][0] < INFANT_YEARS)
+
+
+def same_bracket(a: "Pet", b: "Pet") -> bool:
+    """Romance is for two teens (stage 2) or two grown-ups (stage 3–4)."""
+    return a.stage >= 2 and b.stage >= 2 and (a.stage == 2) == (b.stage == 2)
+
+
 def is_date_event(e: Event) -> bool:
     """A romantic scene of two pets: marked `date=True`, or (older events) named or tagged like one."""
     return (e.social and not e.followup and not e.id.startswith("_")
             and (e.date or any(h in e.id for h in DATE_HINTS) or "love" in e.aff))
 FIGHT_HINTS = ("fight", "duel", "beef", "rival", "enemy", "war", "brawl", "battle", "bully")
 
-# --- twist tails: (text, fx, weight) --------------------------------------------------------------
+
+def _romantic(e: Event) -> bool:
+    outs = [x for c in e.choices for x in c.outs + c.fail]
+    return is_date_event(e) or e.id in DATE_FALLBACKS or any(
+        x.fx.get("status") in ("crush", "partner") or x.fx.get("baby") for x in outs)
+
+
+# events that can start or deepen a romance (a date, a crush/partner status, a baby): checked by same_bracket
+ROMANCE = {e.id for e in EVENTS.values() if e.social and _romantic(e)}
+
+# --- twist tails: (text, fx, weight[, req]) — req is checked like an event's (an age, a job) --------------------------------------------------------------
 TAILS = [
     ("А потім виявилось, що це все був сон. Але гроші справжні.", dict(money=100), 1),
     ("Раптом подзвонила податкова. Вона все бачила.", dict(money_mult=0.85), 1),
@@ -397,7 +422,8 @@ TAILS = [
     ("Поруч ударила блискавка. {name} тепер трохи {інший|інша}…", dict(mutate=1, health=-10), 0.6),
     ("Бабця на лавці прокляла {name_acc} просто так, для профілактики.", dict(luck=-3, mystic=1), 1),
     ("Голуб влучив {name_dat} просто в маківку. Кажуть, на гроші.", dict(money=77, clean=-25), 1),
-    ("У кишені знайшовся забутий лотерейний квиток — і він виграшний!", dict(money=300, gambler=1), 0.8),
+    ("У кишені знайшовся забутий лотерейний квиток — і він виграшний!", dict(money=300, gambler=1), 0.8,
+     dict(years=(18, 999))),
     ("Над головою закружляла зграя ворон. Погана прикмета.", dict(dark=2, mood=-5), 1),
     ("Вночі {name_acc} вкусив дивний блідий кажан…", dict(role="vampire", twist=True), 0.12),
     ("У повню {name_acc} подряпав дуже волохатий «пес»…", dict(role="werewolf", twist=True), 0.12),
@@ -407,7 +433,7 @@ TAILS = [
     ("{name} {впав|впала} у радіоактивну калюжу за гаражами.", dict(mutate=2, health=-15), 0.4),
     ("Відключили світло. Усе в холодильнику зіпсувалось.", dict(hunger=-20, mood=-5), 1),
     ("На смітнику {name} {знайшов|знайшла} цілком нормальну річ!", dict(item_slot="head"), 0.7),
-    ("Подзвонила мама й спитала, коли вже онуки.", dict(love=2, mood=-8), 1),
+    ("Подзвонила мама й спитала, коли вже онуки.", dict(love=2, mood=-8), 1, dict(years=(20, 50))),
     ("Хтось з чату вночі лайкнув стару фотку {name_gen}. Підозріло.", dict(cha=1, mood=5), 1),
     ("Злива змила весь бруд. Безкоштовний душ!", dict(clean=100), 1),
     ("У новинах сказали, що безсмертя дарує щоденна порція {food_gen}. {name} {повірив|повірила}.", dict(lifespan=5, glutton=1), 0.6),
@@ -417,10 +443,10 @@ TAILS = [
     ("Невідомий доброчинець задонатив {name_dat} 500 ₴.", dict(money=500, love=1), 0.6),
     ("Блогер зняв {name_acc} у тікток. 2 мільйони переглядів!", dict(cha=3, money=200), 0.7),
     ("Таксист-філософ прочитав {name_dat} лекцію про сенс життя.", dict(int=2, mystic=1), 1),
-    ("{name} застряг у ліфті на 4 години. Без вайфаю.", dict(mood=-15, dark=1), 1),
+    ("{name} {застряг|застрягла} у ліфті на 4 години. Без вайфаю.", dict(mood=-15, dark=1), 1),
     ("На городі {name} {викопав|викопала} козацький скарб!", dict(money=1000, patriot=2, item="sabre"), 0.15),
-    ("Кум приніс самогон «на пробу».", dict(party=2, health=-6, mood=10), 1),
-    ("Сонце, кава і жодного повідомлення від начальника. Ідеальний день.", dict(mood=20), 1),
+    ("Кум приніс самогон «на пробу».", dict(party=2, health=-6, mood=10), 1, dict(years=(18, 999))),
+    ("Сонце, кава і жодного повідомлення від начальника. Ідеальний день.", dict(mood=20), 1, dict(job="any")),
     ("З'явився двійник {name_gen}. Хто з них справжній — тепер невідомо.", dict(reroll_persona=True, twist=True), 0.12),
     ("{name} {лизнув|лизнула} батарейку. Тепер розуміє фізику.", dict(int=3, health=-8), 0.8),
     ("{name} {прокинувся|прокинулася}… іншим видом. Лікарі розводять "
@@ -1324,11 +1350,12 @@ class Pet:
                 notes.append(fx_note(k, v))
                 self._tally(k, v)
             elif k == "money":
+                v = round(v)
                 if v < 0 and self.life.get("fin", 0) > 0:  # financially literate pets lose less
                     v = round(v * (1 - self.life["fin"] / 300))
                 short = 0
                 if v < 0:  # a loss never digs deeper than DEBT_FLOOR: the rest is written off with consequences
-                    paid = max(v, min(self.money, DEBT_FLOOR) - self.money)
+                    paid = round(max(v, min(self.money, DEBT_FLOOR) - self.money))
                     short, v = paid - v, paid
                 self.money += v
                 if v:
@@ -1358,8 +1385,8 @@ class Pet:
                 self.years += parse_years(v)  # hidden: the player sees only the age
             elif k == "money_mult":
                 if self.money > 0:
-                    lost = self.money * (1 - v)
-                    self.money *= v
+                    lost = self.money - round(self.money * v)
+                    self.money = round(self.money * v)
                     notes.append(f"💸 {'−' if lost > 0 else '+'}{abs(lost):.0f} ₴" if v != 0 else f"💸 {self.g('втратив', 'втратила')} усі гроші")
             elif k == "xp":
                 self.xp += v
@@ -1399,8 +1426,8 @@ class Pet:
                         self.flags["_job_y"] = round(self.years, 3)  # req tenure=
                         for it in JOBS[v]["items"]:
                             self.give(it)
-                        notes.append(f"💼 {JOBS[v]['name']}")
-                        self.note("job", f"💼 {self.called()} тепер {JOBS[v]['name']}")
+                        notes.append(f"💼 {self.job_name(v)}")
+                        self.note("job", f"💼 {self.called()} тепер {self.job_name(v)}")
                         self.ach("Перша робота")
                 elif not v and self.job:
                     notes.append(f"🔥 {self.g('звільнений', 'звільнена')}: {self.job_name()}")
@@ -1472,7 +1499,7 @@ class Pet:
                     goal = rng.choice(sorted(GOALS))
                     self.persona.update(temper=t, lean=lean, goal=goal, dream=GOALS[goal], fear=rng.choice(FEARS),
                                         quirk=rng.choice(QUIRKS))
-                    notes.append(f"🌀 новий характер: {t}")
+                    notes.append(f"🌀 новий характер: {self.temper_name()}")
             elif k == "twist":
                 pass  # marker, handled by resolve()
             elif k == "sv":
@@ -1711,6 +1738,8 @@ class Pet:
                 cur = self.status.get(other.pid, "") if other else None
                 if cur not in ([v] if isinstance(v, str) else v):
                     return False
+                if list(v) == [""] and other.pid in self.rel:
+                    return False  # status "" is also a cooled-down acquaintance: "strangers" means never met
             elif k == "nostatus" and other and self.status.get(other.pid, "") in ([v] if isinstance(v, str) else v):
                 return False
             elif k == "other_stage":
@@ -1748,8 +1777,10 @@ class Pet:
             return False
         if e.once and self.flags.get(f"seen_{e.id}"):
             return False
-        if self.years < INFANT_YEARS and not e.followup and not any(k in e.req for k in ("stage", "years", "phase", "age")):
-            return False  # no pranks, gossip or АТБ queues for a baby: an event without an age is for grown-ups
+        if self.years < INFANT_YEARS and not e.followup and not for_infants(e):
+            return False  # no school, pranks or АТБ queues for a baby: only events written for that age
+        if other and e.id in ROMANCE and not same_bracket(self, other):
+            return False  # romance: two teens or two grown-ups, never a kid and never across the line
         return self.meets(e.req, other) and bool(self.options(e, other))
 
     def candidates(self, other: "Pet | None", kind: str = "", twist: bool = False) -> tuple[list[Event], list[float]]:
@@ -1762,6 +1793,9 @@ class Pet:
                 continue
             if e.id in DATE_FALLBACKS[1:]:
                 continue    # the spare built-in dates are picked by pick_event, never drawn from the pool
+            if (kind != "date" and e.id in DATE_FALLBACKS and other
+                    and self.status.get(other.pid, "") in ("rival", "enemy", "ex")):
+                continue    # a date with a foe only when the owners arrange it (/pet_date), not out of the blue
             if kind == "fight" and not (any(h in e.id for h in FIGHT_HINTS) or "toxic" in e.aff):
                 continue
             if not self.eligible(e, other, fresh=False):
@@ -1903,7 +1937,7 @@ class Pet:
                 why.append(f"потрібна річ: {item_name(item)}")
                 short.append(f"річчю «{item_name(item)}»")
             need = c.req.get("money", 0)
-            if need > self.money:
+            if need and need > self.money:
                 why.append(f"потрібно {need} ₴ (є {math.floor(self.money)})")
                 short.append(f"{need} ₴ у гаманці")
             elif not self.can_pay(c):
@@ -2106,7 +2140,8 @@ class Pet:
                                  notes=[fx_note(k, v) for k, v in self.tale["fx"].items() if round(v, 1)])
                 self.tale = {}
         if self.alive and not res.next and rng.random() < TWIST_TAIL:
-            tt, tfx, _ = rng.choices(TAILS, [x[2] for x in TAILS])[0]
+            tails = [t for t in TAILS if len(t) < 4 or self.meets(t[3])]
+            tt, tfx = rng.choices(tails, [x[2] for x in tails])[0][:2]
             res.tail = self.fmt(tt)
             res.tail_notes = self.apply(tfx, None, rng)
             if self.alive and self.health <= 0:

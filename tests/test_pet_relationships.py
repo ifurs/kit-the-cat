@@ -42,7 +42,8 @@ def test_no_romance_for_babies():
     assert a.status.get(b.pid) != "crush" and b.status.get(a.pid) != "crush"
     assert not a.heir and not b.heir
     assert a.rel[b.pid] == 20  # friendship still counts
-    assert E.EVENTS["_date"].req.get("stage") == (2, 4) and E.EVENTS["_date"].req.get("other_stage") == 2
+    assert E.EVENTS["_date"].req.get("stage") == (2, 4) and E.EVENTS["_date"].req.get("other_stage") == (2, 4)
+    assert "_date" in E.ROMANCE  # and same_bracket keeps a teen and a grown-up apart
 
 
 def test_teens_can_crush_but_not_marry():

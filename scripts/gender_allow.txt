@@ -69,3 +69,5 @@
 Довідку видав, але разом з оглядом: за г | about a recurring character (content/cast.py), not the pet
 Танцював гірше, ніж лікував. | about a recurring character (content/cast.py), not the pet
 Потім сказав: «Старий звик. | about a recurring character (content/cast.py), not the pet
+{Вийшов|Вийшла} до лісника, той налив ча | somebody else is the subject (a character, an object, a speaker)
+Схопити, поки не втік | somebody else is the subject (a character, an object, a speaker)

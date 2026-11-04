@@ -271,7 +271,7 @@ def test_every_text_formats_cleanly_for_a_long_name_and_an_other_pet():
     for where, text in _all_texts():
         out = p.fmt(text, other)
         assert not re.search(r"\{[a-z_]+\}", out), (where, out)
-    for text, _fx, _w in E.TAILS:
+    for text, _fx, _w, *_req in E.TAILS:
         assert "{" not in p.fmt(text, other), text
 
 
