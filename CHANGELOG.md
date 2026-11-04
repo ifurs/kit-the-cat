@@ -47,6 +47,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   `soc_proposal`, `soc_valentine` and `soc_ex_things` are marked; `DATE_HINTS` stays as a fallback for old ids.
 - The pair remembers its dates (`Pet.had_date`, flags `dt:<pid>`, 60 per pair): `pick_event(kind="date")` offers a date the
   pair has not had yet before it repeats one, and once they have had all of them, the one longest ago.
+- **Skills and items open choices in adventures.** 83 new choices on existing events (`content/gated.py`, appended after the
+  old choices): 50 behind a skill (13 🧠, 13 😎, 12 💪, 12 🍀; kids 19–22, teens 21–30, adults 28–52 — set from where real
+  pets' skills are) and 33 behind an item the shop sells (guitar, sabre, helmet, book, sunglasses, mic, laptop, monocle…).
+  They skip the dice, give a slightly better reward and name the skill or the item in the text.
+- **Locked buttons for them.** `Pet.locked_why(e, other) -> [(idx, reason)]` (at most `LOCK_MAX` = 2) lists the choices that
+  only a skill, an item or money separate the pet from («потрібно 🧠 40 (зараз 31)», «потрібна річ: 🗡 Шабля», «бракує 300 ₴»);
+  role, cast, flag and every other requirement stay hidden. Both browser UIs draw «🔒 label» with the reason under it
+  (`pending.locked` is `{i, label, why}` now, was `{i, label, need}`). `Pet.locked` keeps its money-only form.
+- **A hint that skills matter.** `Result.hint`: after an event that had a locked choice, 1 time in 3 and at most once per game
+  day, «🔒 З 🧠 40 тут був би ще один варіант».
 
 ### Changed
 - `/pet_date` and the date pool: the built-in `_date` no longer competes with real dates (it was drawn at full weight and

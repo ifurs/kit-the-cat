@@ -91,6 +91,9 @@ YEARS_PER_DAY = {1: 4.0, 2: 2.0, 3: 1.4, 4: 1.4}   # passive ageing per game day
 GOAL_BY_DREAM = {v: k for k, v in GOALS.items()}
 LEAN_BONUS = 8           # skill bonus for a choice in the pet's character (temperament lean)
 LEAN_OUT = 1.6           # weight × for outcomes that feed the pet's lean trait
+LOCK_REQ = ("skill", "has", "money")   # the only requirements a locked button may reveal; any other one stays hidden
+LOCK_MAX = 2             # locked buttons shown under one event (Pet.locked_why)
+LOCK_HINT = 1 / 3        # chance of the «🔒 З 🧠 40 тут був би ще один варіант» line after an event that showed locked buttons
 HEAL_PER_H = 0.3         # natural recovery per game hour (hospital: 3): damage from choices lasts
 HEAL_PRICE = 150         # 💊 a doctor's visit
 LETHAL_HIT = 30          # a choice kills (health → 0) only if it takes at least this much health at once
@@ -572,6 +575,7 @@ class Result:
     series: dict = field(default_factory=dict)  # series: {id, title, ep, finale, ending} of the episode just lived
     check: dict = field(default_factory=dict)   # a skill check: {skill, value, item, diff, parts}; empty without one
     helped: str = ""             # the check passed only thanks to a worn item: «🗡 Шабля — дуже до речі»
+    hint: str = ""               # sometimes: «🔒 З 🧠 40 тут був би ще один варіант» (the event had a locked choice)
 
 
 def _plain_sum(xs) -> float:
@@ -1878,6 +1882,53 @@ class Pet:
         return [(i, self.price(c) - int(self.money)) for i, c in enumerate(e.choices)
                 if i not in open_ and self.meets(c.req, other) and not self.can_pay(c)]
 
+    def _lock_info(self, e: Event, other: "Pet | None" = None) -> list[tuple[int, str, str]]:
+        """Choices that only a skill, an item or money separate this pet from: [(index, reason, short)], in event order.
+        `reason` is what a locked button says («потрібно 🧠 40 (зараз 31)»), `short` is what the hint needs («🧠 40»).
+        A choice whose other requirements (role, cast, flag, age…) fail is not listed: it stays hidden, as before."""
+        if self.jailed:
+            return []
+        open_ = {i for i, _ in self.options(e, other)}
+        out = []
+        for i, c in enumerate(e.choices):
+            if i in open_ or not self.meets({k: v for k, v in c.req.items() if k not in LOCK_REQ}, other):
+                continue
+            why, short = [], []
+            for s, n in c.req.get("skill", {}).items():
+                if self.skill(s) < n:
+                    why.append(f"потрібно {SKILLS[s]} {n} (зараз {math.floor(self.skill(s))})")
+                    short.append(f"{SKILLS[s]} {n}")
+            item = c.req.get("has")
+            if item and not any(i2 == item or i2.split("@")[0] == item for i2 in self.items):
+                why.append(f"потрібна річ: {item_name(item)}")
+                short.append(f"річчю «{item_name(item)}»")
+            need = c.req.get("money", 0)
+            if need > self.money:
+                why.append(f"потрібно {need} ₴ (є {math.floor(self.money)})")
+                short.append(f"{need} ₴ у гаманці")
+            elif not self.can_pay(c):
+                why.append(f"бракує {self.price(c) - int(self.money)} ₴")
+                short.append(f"{self.price(c)} ₴ у гаманці")
+            if why:
+                out.append((i, "; ".join(why), " і ".join(short)))
+        return out
+
+    def locked_why(self, e: Event, other: "Pet | None" = None) -> list[tuple[int, str]]:
+        """Locked buttons for an event: [(choice index, reason)], at most LOCK_MAX. A choice shows up here when its
+        only failing requirements are `skill`, `has` or `money` (or its price is out of reach); the reason reads
+        «потрібно 🧠 40 (зараз 31)», «потрібна річ: 🗡 Шабля» or «бракує 300 ₴». Everything else (role, cast, flag…)
+        stays hidden so that no story is spoilt. `locked` is the older, money-only form of this list."""
+        return [(i, why) for i, why, _ in self._lock_info(e, other)][:LOCK_MAX]
+
+    def _lock_hint(self, e: Event, other: "Pet | None", rng_key: str) -> str:
+        """The soft hint under a result, or "": 1 time in 3 after an event that showed a locked choice, at most once per
+        game day (`flags["_lock_hint"]`). It draws from a hash, not from the game's rng, so nothing else shifts."""
+        info = self._lock_info(e, other)[:LOCK_MAX]
+        if not info or self.flags.get("_lock_hint") == game_day() or random.Random(rng_key).random() >= LOCK_HINT:
+            return ""
+        self.flags["_lock_hint"] = game_day()
+        return f"🔒 З {info[0][2]} тут був би ще один варіант"
+
     def _chance_terms(self, c: Choice, items: bool = True) -> list[tuple[str, float]]:
         """The pieces of a check, in order: the skill's own pieces, luck, level, difficulty, «у своїй стихії».
         Their sum is the pre-clamp value of `chance` (v); every consumer reads the number from here."""
@@ -1972,6 +2023,7 @@ class Pet:
         """Apply a choice: skill check with natural 1/20, weighted outcomes, crits, twist tail, journal."""
         c = e.choices[idx]
         res = Result("", [], label=self.fmt(c.label, other))
+        res.hint = self._lock_hint(e, other, f"{self.pid}|{e.id}|{self.events_done}|lock")   # before the choice changes the pet
         title = self.fmt(e.story) if e.story else ""  # «{Холостяк|Холостячка}»: the title is gendered like any text
         if e.story and (not e.followup or self.tale.get("title") != title):
             self.tale = dict(id=e.id, title=title, path=[], vars={}, fx={})  # a story begins
