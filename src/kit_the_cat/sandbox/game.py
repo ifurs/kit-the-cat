@@ -125,7 +125,7 @@ class Sandbox:
                 series=dict(title=E.SERIES[e.series]["title"], ep=p.series.get(e.series, {}).get("ep", 0) + 1) if e.series else None,
                 choices=[dict(i=i, label=p.button(e, i, other), chance=p.chance(c), skill=c.check[0] if c.check else "",
                               parts=p.chance_parts(c)) for i, c in p.options(e, other)],
-                locked=[dict(i=i, label=p.button(e, i, other), need=need) for i, need in p.locked(e, other)])
+                locked=[dict(i=i, label=p.button(e, i, other), why=why) for i, why in p.locked_why(e, other)])
         rows = await self.db.pet_log(SANDBOX, owner, p.gen, 40)
         out["journal"] = [dict(ts=E.kyiv(r["ts"]).strftime("%d.%m %H:%M"), kind=r["kind"], text=r["text"])
                           for r in rows][::-1]

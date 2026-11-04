@@ -16,7 +16,7 @@ Always pin a tag. Extras: `images` (Pillow, for GIF/PNG), `sandbox` (aiohttp ser
 Stable within a minor version (see [CONTRIBUTING.md](../CONTRIBUTING.md#versioning)):
 
 - `engine`: `Pet` (`from_dict`, `to_dict`, `tick`, `pick_event`, `options`, `chance`, `start`, `auto_choice`,
-  `resolve`, `look`, `fmt`, `give`, `cooldown_left`, `mark_cool`, `price`, `locked`, `called`), `new_pet`, `EVENTS`, `ROLES`, `WORLD`, `BUDGET`,
+  `resolve`, `look`, `fmt`, `give`, `cooldown_left`, `mark_cool`, `price`, `locked`, `locked_why`, `called`), `new_pet`, `EVENTS`, `ROLES`, `WORLD`, `BUDGET`,
   `chat_state`, `plan`, `live_silently`, `care`, `feed`, `buy`, `shop_stock`, `job_offers`, `apply_job`,
   `fix_partners`, `mourn`, `chat_daily`, `world_start`, `world_claim`, `card`, `clock` (patchable), `SPEED`.
   Recurring characters (0.17): `Pet.cast` (a JSON dict inside the pet document, missing in old documents) and
@@ -44,6 +44,19 @@ Progress you can show (0.20):
   `Pet.chance(choice, items=False)` is the chance without the worn items.
 - `Result.check = {skill, value, item, diff, parts}` (a skill check: skill 💪 `value` with `item` bonus against difficulty
   `diff`) and `Result.helped` (non-empty, and repeated in `Result.notes`, when the check passed only thanks to a worn item).
+- **Locked choices.** `Pet.locked_why(event, other=None) -> list[tuple[int, str]]`: `(choice index, reason)`, at most
+  `engine.LOCK_MAX` (2), in event order. A choice is listed when the only things between the pet and it are a `skill`
+  requirement, a `has` item, `money` or its price; any other failing requirement (role, cast, flag, age…) keeps it hidden.
+  Reasons read «потрібно 🧠 40 (зараз 31)», «потрібна річ: 🗡 Шабля», «потрібно 900 ₴ (є 120)», «бракує 300 ₴»; several
+  failures are joined with «; ». Show each as a disabled «🔒 {p.button(e, i, other)}» with the reason under it; never pass
+  the index to `resolve` (the pet cannot pick it: `options` does not contain it). `Pet.locked` keeps its old money-only
+  shape `[(idx, ₴ missing)]`. The sandbox and the browser build send `pending.locked = [{i, label, why}]` (it used to be `need`).
+- **Hint.** `Result.hint` is `""` or «🔒 З 🧠 40 тут був би ще один варіант» («З річчю «🗡 Шабля»…», «З 300 ₴ у гаманці…»): after
+  an event that had a locked choice, 1 time in 3, at most once per game day per pet (`pet.flags["_lock_hint"] = game_day`).
+  It is decided from a hash of the pet and the event, so the game's rng stream does not move. Show it as a soft line under the result.
+- Content: `content/gated.py` (`GATED = {event_id: [Choice, …]}`) appends 83 gated choices to existing events (after their
+  old choices, so indexes of saved pending events do not move): 50 behind a skill (`req=dict(skill={"int": 40})`) and 33
+  behind an owned shop item (`req=dict(has="sabre")`). They skip the dice and name the skill or item in the text.
 - Items: `ITEM_SKILL = {item: {skill: n}}` is a small bonus (+2…+5) of an item **while it is worn** (`pet.equipped`); a
   generated `gen:` item gives +1. `Pet.skill(s)` includes it (capped at `ITEM_SKILL_CAP` = +8 per skill, see
   `Pet.item_bonus(s)`); `engine.item_skill(item)` is one item's bonus. `battle.item_stats(item)` →
@@ -62,7 +75,7 @@ out = E.plan(state, pets, last_seen, rng)   # one auto post per pass, within the
 for p in out["dm"] + ([out["target"]] if out["action"] == "event" else []):
     e, other = p.pick_event(pets, rng)
     p.start(e, other)                       # pending; show p.fmt(e.text, other) + p.options(e, other) as buttons
-                                        # (p.locked(e, other) → [(idx, ₴ missing)]: optional greyed-out buttons)
+                                        # (p.locked_why(e, other) → [(idx, reason)]: optional greyed-out buttons; p.locked is the money-only form)
 for p in out["silent"]:
     E.live_silently(p, pets, rng)           # owner away: the pet decides alone, journal only
 # out["action"] == "world" → E.world_start(...); out["expired"] → resolve with p.auto_choice(...)
