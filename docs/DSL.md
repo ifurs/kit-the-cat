@@ -90,7 +90,8 @@ Effects (o(..., **fx)):
   finale=("bus", "good")               the series (season) ends with this ending tag (a key of its `ends`)
   then=(["bus_end_a", "bus_end"], "1y")  a list of ids picks, right now, the first whose req holds (ss= first!);
                                        the last is the fallback (no ss= in its req): the ending depends on the scores
-  # social events only:
+  # social events only (ev(..., date=True) puts a romantic scene into the date pool: /pet_date and the pair's
+  # «not had this date yet» rule; see content/dates.py):
   rel=+10  status="friend|bestie|rival|enemy|crush|partner|ex"  other={...effects for the other pet}
   baby=True                            the couple gets an heir egg (hybrid genes)
   swap_genes=True                      body swap: the bodies (genes and species) change places, the souls stay
