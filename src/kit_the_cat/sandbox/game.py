@@ -7,7 +7,9 @@ amount (`_pass`): salaries, NPC lives, holidays by date, world events. Only the 
 """
 import asyncio
 import random
+import secrets
 import time
+from collections import OrderedDict
 from dataclasses import asdict
 
 from .. import battle as B
@@ -19,6 +21,7 @@ from ..content.economy import FOOD, JOBS
 from ..storage import MemoryStore
 
 SANDBOX = -777
+FIGHT_TTL, FIGHT_CAP, DECISION_SECONDS = 600, 32, 20   # paused spars wait this long (s) / at most this many / the UI countdown
 NPC_BASE = 100
 HUMANS = {1: "Ти", 2: "Друг", 3: "Сусідка"}
 NPC_NAMES = ["Тьотя Валя", "Дядько Толік", "Кума Оксана", "Петрович", "Студент Діма", "Баба Галя", "Айтішник Ігор",
@@ -34,6 +37,7 @@ class Sandbox:
         self.offset = 0.0
         self.lock = asyncio.Lock()
         self.world_feed: list[str] = []
+        self._fights: OrderedDict[str, dict] = OrderedDict()   # spars paused at the decision: fight id -> state (in memory)
         E.clock = (lambda: time.time() + self.offset) if epoch is None else (lambda: epoch + self.offset)
 
     # --- persistence ---------------------------------------------------------------------------
@@ -104,6 +108,7 @@ class Sandbox:
             traits={E.TRAITS[t]: round(p.traits.get(t, 0), 1) for t in p.top_traits()},
             skills={k: round(p.skills.get(k, 0)) for k in E.SKILLS}, jailed=p.jailed, pending=None,
             genes=sprites.describe(p.genome), dna=sprites.dna_code(p.genome), rarity=sprites.rarity(p.genome)[1],
+            rank=B.rank(p), elo=int(p.flags.get("elo", 1000)),
             gen=p.gen, dynasty=p.dynasty, achievements=[p.ach_name(a) for a in p.achievements[-12:]], heir=bool(p.heir), look=_look_key(p),
             persona=dict(temper=p.temper_name(), dream=p.dream_text(), fear=p.persona.get("fear", "")), emoji=E.SPECIES_EMOJI.get(p.species, "🐾"),
             cast=p.cast_list(), perk=E.perk_text(p), goal_step=p.goal_step(), dream_done=bool(p.flags.get("dream_done")),
@@ -505,28 +510,81 @@ class Sandbox:
 
     # --- battles & tournament -------------------------------------------------------------------
     async def spar(self, owner: int, foe: int, strategy: str) -> dict:
-        """Friendly 1-on-1. Non-lethal; rating counts."""
+        """Friendly 1-on-1. Non-lethal; rating counts. When a fighter first drops below half health the fight pauses
+        (`paused`, `fight`, `tactics`): the caller answers with `spar_tactic`."""
         async with self.lock:
             pets = await self.pets()
+            await self._flush_fights(owner, pets)
             a = next((x for x in pets if x.owner_id == owner), None)
             b = next((x for x in pets if x.owner_id == foe), None)
             if not a or not b or a is b:
                 return dict(error="Обери суперника")
             if not B.eligible(a) or not B.eligible(b):
                 return dict(error="Битися можуть живі пети від підлітка, не в тюрмі й не в лікарні")
-            res = self._battle(a, b, strategy, B.auto_strategy(b, self.rng))
+            fa, fb = B.Fighter.of(a, strategy), B.Fighter.of(b, B.auto_strategy(b, self.rng))
+            chance = B.win_chance(fa, fb)
+            st = B.fight(fa, fb, self.rng, stop_at=B.STOP_AT)
+            if st.done:
+                res = self._after(a, b, st.result, chance)
+            else:
+                for k in [k for k, v in self._fights.items() if time.time() - v["at"] > FIGHT_TTL]:
+                    del self._fights[k]
+                while len(self._fights) >= FIGHT_CAP:
+                    self._fights.popitem(last=False)
+                fid = secrets.token_hex(8)
+                self._fights[fid] = dict(owner=owner, foe=foe, st=st, chance=chance, at=time.time())
+                return dict(owners=[a.owner_id, b.owner_id], paused=True, fight=fid, log=st.log, fighters=st.info(),
+                            low=st.low, chance=round(chance, 3), seconds=DECISION_SECONDS,
+                            tactics=[(k, *v) for k, v in B.TACTICS.items()])
             await self.save(a, b)
         return res
 
+    async def spar_tactic(self, owner: int, fight: str, tactic: str) -> dict:
+        """The decision of a paused spar. The fight id is single-use and belongs to the player who started it;
+        the opponent picks its own tactic. Returns the rest of the fight (`log` holds only the new lines, from `from`)."""
+        tactic = tactic or B.HOLD
+        if tactic != B.HOLD and tactic not in B.TACTICS:
+            return dict(error="Невідома тактика")
+        async with self.lock:
+            ent = self._fights.get(fight)
+            if not ent or ent["owner"] != owner:
+                return dict(error="Цей бій уже скінчився")
+            del self._fights[fight]   # single use
+            pets = await self.pets()
+            a = next((x for x in pets if x.owner_id == owner), None)
+            b = next((x for x in pets if x.owner_id == ent["foe"]), None)
+            if not a or not b or not B.eligible(a) or not B.eligible(b):
+                return dict(error="Суперник вибув із бою")
+            st, n = ent["st"], len(ent["st"].log)
+            r = B.resume(st, tactic, B.auto_tactic(st.fighters[1]), self.rng)
+            res = self._after(a, b, r, ent["chance"])
+            res.update(log=r.log[n:], **{"from": n})
+            await self.save(a, b)
+        return res
+
+    async def _flush_fights(self, owner: int, pets: list[E.Pet]) -> None:
+        """A decision nobody answered (the page was closed): the old spar is finished without a tactic."""
+        for fid in [k for k, v in self._fights.items() if v["owner"] == owner]:
+            ent = self._fights.pop(fid)
+            a = next((x for x in pets if x.owner_id == owner), None)
+            b = next((x for x in pets if x.owner_id == ent["foe"]), None)
+            if a and b and B.eligible(a) and B.eligible(b):
+                st = ent["st"]
+                self._after(a, b, B.resume(st, B.HOLD, B.auto_tactic(st.fighters[1]), self.rng), ent["chance"])
+                await self.save(a, b)
+
     def _battle(self, a: E.Pet, b: E.Pet, sa: str, sb: str) -> dict:
         fa, fb = B.Fighter.of(a, sa), B.Fighter.of(b, sb)
-        chance = B.win_chance(fa, fb)
-        r = B.fight(fa, fb, self.rng)
+        return self._after(a, b, B.fight(fa, fb, self.rng), B.win_chance(fa, fb))
+
+    def _after(self, a: E.Pet, b: E.Pet, r: B.BattleResult, chance: float) -> dict:
+        """Apply the consequences of a finished fight; the dict the UI shows (what the fight gave, the record)."""
         w, l = (a, b) if r.winner == 0 else (b, a)
-        wn, ln = B.aftermath(w, l, self.rng)
+        wn, ln = B.aftermath(w, l, self.rng, surrender=r.surrendered >= 0)
         return dict(owners=[a.owner_id, b.owner_id], winner=[a.owner_id, b.owner_id][r.winner], rounds=r.rounds,
-                    log=r.log, fighters=r.fighters, text=r.text, chance=round(chance, 3),
-                    notes={w.owner_id: wn, l.owner_id: ln})
+                    log=r.log, fighters=r.fighters, text=r.text, chance=round(chance, 3), highlights=r.highlights,
+                    surrendered=r.surrendered, notes={w.owner_id: wn, l.owner_id: ln},
+                    rec={p.owner_id: dict(elo=int(p.flags["elo"]), rank=B.rank(p), line=B.record(p)) for p in (a, b)})
 
     async def tour_view(self, owner: int) -> dict:
         st = await self._state()
@@ -536,7 +594,7 @@ class Sandbox:
         out = dict(tour=None, eligible=sum(B.eligible(p) for p in pets.values()),
                    history=st.get("tour_hist", [])[-5:][::-1], strategies=[(k, *v) for k, v in B.STRATEGIES.items()],
                    my_strategy=(t or {}).get("strategies", {}).get(str(owner), ""),
-                   me=dict(elo=me.flags.get("elo", 1000), wins=me.flags.get("wins", 0),
+                   me=dict(elo=me.flags.get("elo", 1000), rank=B.rank(me), line=B.record(me), wins=me.flags.get("wins", 0),
                            losses=me.flags.get("losses", 0), money=int(me.money)) if me else None)
         if not t:
             return out
@@ -735,9 +793,7 @@ class Sandbox:
         if not champ:
             return None
         second = next((o for o in final if o and o != champ_id), 0)
-        champ.apply(dict(money=t["prize"], item="crown@9", mood=30, xp=40, cha=2), None, self.rng)
-        champ.ach("Чемпіон турніру")
-        champ.flags["titles"] = champ.flags.get("titles", 0) + 1
+        B.crown(champ, t["prize"], self.rng)
         champ.note("battle", f"🏆 {champ.name} — ЧЕМПІОН ТУРНІРУ! +{t['prize']} ₴ і золота корона")
         if by.get(second):
             s2 = by[second]

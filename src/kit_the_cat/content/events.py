@@ -15,6 +15,7 @@ from .arcs_adult import ARCS_ADULT
 from .arcs_soul import ARCS_SOUL
 from .arcs_week_20261029 import ARCS_WEEK_20261029
 from .arcs_week_20261102 import ARCS_WEEK_20261102
+from .arena import ARENA
 from .cast_home import HOME
 from .cast_town import TOWN
 from .chains import CHAINS
@@ -40,7 +41,7 @@ DEFAULT_TIME = [(DAILY, "3d"), (LIFE, "1m"), (CHAINS, "3m"), (JOBS_LIFE, "1m"), 
                 (TWISTS, "1m"), (STATUS, "1m"), (CONSEQUENCES, "2w"), (ARCS_YOUNG, "1m"), (ARCS_ADULT, "1m"),
                 (ARCS_SOUL, "1m"), (DREAMS_CONTENT, "3m"), (HEALTH, "1w"),
                 (ARCS_WEEK_20261029, "1m"), (ARCS_WEEK_20261102, "1m"), (HOLIDAY_EVENTS, "2d"), (AGES, "1m"), (YOUTH, "1m"), (STORIES, "1d"), (STORIES_MORE, "1d"), (STORIES_TV, "1d"),
-                (HOME, "1m"), (TOWN, "1m"), (SERIES_CONTENT, "1m")]
+                (HOME, "1m"), (TOWN, "1m"), (SERIES_CONTENT, "1m"), (ARENA, "1w")]
 ALL = [e for events, _ in DEFAULT_TIME for e in events]
 _guard_family(ALL)
 CHOICE_TIME = {

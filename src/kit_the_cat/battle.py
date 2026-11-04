@@ -55,6 +55,9 @@ HITS = {
 WIN_LINES = ["{w} {переміг|перемогла}! {l} лежить і рахує зірочки.", "Нокаут! {w} — справжн{ій боєць|я бійчиня}.",
              "{l} здається й просить шаурму. {w} перемагає.", "Суддя зупиняє бій: {w} забирає перемогу.",
              "{w} виграє. Глядачі кидають на ринг вареники."]
+SURRENDER_LINES = ["{l} кидає на ринг білий рушник. {w} забирає перемогу без зайвих синців.",
+                   "{l} каже «досить» і просить пиріжок. {w} перемагає.",
+                   "Бій зупинено: {l} {other:вирішив|вирішила} берегти здоров'я. Перемагає {w}."]
 
 
 @dataclass
@@ -127,9 +130,45 @@ class Fighter:
 class BattleResult:
     winner: int                  # 0 or 1
     rounds: int
-    log: list
-    fighters: list               # [{name, max_hp, hp, strategy, passive, specials, ultimate}]
+    log: list                    # [{r, side, text, hp, k, i}]; k = "" | crit | miss | special | ult | dot | skip | tactic | surrender
+    fighters: list               # [{name, emoji, max_hp, hp, strategy, passive, specials, ultimate, power}]
     text: str = ""
+    highlights: list = field(default_factory=list)   # <= HIGHLIGHTS log entries (same shape, with their log index `i`)
+    surrendered: int = -1        # side that gave up, or -1
+
+
+# --- tactics: the one decision of a fight --------------------------------------------------------------------
+TACTICS = {
+    "allin": ("🔥 Ва-банк", "атака +30%, захист −30%"),
+    "defend": ("🛡 В оборону", "захист +40%, атака −20%"),
+    "surrender": ("🏳 Здатися", "програти зараз і зберегти здоров'я"),
+}
+HOLD = "hold"                  # no change: the default
+STOP_AT = 0.5                  # the fight pauses when a fighter first drops below this share of health
+HIGHLIGHTS = 8
+
+
+@dataclass
+class FightState:
+    """A fight paused at `stop_at` (or finished): `resume()` plays the rest. Plain data, nothing is rolled while paused."""
+    fighters: list
+    log: list
+    order: list
+    rnd: int = 1                 # round being played
+    pos: int = 0                 # index into `order` of the next turn of the round
+    max_rounds: int = 25
+    stop_at: float = 0.0
+    triggered: bool = False      # the pause already happened
+    low: int = -1                # side that fell below `stop_at` first
+    done: bool = False
+    result: "BattleResult | None" = None
+
+    @property
+    def paused(self) -> bool:
+        return not self.done
+
+    def info(self) -> list:
+        return _info(self.fighters)
 
 
 def auto_strategy(p: "E.Pet", rng: random.Random) -> str:
@@ -139,6 +178,24 @@ def auto_strategy(p: "E.Pet", rng: random.Random) -> str:
     by_trait = {"toxic": "aggressive", "party": "aggressive", "patriot": "aggressive", "gambler": "lucky",
             "mystic": "lucky", "dark": "cunning", "love": "careful", "glutton": "careful"}.get(t)
     return by_trait if by_trait and rng.random() < 0.7 else rng.choice(list(STRATEGIES))
+
+
+def auto_tactic(f: "Fighter") -> str:
+    """The mid-fight tactic of an NPC (or an absent owner), from the strategy `auto_strategy` gave it. Never surrenders."""
+    if f.strategy == "aggressive":
+        return "allin"
+    if f.strategy == "careful":
+        return "defend"
+    if f.strategy == "lucky":
+        return "allin" if f.hp < f.max_hp * 0.4 else HOLD
+    return HOLD
+
+
+def _info(fs: list) -> list:
+    return [dict(name=f.name, emoji=E.SPECIES_EMOJI.get(f.species, "🐾"), max_hp=round(f.max_hp),
+                 hp=round(max(0, f.hp)), strategy=STRATEGIES[f.strategy][0],
+                 passive=SPECIES_PASSIVE.get(f.species, ("", ""))[0], specials=[s[1] for s in f.specials],
+                 ultimate=f.ultimate, power=f.power) for f in fs]
 
 
 def _dmg(att: Fighter, de: Fighter, rng: random.Random, mult: float = 1.0, pierce: bool = False,
@@ -160,26 +217,62 @@ def _dmg(att: Fighter, de: Fighter, rng: random.Random, mult: float = 1.0, pierc
     return d, tag
 
 
-def fight(a: Fighter, b: Fighter, rng: random.Random, max_rounds: int = 25) -> BattleResult:
-    fs = [a, b]
-    log: list[dict] = []
+def fight(a: Fighter, b: Fighter, rng: random.Random, max_rounds: int = 25,
+          stop_at: float | None = None) -> "BattleResult | FightState":
+    """Play a fight. One call returns the BattleResult. With `stop_at` (0.5: when a fighter first drops below half
+    of its health) it returns a FightState: paused with `state.paused`, or already finished (`state.result`) when
+    nobody dropped that low. `resume(state, tactic_a, tactic_b, rng)` plays the rest, with the same rng."""
+    st = FightState([a, b], [], [0, 1], max_rounds=max_rounds, stop_at=stop_at or 0.0)
+    _say(st, -1, f"🔔 {a.name} ({STRATEGIES[a.strategy][0]}) проти {inflect(b.name, "gen", b.gender)} ({STRATEGIES[b.strategy][0]})!", "", 0)
+    st.order = [0, 1] if a.spd + rng.random() * 3 >= b.spd + rng.random() * 3 else [1, 0]
+    _run(st, rng)
+    return st if stop_at else st.result
 
-    def say(side: int, text: str) -> None:
-        log.append(dict(r=rnd, side=side, text=text, hp=[round(max(0, a.hp)), round(max(0, b.hp))]))
 
-    rnd = 0
-    say(-1, f"🔔 {a.name} ({STRATEGIES[a.strategy][0]}) проти {inflect(b.name, "gen", b.gender)} ({STRATEGIES[b.strategy][0]})!")
-    order = [0, 1] if a.spd + rng.random() * 3 >= b.spd + rng.random() * 3 else [1, 0]
-    winner = None
-    for rnd in range(1, max_rounds + 1):
-        for i in order:
+def resume(st: FightState, tactic_a: str | None, tactic_b: str | None, rng: random.Random) -> BattleResult:
+    """Finish a paused fight. Tactics: "allin", "defend", "surrender", or None / "hold" for no change."""
+    if st.done:
+        return st.result
+    a, b = st.fighters
+    gave_up = 0 if tactic_a == "surrender" else 1 if tactic_b == "surrender" else -1
+    for side, (f, t) in enumerate(((a, tactic_a), (b, tactic_b))):
+        if gave_up >= 0:
+            break
+        if t == "allin":
+            f.atk, f.dfn = f.atk * 1.3, f.dfn * 0.7
+            _say(st, side, f"🔥 {f.name} іде ва-банк: атака +30%, захист −30%", "tactic")
+        elif t == "defend":
+            f.atk, f.dfn = f.atk * 0.8, f.dfn * 1.4
+            _say(st, side, f"🛡 {f.name} стає в оборону: захист +40%, атака −20%", "tactic")
+    if gave_up >= 0:
+        _say(st, gave_up, f"🏳 {st.fighters[gave_up].name} здається", "surrender")
+        _verdict(st, 1 - gave_up, rng, gave_up)
+    else:
+        _run(st, rng)
+    return st.result
+
+
+def _say(st: FightState, side: int, text: str, kind: str = "", rnd: int | None = None) -> None:
+    a, b = st.fighters
+    st.log.append(dict(r=st.rnd if rnd is None else rnd, side=side, text=text, k=kind, i=len(st.log),
+                       hp=[round(max(0, a.hp)), round(max(0, b.hp))]))
+
+
+def _run(st: FightState, rng: random.Random) -> None:
+    a, b = st.fighters
+    fs = st.fighters
+    while st.rnd <= st.max_rounds:
+        while st.pos < 2:
+            i = st.order[st.pos]
+            st.pos += 1
             me, foe = fs[i], fs[1 - i]
             if me.hp <= 0 or foe.hp <= 0:
                 continue
+            say = lambda side, text, kind="": _say(st, side, text, kind)  # noqa: E731
             # start of turn: damage over time, regeneration, timers
             for dot in me.dot:
                 me.hp -= dot[0]
-                say(i, f"💀 Прокляття гризе {inflect(me.name, "acc", me.gender)}: −{dot[0]:.0f}")
+                say(i, f"💀 Прокляття гризе {inflect(me.name, "acc", me.gender)}: −{dot[0]:.0f}", "dot")
             me.dot = [(d, t - 1) for d, t in me.dot if t > 1]
             if me.species == "axolotl" and me.hp > 0:
                 heal = me.max_hp * 0.03
@@ -189,37 +282,77 @@ def fight(a: Fighter, b: Fighter, rng: random.Random, max_rounds: int = 25) -> B
             for k in list(me.cd):
                 me.cd[k] = max(0, me.cd[k] - 1)
             if me.hp <= 0:
+                st.pos = 2
                 break
             if me.stun:
                 me.stun -= 1
-                say(i, f"😵 {me.name} пропускає хід")
+                say(i, f"😵 {me.name} пропускає хід", "skip")
                 continue
             _act(me, foe, i, rng, say)
             if foe.hp <= 0 and foe.role == "zombie" and not foe.revived:
                 foe.revived = True
                 foe.hp = foe.max_hp * 0.3
-                say(1 - i, f"🧟 {foe.name} встає з мертвих! (ще {foe.hp:.0f})")
+                say(1 - i, f"🧟 {foe.name} встає з мертвих! (ще {foe.hp:.0f})", "special")
+            if st.stop_at and not st.triggered and a.hp > 0 and b.hp > 0:
+                low = [s for s in (0, 1) if fs[s].hp < fs[s].max_hp * st.stop_at]
+                if low:  # the decision point: pause here (nothing is rolled)
+                    st.triggered, st.low = True, low[0] if len(low) == 1 else i
+                    return
         if a.hp <= 0 or b.hp <= 0:
-            winner = 0 if b.hp <= 0 else 1
-            break
+            return _verdict(st, 0 if b.hp <= 0 else 1, rng)
+        st.rnd, st.pos = st.rnd + 1, 0
+    st.rnd = st.max_rounds
+    _verdict(st, None, rng)
+
+
+def _verdict(st: FightState, winner: int | None, rng: random.Random, gave_up: int = -1) -> None:
+    a, b = st.fighters
     if winner is None:  # judges' decision
         winner = 0 if a.hp / a.max_hp >= b.hp / b.max_hp else 1
-        say(-1, "⏱ Час вийшов — рішення суддів за відсотком здоров'я")
-    w, l = fs[winner], fs[1 - winner]
-    text = pick(rng.choice(WIN_LINES), w.gender, l.gender).format(w=w.name, l=l.name)
-    say(winner, f"🏆 {text}")
-    info = [dict(name=f.name, max_hp=round(f.max_hp), hp=round(max(0, f.hp)), strategy=STRATEGIES[f.strategy][0],
-                 passive=SPECIES_PASSIVE.get(f.species, ("", ""))[0], specials=[s[1] for s in f.specials],
-                 ultimate=f.ultimate, power=f.power) for f in fs]
-    return BattleResult(winner, rnd, log, info, text)
+        _say(st, -1, "⏱ Час вийшов — рішення суддів за відсотком здоров'я")
+    w, l = st.fighters[winner], st.fighters[1 - winner]
+    text = pick(rng.choice(SURRENDER_LINES if gave_up >= 0 else WIN_LINES), w.gender, l.gender).format(w=w.name, l=l.name)
+    _say(st, winner, f"🏆 {text}")
+    st.done = True
+    st.result = BattleResult(winner, st.rnd, st.log, _info(st.fighters), text, _highlights(st.log, [a.max_hp, b.max_hp]), gave_up)
+
+
+def _highlights(log: list, max_hp: list, limit: int = HIGHLIGHTS) -> list:
+    """The lines worth reading: the opening, the turning point (the last time the lead changed), crits, specials and
+    ultimates (biggest swings first), the finishing blow and the verdict. At most `limit` entries, in order."""
+    n = len(log)
+    if n <= limit:
+        return list(log)
+    keep = {0, n - 1, n - 2}   # opening, finishing blow, verdict
+    lead, flip = 0, None
+    for e in log:
+        d = e["hp"][0] / max_hp[0] - e["hp"][1] / max_hp[1]
+        now = 1 if d > 0.02 else -1 if d < -0.02 else 0
+        if now and lead and now != lead:
+            flip = e["i"]
+        lead = now or lead
+    if flip is not None:
+        keep.add(flip)
+    swing = lambda i: sum(abs(x - y) for x, y in zip(log[i - 1]["hp"], log[i]["hp"])) if i else 0  # noqa: E731
+    rank = {"ult": 3, "surrender": 3, "special": 2, "crit": 1}
+    cands = sorted((e["i"] for e in log if e["k"] in rank and e["i"] not in keep), key=lambda i: (-rank[log[i]["k"]], -swing(i), i))
+    for i in cands:
+        if len(keep) >= limit:
+            break
+        keep.add(i)
+    for i in sorted((e["i"] for e in log if e["i"] not in keep), key=lambda i: (-swing(i), i)):
+        if len(keep) >= min(5, limit):  # a quiet fight still gets a few lines
+            break
+        keep.add(i)
+    return [log[i] for i in sorted(keep)]
 
 
 def _act(me: Fighter, foe: Fighter, i: int, rng: random.Random, say) -> None:
     # ultimate: once per battle, when it matters
-    named = lambda side, text: say(side, f"{me.name} → {text}")  # specials always say who did it
+    named = lambda side, text: say(side, f"{me.name} → {text}", "special")  # specials always say who did it
     if me.ultimate and not me.ult_used and (me.hp < me.max_hp * 0.5 or rng.random() < 0.15):
         me.ult_used = True
-        return _ultimate(me, foe, i, rng, named)
+        return _ultimate(me, foe, i, rng, lambda side, text: say(side, f"{me.name} → {text}", "ult"))
     ready = [s for s in me.specials if me.cd.get(s[0], 0) == 0]
     if me.strategy == "careful" and me.hp < me.max_hp * 0.35 and rng.random() < 0.45:
         heal = me.max_hp * 0.15
@@ -232,11 +365,11 @@ def _act(me: Fighter, foe: Fighter, i: int, rng: random.Random, say) -> None:
     d, tag = _dmg(me, foe, rng)
     verb = rng.choice(HITS.get(me.species, ["б'є"]))
     if tag == "dodge":
-        return say(i, f"💨 {me.name} {verb}, але {foe.name} ухиляється")
+        return say(i, f"💨 {me.name} {verb}, але {foe.name} ухиляється", "miss")
     foe.hp -= d
     if me.species == "fox":
         me.hp = min(me.max_hp, me.hp + d * 0.1)
-    say(i, f"{'💥 КРИТ! ' if tag == 'crit' else ''}{me.name} {verb} → {foe.name} −{d:.0f}")
+    say(i, f"{'💥 КРИТ! ' if tag == 'crit' else ''}{me.name} {verb} → {foe.name} −{d:.0f}", tag)
 
 
 def _special(me: Fighter, foe: Fighter, i: int, trait: str, name: str, rng: random.Random, say) -> None:
@@ -349,16 +482,73 @@ def update_elo(win: "E.Pet", lose: "E.Pet", k: float = 32) -> int:
     return delta
 
 
-def aftermath(win: "E.Pet", lose: "E.Pet", rng: random.Random) -> tuple[list[str], list[str]]:
-    """Non-lethal consequences of a battle. Returns effect notes (winner, loser)."""
+# --- the arena as a part of life: rank, record, rewards --------------------------------------------------------
+RANKS = [(1300, "Легенда арени"), (1150, "Гроза району"), (1050, "Боєць"), (0, "Новачок")]   # by Elo, highest first
+ACH_WINS = {5: "Бійцівський клуб", 20: "Гроза району", 50: "Непереможний"}
+ARENA_FLAGS = ("arena_vet", "arena_champ")   # set by the engine below; content/arena.py events ask for them
+FAME_WIN, FAME_TITLE = 1, 5     # fame (life stat: from tier 2 it pays «реклама» daily) per win / per tournament title
+
+
+def rank(p: "E.Pet") -> str:
+    """Arena rank by Elo: Новачок < 1050 <= Боєць < 1150 <= Гроза району < 1300 <= Легенда арени (shown as «🥊 Боєць»)."""
+    elo = float(p.flags.get("elo", 1000))
+    return next(name for floor, name in RANKS if elo >= floor)
+
+
+def _plural(n: int, one: str, few: str, many: str) -> str:
+    return one if n % 10 == 1 and n % 100 != 11 else few if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14 else many
+
+
+def next_goal(p: "E.Pet") -> tuple[int, str] | None:
+    """(wins left, achievement) for the next arena achievement, or None when they are all won."""
+    wins = int(p.flags.get("wins", 0))
+    return next(((t - wins, name) for t, name in sorted(ACH_WINS.items()) if t > wins), None)
+
+
+def record(p: "E.Pet") -> str:
+    """«🥊 4–1 · ще 1 перемога до «Бійцівський клуб»»."""
+    line = f"🥊 {int(p.flags.get('wins', 0))}–{int(p.flags.get('losses', 0))}"
+    goal = next_goal(p)
+    if goal:
+        line += f" · ще {goal[0]} {_plural(goal[0], 'перемога', 'перемоги', 'перемог')} до «{goal[1]}»"
+    return line
+
+
+def _pretty(note: str) -> str:
+    """«😊+10» → «😊 +10», «❤️-8» → «❤️ −8» (notes of `apply` are tight)."""
+    if " " in note:
+        return note
+    for i, ch in enumerate(note):
+        if ch in "+-" and i and note[i + 1:i + 2].isdigit():
+            return f"{note[:i]} {note[i:].replace('-', '−')}"
+    return note
+
+
+def aftermath(win: "E.Pet", lose: "E.Pet", rng: random.Random, surrender: bool = False) -> tuple[list[str], list[str]]:
+    """Non-lethal consequences of a battle: rating, XP, mood, strength, fame for the winner; mood and health for the
+    loser (a fighter who surrendered keeps the health). Returns the effect notes (winner, loser)."""
     delta = update_elo(win, lose)
-    wn = win.apply(dict(mood=10, xp=8, str=0.5), None, rng)
-    ln = lose.apply(dict(mood=-10, health=-8, xp=3), None, rng)
+    wn = win.apply(dict(mood=10, xp=8, str=0.5, fame=FAME_WIN), None, rng)
+    ln = lose.apply(dict(mood=-10, xp=3) if surrender else dict(mood=-10, health=-8, xp=3), None, rng)
     win.note("battle", f"🥊 {win.name} {win.g('переміг', 'перемогла')} {inflect(lose.name, "acc", lose.gender)} (рейтинг +{delta})")
     lose.note("battle", f"🥊 {lose.name} {lose.g('програв', 'програла')} {inflect(win.name, "dat", win.gender)} (рейтинг −{delta})")
-    if win.flags["wins"] in (5, 20, 50):
-        win.ach({5: "Бійцівський клуб", 20: "Гроза району", 50: "Непереможний"}[win.flags["wins"]])
-    return wn + [f"🏅 +{delta}"], ln + [f"🏅 −{delta}"]
+    if win.flags["wins"] in ACH_WINS:
+        win.ach(ACH_WINS[win.flags["wins"]])
+    if win.flags["wins"] >= 5:
+        win.flags["arena_vet"] = 1   # opens the events of a known fighter (content/arena.py)
+    nbsp = "\u00a0"
+    pre = lambda p, d, xp: [f"🏅 Elo {d:+d} ({int(p.flags['elo']):,})".replace("-", "−").replace(",", nbsp), f"⭐ +{xp} XP"]  # noqa: E731
+    return (pre(win, delta, 8) + [_pretty(n) for n in wn],
+            pre(lose, -delta, 3) + [_pretty(n) for n in ln] + (["🏳 без травм"] if surrender else []))
+
+
+def crown(champ: "E.Pet", prize: int, rng: random.Random) -> list[str]:
+    """A tournament title: the prize, the golden crown, charisma, fame, and the flag that opens the champion's events."""
+    notes = champ.apply(dict(money=prize, item="crown@9", mood=30, xp=40, cha=2, fame=FAME_TITLE), None, rng)
+    champ.ach("Чемпіон турніру")
+    champ.flags["titles"] = champ.flags.get("titles", 0) + 1
+    champ.flags["arena_champ"] = 1
+    return notes
 
 
 def eligible(p: "E.Pet") -> bool:

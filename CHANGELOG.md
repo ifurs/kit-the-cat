@@ -5,6 +5,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **A readable arena fight.** The log now plays at 1.1 s a line (1.6 s for a crit, a special or an ultimate, 0.7 s for a
+  miss), the key lines are bold, the HP bars glide, a ticker under them shows «Раунд 4 · 🐷 63 ❤️ · 🐱 41 ❤️», and
+  «⏸ Пауза», «⏩ ×2» (remembered) and «⏭ До фіналу» (only the highlights) sit under the log. `BattleResult.highlights`
+  (≤ 8 log entries: the opening, the last lead change, crits, specials, ultimates, the finishing blow, the verdict);
+  log entries have a kind `k` (`crit`, `miss`, `special`, `ult`, `dot`, `skip`, `tactic`, `surrender`) and an index `i`.
+- **One decision mid-fight.** `battle.fight(a, b, rng, stop_at=0.5)` returns a `FightState` when a fighter first
+  drops below half health and `battle.resume(state, tactic_a, tactic_b, rng)` plays the rest: «🔥 Ва-банк» (attack +30%,
+  defence −30%), «🛡 В оборону» (defence +40%, attack −20%), «🏳 Здатися» (lose now, keep the health). The old one-call
+  `fight()` is unchanged; `auto_tactic(fighter)` is what NPCs pick. The sandbox pauses a spar for 20 s (`spar_tactic`;
+  the fight id is single-use and belongs to the player who started the spar).
+- **A reason to fight.** The result screen lists everything the fight gave (Elo with the new total, XP, strength, mood,
+  fame; health for the loser) and the record with the next achievement. `battle.rank(p)` (Новачок / Боєць / Гроза
+  району / Легенда арени by Elo), `battle.record(p)`, `battle.next_goal(p)`; the rank is on the pet card. A win gives
+  fame +1 (from tier 2 fame pays «реклама» every day), five wins set the flag `arena_vet`, a tournament title
+  (`battle.crown`) gives fame +5 and the flag `arena_champ`.
+- **6 arena events** (`content/arena.py`): a sports-drink ad, a kid from the yard, a rival at the market, a local
+  paper interview, a fan club of two grandmothers, an old coach (for `arena_vet` / `arena_champ`).
+
 ## [0.19.1] — 2026-11-04
 
 ### Fixed
