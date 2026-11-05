@@ -32,7 +32,6 @@ CHECKS = {
     "mama-adult": "«Покликати маму» offered at 25+",
     "fract-money": "fractional money in notes",
     "girl-zastryah": "«застряг» about a girl pet",
-    "lifespan>105": "pet lived past 105",
 }
 
 
@@ -56,8 +55,6 @@ def scan(path: Path, hits: dict) -> int:
                 hits["romance-minor"].append(f"{where} [{ev}] з {other} ({oage} р.)")
         body = line.startswith(("ПОДІЯ", "ВАРІАНТИ", "ВИБІР", "РЕЗУЛЬТАТ", "ХВІСТ", "  · [event]", "  · [social]"))
         if not body:
-            if line.startswith("КІНЕЦЬ") and (m := re.search(r"(\d+) р\.", line)) and int(m[1]) > 105:
-                hits["lifespan>105"].append(f"{path.name}: {line[:90]}")
             continue
         if age < 18 and BOOZE.search(line):
             hits["booze<18"].append(f"{where} [{ev}] {line[:140]}")

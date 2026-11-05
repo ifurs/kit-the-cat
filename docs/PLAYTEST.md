@@ -22,7 +22,7 @@ uv run python scripts/playtest_checks.py build/lives --strict --examples 3
 ```
 `--strict` fails on the exact checks (romance across the line, the debt lock text, «Покликати маму» for grown-ups,
 fractional money). The word-based ones (alcohol under 18, school under 3, work words without a job, a «never met» event
-with an acquaintance, lifespans over 105) are leads: read the examples. The static side of the same rules is
+with an acquaintance) are leads: read the examples. The static side of the same rules is
 `scripts/integrity_audit.py --static` (grown-up words under 18 across events and tails, work words, school ages).
 
 ## 3. LLM read (optional, for things a regex can't see)
@@ -31,7 +31,7 @@ Cheap model per 2 journals (~30k tokens each), then a stronger model verifies ev
 and the source and clusters them by root cause. Expect ~30–40 % precision from the cheap pass: the verification step is
 not optional. Brief for the cheap pass (what to flag): age (kids offered alcohol, a job, a mortgage, marriage; grown-ups
 sent to school), gender of the pet or the other pet, state contradictions (a spouse with «пара: —», work with «робота:
-—»), relationships (an enemy treated as a best friend, «вперше зустрічає» twice), choice ↔ result, time & lifespan,
+—»), relationships (an enemy treated as a best friend, «вперше зустрічає» twice), choice ↔ result, time,
 repetition (3+ times in a life or < 5 years apart), broken text (`{…}`, unresolved `|`, russisms).
 
 Known false positives to tell it about:
@@ -41,4 +41,5 @@ Known false positives to tell it about:
 - an amount in the text vs the note differs by < 25 % (the financial-literacy discount);
 - fractional life-stat notes («📈+2.2»), builtin ids starting with `_` (`_date`, `_fight`), dark/absurd humour, the war
   context, fantasy roles — all by design;
-- an NPC's age may drift a little against the pet's (NPCs pay the time of their own decisions).
+- an NPC's age may drift a little against the pet's (NPCs pay the time of their own decisions);
+- long lives (110–135 years from stacked species/undead/«безсмертя» bonuses) are by design: there is no cap.
