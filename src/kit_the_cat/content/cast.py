@@ -17,6 +17,9 @@ CAST = {
     "bohdan": dict(name="пан Богдан", who="старший колега", icon="🧑‍💼", gender="m"),
     "myron": dict(name="сусід Мирон", who="майстер із гаражу", icon="🔧", gender="m"),
     "solomiya": dict(name="Соломія Андріївна", who="вчителька", icon="📚", gender="f"),
+    "iryna": dict(name="пані Ірина", who="бібліотекарка з районної бібліотеки", icon="📖", gender="f"),
+    "petro": dict(name="дід Петро", who="голуб'ятник із даху дев'ятиповерхівки", icon="🕊", gender="m"),
+    "yaroslav": dict(name="Ярослав Іванович", who="краєзнавець і сторож музею", icon="🗺", gender="m"),
 }
 
 # (lowest bond, how the relationship is called), read from the top

@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.22.1] — 2026-11-07
+
+### Added
+- **Three new recurring characters, each with a quest** (`content/quests.py`, 27 events): пані Ірина, бібліотекарка
+  («Бібліотека на Райдужній»: readers, a flood, the district council, money for the roof), дід Петро, голуб'ятник
+  («Голуби з даху»: find the champion Сизий, train him, save the dovecote from the ОСББ, the race) and Ярослав
+  Іванович, краєзнавець («Карта 1912 року»: a map, a dig permit, a time capsule of 1912, the letter's descendants).
+  A quest is a series: episodes months apart, «📺 Раніше», three endings by the hidden scores and a coda years later.
+  It starts only for a pet who met the character and did not fall out with them; баба Галя, Мирон, лікар Остап and
+  Соломія Андріївна open extra choices on the way, a drone opens a 🔒 choice. In 100 playtest lives about a quarter
+  meet each of the pigeon and the map quests and one in ten the library one.
+
+### Changed
+- `scripts/playtest_checks.py`: no lifespan>105 lead — long lives are by design.
+
 ## [0.22.0] — 2026-11-05
 
 ### Fixed (an automated playtest: 140 whole lives, journals read by Haiku, findings verified by Sonnet and by scripts)
@@ -693,7 +708,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.22.1...HEAD
+[0.22.1]: https://github.com/ifurs/kit-the-cat/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/ifurs/kit-the-cat/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/ifurs/kit-the-cat/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/ifurs/kit-the-cat/compare/v0.19.1...v0.20.0

@@ -7,7 +7,8 @@ Kit the Cat: the pet life-sim of the Ukrainian Telegram bot «Кошеня», as
 - `engine.py` — Pet (JSON document), years/ageing (decisions cost time), automatic upkeep, life stats with tiers
   (`LIFE`, `MONEY_TIERS`), events, effects, roles, world events, economy, casino, scheduling plan
 - `content/` — 360 life events in a tiny DSL (`status.py`: life-stat events); `content/dsl.py` is the contract (KNOWN_FX / KNOWN_REQ) the engine implements;
-  `content/cast.py` + `cast_home.py` / `cast_town.py` — the recurring characters (bonds, away/back) and their events
+  `content/cast.py` + `cast_home.py` / `cast_town.py` — the recurring characters (bonds, away/back) and their events;
+  `content/quests.py` — the characters' quests (series that start for a pet who knows the character)
   `content/social.py` + `social_more.py` — two-pet events (kids, teens, strangers, friends, foes, couples, exes, holidays)
   `content/modern.py` — modern everyday life («Аврора», Threads, ШІ-чат, підписки); `content/family.py` — the age limits
   of parents and grandparents (an event about a living mother closes at 50 years)
