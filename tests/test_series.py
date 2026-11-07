@@ -12,7 +12,8 @@ from kit_the_cat.content.series import SERIES
 from test_perks_dreams_health import _pet
 
 ROOTS = {e.series: e for e in ALL if e.series and not e.followup}
-STAGE = {"hut": (1, 7.0), "bottle": (2, 15.0), "cafe": (3, 30.0), "route": (3, 40.0)}
+STAGE = {"hut": (1, 7.0), "bottle": (2, 15.0), "cafe": (3, 30.0), "route": (3, 40.0),
+         "lib": (2, 13.0), "dove": (1, 9.0), "map": (2, 15.0)}
 
 
 def _play(sid: str, seed: int, adult_coda: bool = True) -> tuple[E.Pet, list[E.Result]]:

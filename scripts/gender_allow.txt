@@ -71,3 +71,8 @@
 Потім сказав: «Старий звик. | about a recurring character (content/cast.py), not the pet
 {Вийшов|Вийшла} до лісника, той налив ча | somebody else is the subject (a character, an object, a speaker)
 Схопити, поки не втік | somebody else is the subject (a character, an object, a speaker)
+На прощання дід дав потримати Сизого. | somebody else is the subject, or the word is not about the pet
+Камера дрона знайшла Сизого за дві хвили | somebody else is the subject, or the word is not about the pet
+«Колись», — погодився Ярослав Іванович. | somebody else is the subject, or the word is not about the pet
+депутатів переконав графік відвідувань | somebody else is the subject, or the word is not about the pet
+Архів дав три прізвища й жодної адреси. | somebody else is the subject, or the word is not about the pet
