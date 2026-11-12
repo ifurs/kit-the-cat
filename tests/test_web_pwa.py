@@ -72,3 +72,9 @@ def test_save_file_restore_rejects_garbage_and_keeps_the_game():
         assert await bridge.restore(good) and bridge.dump() == good
         assert json.loads(await bridge.call("state", 1))
     asyncio.run(go())
+
+
+def test_worker_never_waits_for_the_cache_before_giving_the_page():
+    """`await cache.put(x, res.clone())` before returning `res` hangs Chrome on a big page: an endless load after a deploy."""
+    sw = (build_web.WEB / "sw.js").read_text()
+    assert "await cache.put" not in sw and "e.waitUntil(cache.put(" in sw

@@ -3,7 +3,6 @@
 {Кіборг|Кіборгиня} {name} {помітив|поміт | somebody else is the subject (a character, an object, a speaker)
 {Програв|Програла} кандидату, що роздава | somebody else is the subject, or the word is not about the pet
 «Я гаманець вдома {забув|забула}» | common-gender or non-gendered noun/adjective (or not about the pet)
-Бабця зітхнула: «Бракований». | somebody else is the subject, or the word is not about the pet
 Директор вражений настільки, що підвищив | somebody else is the subject, or the word is not about the pet
 Довести, що ти аксолотль | common-gender or non-gendered noun/adjective (or not about the pet)
 Кава, бруківка, нові друзі й картина, як | somebody else is the subject, or the word is not about the pet
@@ -31,7 +30,6 @@
 Ти — архангел на пів ставки! | common-gender or non-gendered noun/adjective (or not about the pet)
 Ти — геній. | common-gender or non-gendered noun/adjective (or not about the pet)
 Ти — кіборг! | common-gender or non-gendered noun/adjective (or not about the pet)
-Ти — обслуговуючий персонал. | common-gender or non-gendered noun/adjective (or not about the pet)
 Ти — тімлід. | common-gender or non-gendered noun/adjective (or not about the pet)
 У майбутньому ти — кіборг. | common-gender or non-gendered noun/adjective (or not about the pet)
 У склепі вже ховався інший сторож. | somebody else is the subject, or the word is not about the pet
@@ -76,3 +74,22 @@
 «Колись», — погодився Ярослав Іванович. | somebody else is the subject, or the word is not about the pet
 депутатів переконав графік відвідувань | somebody else is the subject, or the word is not about the pet
 Архів дав три прізвища й жодної адреси. | somebody else is the subject, or the word is not about the pet
+З підрозділу приїхав у відпустку боєць і | somebody else is the subject (a character, an object, a speaker)
+Табличку теж лишив: вона, каже, не твоя, | somebody else is the subject (a character, an object, a speaker)
+Пан Василь пішов додому з направленням у | somebody else is the subject (a character, an object, a speaker)
+І ще одну банку, щоб не ображався. | somebody else is the subject (a character, an object, a speaker)
+Чашку, «з якої пив увесь склад», купили | somebody else is the subject (a character, an object, a speaker)
+Переміг лот «оселедець». | somebody else is the subject (a character, an object, a speaker)
+Вийшов голова ОСББ і попросив не гупати. | somebody else is the subject (a character, an object, a speaker)
+Купив дід під Житомиром для дачі. | somebody else is the subject (a character, an object, a speaker)
+Спина хруснула так, що почув увесь зал. | somebody else is the subject (a character, an object, a speaker)
+І дідуся, що з'їв магніт. | somebody else is the subject (a character, an object, a speaker)
+А зранку написав відгук на 2 сторінки. | somebody else is the subject (a character, an object, a speaker)
+Але подивився в очі й не зміг. | somebody else is the subject (a character, an object, a speaker)
+Віддав сам — ще й чаю налив. | somebody else is the subject (a character, an object, a speaker)
+А тоді пішов у поліцію. | somebody else is the subject (a character, an object, a speaker)
+{name} {відкрив|відкрила} пляшку «Моршин | somebody else is the subject (a character, an object, a speaker)
+Лизнув — і тепер ти вовкулака! | somebody else is the subject (a character, an object, a speaker)
+Мем живе своїм життям, ти — своїм. | somebody else is the subject (a character, an object, a speaker)
+На прощання подарував чарівну паличку. | somebody else is the subject (a character, an object, a speaker)
+» Відібрав два роки життя за нахабство. | somebody else is the subject (a character, an object, a speaker)

@@ -7,6 +7,7 @@ The page embeds the game's Python sources (the kit_the_cat package + web/bridge.
 published next to it under pyodide/. Nothing else is fetched.
 """
 import argparse
+import base64
 import hashlib
 import io
 import json
@@ -57,7 +58,15 @@ def sources() -> dict[str, str]:
             continue  # dev tools / aiohttp server: not needed in the browser
         out[f"kit_the_cat/{rel}"] = p.read_text()
     out["bridge.py"] = (ROOT / "web" / "bridge.py").read_text()
+    out["kit_the_cat/art_bundle.py"] = art_bundle()
     return out
+
+
+def art_bundle() -> str:
+    """The redrawn pictures as a Python module: the page has no assets directory, and an untouched file adds nothing."""
+    from kit_the_cat import art
+    files = {rel: base64.b64encode((art.ROOT / rel).read_bytes()).decode() for rel in art.redrawn_files()}
+    return f"DATA = {json.dumps(files)}\n"
 
 
 def standalone(page: str, pwa: bool = False) -> str:

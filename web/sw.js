@@ -19,11 +19,13 @@ self.addEventListener("activate", e => {
 
 self.addEventListener("message", e => { if (e.data === "SKIP_WAITING") self.skipWaiting(); });
 
-async function pageFirst(req) {  // network with a short timeout, then the cached page
-  const cache = await caches.open(CACHE);
+async function pageFirst(e) {  // network with a short timeout, then the cached page
+  const req = e.request, cache = await caches.open(CACHE);
   try {
     const res = await Promise.race([fetch(req), new Promise((_, no) => setTimeout(() => no(new Error("timeout")), PAGE_TIMEOUT))]);
-    if (res.ok) await cache.put("./", res.clone());
+    // never `await` this: a clone is read in step with the original, so waiting for it before handing the page over
+    // stalls Chrome on a body this big (the 2 MB page), and a returning player gets an endless load after every deploy
+    if (res.ok) e.waitUntil(cache.put("./", res.clone()));
     return res;
   } catch {
     return (await cache.match("./")) || (await cache.match("index.html")) || Response.error();
@@ -42,6 +44,6 @@ self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin) return;  // anything else passes through
   const path = url.pathname.slice(new URL(self.registration.scope).pathname.length);
-  if (req.mode === "navigate" || path === "" || path === "index.html") return e.respondWith(pageFirst(req));
+  if (req.mode === "navigate" || path === "" || path === "index.html") return e.respondWith(pageFirst(e));
   if (PRECACHE.includes(path)) e.respondWith(cacheFirst(req));
 });

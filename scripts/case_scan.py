@@ -1,12 +1,13 @@
 """List the {name} / {other} placeholders that probably stand in the wrong case — a helper for a human, not a judge.
 
     uv run python scripts/case_scan.py              # every suspicious placeholder: file:line: [kind] context
-    uv run python scripts/case_scan.py --strict     # exit 1 on the obvious kind (preposition + {name}); CI gate
+    uv run python scripts/case_scan.py --strict     # exit 1 on the obvious kinds (preposition + {name}, {name} потрібна); CI gate
     uv run python scripts/case_scan.py --all        # also the weak kinds (mid-sentence objects), for a full review
 
 {name} is the nominative. After a preposition, as an object, as a possessor or in a call it needs {name_gen},
 {name_dat}, {name_acc}, {name_ins}, {name_loc} or {name_voc} (see content/dsl.py and grammar.py).
-Kinds: prep (preposition right before the placeholder — always wrong), plural (an impersonal plural verb right
+Kinds: prep (preposition right before the placeholder — always wrong), dat (a word that wants the dative right
+after it: «{name} потрібна»), plural (an impersonal plural verb right
 after it: «{name} запросили»), head (a noun that wants the genitive right before it: «пости {name}»), voc (a
 call: «Ей, {name}!»), mid (the placeholder is neither the start of a clause nor next to a conjunction; may be an
 object or a subject after its verb — read it). `# case-ok` on the line of a string silences it.
@@ -34,6 +35,7 @@ HEADS = ("відео", "фото", "фотка", "фотку", "фотограф
          "мрію", "страх", "борг", "борги", "рахунок", "картка", "картку", "паспорт", "диплом", "лист", "листи")
 PLURAL_VERB = r"\w+(?:ли|лись|ють|уть|ять|мо|ємо|ите)"
 KINDS = {
+    "dat": re.compile(rf"{PH}\s+(?:потрібн\w*|треба|можна|шкода|вистачає|вистачило|бракує|щастить|пощастило)\b"),
     "prep": re.compile(rf"(?<!{W})(?:{'|'.join(PREPS)})\s+{PH}", re.I),
     "plural": re.compile(rf"{PH}\s+(?!і\b|й\b|та\b|з\b|із\b|зі\b|разом\b)(?:не\s+)?{PLURAL_VERB}\b"),
     "head": re.compile(rf"(?<!{W})(?:{'|'.join(HEADS)})\s+{PH}", re.I),
@@ -80,7 +82,7 @@ def main() -> None:
         print(f"{f}:{line}: [{kind}] …{ctx}…")
     counts = {k: sum(1 for h in hits if h[2] == k) for k in (*KINDS, "mid")}
     print(f"# {len(hits)} hits " + " ".join(f"{k}={n}" for k, n in counts.items() if n))
-    if "--strict" in sys.argv and counts["prep"]:
+    if "--strict" in sys.argv and (counts["prep"] or counts["dat"]):
         raise SystemExit(1)
 
 

@@ -9,7 +9,7 @@ import re
 import struct
 import zlib
 
-from . import cardfont, sprites
+from . import art, cardfont, sprites
 from .sprites_core import Canvas
 
 W, SCALE = 264, 3            # logical width and the zoom of every logical pixel (264 × 3 = 792 px wide)
@@ -131,6 +131,11 @@ class Sheet:
         self.y += FH * zoom + 2
 
     def icon(self, name: str, x: int, y: int) -> None:
+        pic = art.load("icons", name)
+        if pic:
+            for (dx, dy), c in pic.frame(0).items():
+                self.px[(x + dx, y + dy)] = c
+            return
         rows, colors = ICONS[name]
         for dy, line in enumerate(rows):
             for dx, ch in enumerate(line):

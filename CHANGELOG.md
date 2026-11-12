@@ -5,6 +5,64 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- **Redrawable art.** `src/kit_the_cat/assets/` holds 295 PNG files: scenes, wearable items, the shapes of shop items, ears,
+  tails, faces, marks, extras, the markers between two pets and the life card's icons. Draw over a file and the bot and
+  the browser build use it; an untouched file changes nothing, the code keeps drawing it. How to: `assets/README.md`.
+  `scripts/art.py` exports the originals and reports what is redrawn or broken; `tests/test_art.py` keeps them in step
+  with the code. Head and body shapes, fur patterns, eyes, role overlays and eggs are still code.
+- Browser and sandbox: pictures in the wardrobe, the bazaar and homes (your pet wearing the thing, or standing in the
+  place); the diary starts with this life's quests, achievements and ancestors.
+- The result of an adventure keeps its picture, and the pet looks happy or sad depending on how it went.
+- Between adventures the pet does something that fits its age, not one line for a whole life.
+- **17 пригод** (`content/arcs_week_20261112.py`): по одній новій для професій, що мали дві (кухар, діджей, лікар, фермер,
+  кур'єр, волонтер, блогер, нічний сторож, екзорцист, покерист), три листопадові (перший сніг, темрява о пів на п'яту,
+  зимова гума) і чотири наслідки через роки (шаурмична з генератором, пан Василь, сусід Степан, аукціон на тепловізор).
+
+### Changed
+- **The arena is a duel in rounds.** A spar is now up to 7 rounds; every round you pick ⚔️ Удар, 🛡 Захист or 🎭 Хитрість
+  (strike beats trick, trick beats guard, guard beats strike), or a named move of the pet's character, or the
+  ultimate of its role. What a move does comes from skills, level and worn things: every button shows the damage to
+  expect, armour blunts strikes but not tricks, and the screen lists the things that count. Before each round the
+  opponent gives itself away with a look that is honest more often for a smart pet (45–80%). The opponent answers
+  a repeated move. New in `battle`: `duel`, `duel_round`, `duel_moves`, `duel_tell`, `auto_move`, `Duel`, `MOVES`,
+  `DUEL`; `fight` / `resume` are unchanged. In a tournament your own pet's match is a duel too («▶ Бій»); the
+  other matches, and everything under «⏭ До фіналу», play by themselves as before. A duel that was left is fought
+  out by the pets: there is no second try. Sandbox API: `spar` returns a duel, `spar_move` plays a round, `t_next`
+  takes `duel: true`; `spar_tactic` is gone.
+- **Scenes step back, the pet stands out.** Outlines in the scenes take the colour of what they outline instead of
+  the pet's dark line, and scene colours are a little calmer.
+- **One frame per screen in adventures.** The story is plain text in the card, a result is marked by a line on the
+  left, choices have no border of their own: no more frame in a frame in a frame.
+- **Phones.** The pet card is a strip (portrait, name, health and mood) until «Докладніше про пета» or the «Пет»
+  button opens it; the tabs stay at the top while scrolling; after a decision the story is on screen without
+  scrolling; larger buttons for choices and tabs.
+- **New look of the pets: chibi.** A big head on a small body, flat bold colours with a thin shade line instead of a
+  gradient, round eyes with a glint, the face low on the head, a wider blush, whiskers for cat faces. Ears scale with
+  the head, the tail moved to the left so that a held thing is visible on the right. Genes, ages, moods, roles and items
+  work as before; backgrounds are unchanged. The anchors moved (`sprites.GEOM`, `FACE_DY`), so a picture redrawn for
+  the old body has to be redrawn. The old look is the git tag `style-classic`.
+- **All 31 scenes are redrawn** in the same flat sticker look as the pets: big simple shapes, a floor band across the
+  bottom, the middle left free for the pet. They are pictures in `assets/backgrounds/` (one 48×48 frame each, so scenes
+  no longer animate by themselves); night, seasons and weather are still added on top. Delete a file and run
+  `scripts/art.py export` to get the code-drawn scene back.
+- A pet alone in an adventure now gets the season and the night on outdoor scenes, like two-pet scenes always did.
+- `sprites.describe` names the genes in Ukrainian («вуха: звислі», it was «ears: звислі»).
+
+### Fixed
+- **The browser game hung on an endless load for a returning player after every new deploy**: the service worker waited
+  for the page to reach its cache before giving it to the browser, which stalls Chrome on a page this big.
+- «Кексик потрібна довідка» → «Кексикові потрібна», also in the surgery event.
+- `scripts/case_scan.py` catches a nominative name before «потрібна / треба / можна…».
+- A language review of the oldest content (chains, daily, jobs, life, twists, species, social, status, health), about 150
+  fixes: gender pairs that inflected somebody else («Суддя… {випустив|випустила}», «{вилетів|вилетіла} джин»), words that
+  fit only a boy pet («Розумник!», «Козак росте!», job names in the job hunt), russisms («білет», «завіщання»,
+  «сокамерник», «поварешка», «заглох», «включити»), typos and stories that contradicted themselves (a barista who changed
+  sex, a router switched off where «вайфаю немає», «рік життя» for two years).
+- Age and state: collectors and «Продати нирку» only for grown-ups, the naked Kupala swim and the garage night only for
+  adults, the dating app only without a partner, the blogger's living grandmother closes at 40 like the others.
+- «Хай вирішить сам» said to a girl → «Хай вирішить пет». The «Є оновлення гри» banner stays on one line on a phone.
+
 ## [0.22.1] — 2026-11-07
 
 ### Added

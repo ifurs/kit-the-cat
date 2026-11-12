@@ -25,7 +25,7 @@ NOT_OURS = {
 }
 # A grandmother or a grandfather of the pet who is alive in the story (phones, feeds, tells, gives).
 GRANDPARENTS = {
-    "daily_andriy", "daily_grandma_call", "daily_kitten", "teen_hair", "teen_grandma_phone", "health_cold", "kid_dream_seed",
+    "daily_andriy", "daily_grandma_call", "job_blogger_hate", "daily_kitten", "teen_hair", "teen_grandma_phone", "health_cold", "kid_dream_seed",
     "kid_village_fu", "dr_sea_1", "zoom_grandma", "zoom_family", "tw_vamp_garlic", "tw_alien_borsch", "tw_cure_vampire",
     "tw_cure_alien", "tw_clinical_death", "arc_grandma_recipe", "arc_recipe_restaurant", "arc_recipe_viral",
     "arc_stairs_dream", "koliada_group", "hol_kutia", "hol_andriy_cherry", "hol_valentine_single", "hol_easter_basket",
