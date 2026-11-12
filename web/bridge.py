@@ -121,23 +121,20 @@ async def card_png(owner: int):
     return card.render_life_card(p.look(), E.life_summary(p, {x.pid: x.name for x in pets}))
 
 
-async def event_frames(owner: int):
-    pets = await SB.pets(tick=False)
-    p = next((x for x in pets if x.owner_id == owner), None)
-    e = E.EVENTS.get(p.pending.get("id", "")) if p and p.pending else None
-    if not e:
+async def event_frames(owner: int, mood: str = ""):
+    got = await SB.scene(owner, mood)
+    if not got:
         return None
-    bg = e.bg if E.bg_ok(e.bg) else ""
-    other = next((x for x in pets if x.pid == p.pending.get("other")), None)
-    if not other:
-        look = p.look(bg)
-        return _cached("e" + repr(look), lambda: _pack(sprites.frame_canvases(look, 4)))
-    bgx = E.scene(bg or p.home, p.flags)
-    st = p.status.get(other.pid, "")
-    between = ("heart" if st in ("crush", "partner") else "fight" if st in ("rival", "enemy")
-               else "broken" if st == "ex" else "chat")
-    looks = [p.look(bgx), other.look(bgx)]
-    return _group(looks, bgx if E.bg_ok(bgx) else "meadow", 2, between)
+    looks, bg, between = got
+    if between is None:
+        return _cached("e" + repr(looks[0]), lambda: _pack(sprites.frame_canvases(looks[0], 4)))
+    return _group(looks, bg, 2, between)
+
+
+async def tryon_frames(owner: int, item: str = "", bg: str = ""):
+    """One still picture: the pet in an item, or in a place (the wardrobe, the bazaar, homes)."""
+    look = await SB.tryon(owner, item, bg)
+    return _cached("t" + repr(look), lambda: _pack(sprites.frame_canvases(look, 1))) if look else None
 
 
 async def fight_frames(a: int, b: int):

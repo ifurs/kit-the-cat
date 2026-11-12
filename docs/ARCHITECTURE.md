@@ -30,7 +30,7 @@ uses only the standard library, so the same code runs in a Telegram bot, a local
 | `sprites.py` | `Genome` (genes → visible parts), `unique_genome` (min distance 4 within a chat), `breed`, species drawing, roles, fixed `ITEMS` (`it_*` draw functions), tints, eggs, graves, GIF/PNG, group scenes |
 | `sprites_gen.py` | generated items `gen:<slot>:<code>` — kinds × colours × patterns × ornaments, with Ukrainian names in correct grammatical gender |
 | `sprites_bg.py` | backgrounds and modifiers (`farm~winter~snow`) |
-| `battle.py` | `Fighter` from a pet (species passives, trait specials, role ultimates), `fight` / `resume` (a fight that pauses once for a tactic), `win_chance`, `update_elo`, `aftermath`, `rank`, `bracket` |
+| `battle.py` | `Fighter` from a pet (species passives, trait specials, role ultimates), `fight` / `resume` (a fight that pauses once for a tactic), `duel` / `duel_round` (a fight the player plays round by round: strike, guard, trick), `win_chance`, `update_elo`, `aftermath`, `rank`, `bracket` |
 | `storage.py` | `MemoryStore` — reference implementation of the storage contract ([INTEGRATION.md](INTEGRATION.md)) |
 | `tz.py` | Kyiv time zone (zoneinfo, or a built-in rule where tzdata is missing) |
 | `sandbox/` | `Sandbox` game service over a store (NPC neighbours, autopilot care, tournaments), `api.dispatch` (HTTP-free), `server.py` (aiohttp), `static/index.html` |

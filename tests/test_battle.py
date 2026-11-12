@@ -198,3 +198,77 @@ def test_five_wins_make_a_known_fighter_and_a_title_makes_a_champion():
     B.crown(a, 900, rng)
     assert a.flags["arena_champ"] == 1 and a.flags["titles"] == 1 and a.life["fame"] == B.FAME_TITLE
     assert any(i.startswith("crown") for i in a.items)
+
+
+# --- duel: a fight in rounds ------------------------------------------------------------------------------------
+
+def _duel(seed):
+    a, b, rng = _pair(seed)
+    return B.duel(B.Fighter.of(a, B.DUEL), B.Fighter.of(b, B.DUEL), rng), rng
+
+
+def test_a_duel_ends_within_its_rounds_whatever_is_played():
+    for seed in range(40):
+        d, rng = _duel(seed)
+        while not d.done:
+            assert [m["key"] for m in B.duel_moves(d, 0)][:3] == list(B.MOVES)
+            B.duel_round(d, rng.choice([None, "strike", "guard", "trick", "special", "ult", "nonsense"]), None, rng)
+        r = d.result
+        assert r.winner in (0, 1) and 1 <= r.rounds <= B.DUEL_ROUNDS and r.log[-1]["text"].startswith("🏆")
+        assert sum(e["k"] == "round" for e in r.log) <= B.DUEL_ROUNDS and len(r.highlights) <= B.HIGHLIGHTS
+        assert B.duel_round(d, "strike", "strike", rng) is r   # a finished duel stays finished
+
+
+def test_duel_triangle_strike_beats_trick_beats_guard_beats_strike():
+    def hurt(ma, mb):   # health each side lost over many first rounds
+        lost = [0.0, 0.0]
+        for seed in range(60):
+            d, rng = _duel(seed)
+            for f in d.fighters:   # plain fighters: no dodge, no specials, no ultimate
+                f.dodge, f.specials, f.ultimate = 0.0, [], ""
+            hp = [f.hp for f in d.fighters]
+            B.duel_round(d, ma, mb, rng)
+            lost = [lost[i] + hp[i] - d.fighters[i].hp for i in (0, 1)]
+        return lost
+    for win, lose in B.BEATS.items():
+        a, b = hurt(win, lose)
+        assert a < b * 0.5, (win, lose, a, b)   # the winner of the exchange is hurt far less
+    a, b = hurt("guard", "guard")
+    assert a <= 0 and b <= 0   # two blocks: nobody is hit, both catch their breath
+
+
+def test_duel_gear_and_skills_show_in_the_moves():
+    a, b, _ = _pair(4)
+    bare = {m["key"]: m["power"] for m in B.duel_moves(B.duel(B.Fighter.of(a, B.DUEL), B.Fighter.of(b, B.DUEL), random.Random(1)), 0)}
+    a.equipped["held"] = "sabre"
+    armed = {m["key"]: m["power"] for m in B.duel_moves(B.duel(B.Fighter.of(a, B.DUEL), B.Fighter.of(b, B.DUEL), random.Random(1)), 0)}
+    assert all(armed[k] > bare[k] for k in B.MOVES)
+    b.equipped["outfit"] = "bronik"   # armour blunts a strike and a counter, a trick goes past it
+    vs_armour = {m["key"]: m["power"] for m in B.duel_moves(B.duel(B.Fighter.of(a, B.DUEL), B.Fighter.of(b, B.DUEL), random.Random(1)), 0)}
+    assert vs_armour["strike"] < armed["strike"] and vs_armour["trick"] == armed["trick"]
+
+
+def test_duel_tell_is_the_plan_more_often_for_a_sharp_reader():
+    def honest(wit):
+        hits = 0
+        for seed in range(300):
+            d, rng = _duel(seed % 20)
+            d.fighters[0].wit = wit
+            for f in d.fighters:
+                f.specials, f.ultimate = [], ""
+            text = B.duel_tell(d, 1, random.Random(seed))
+            shown = next(k for k, v in B.TELLS.items() if any(text.startswith(t.split("{")[0]) and text.endswith(t.split("}")[-1]) for t in v))
+            hits += shown == d.plan[1]
+        return hits / 300
+    assert honest(90) > honest(0) + 0.2
+    d, rng = _duel(1)
+    B.duel_tell(d, 1, rng)
+    plan = d.plan[1]
+    B.duel_round(d, "guard", None, rng)
+    assert d.used[1] == [plan]   # the announced move is the one that is played
+
+
+def test_surrender_in_a_duel_loses_now():
+    d, rng = _duel(2)
+    r = B.duel_round(d, "surrender", None, rng)
+    assert r.winner == 1 and r.surrendered == 0 and r.log[-2]["k"] == "surrender"

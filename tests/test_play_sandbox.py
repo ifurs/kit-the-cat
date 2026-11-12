@@ -1,4 +1,6 @@
 """The standalone sandbox (kit-the-cat): a whole life without Telegram, through the HTTP API."""
+from urllib.parse import quote
+
 import pytest
 import pytest_asyncio
 from aiohttp.test_utils import TestClient, TestServer
@@ -152,8 +154,17 @@ async def test_spar(client):
     await ready_for_tournament(client, 2)
     s = await state(client)
     foe = next(p["owner"] for p in s["players"] if p["npc"])
-    b = (await do(client, "spar", "cunning", **{"with": foe}))["battle"]
-    assert "error" not in b and b["log"] and b["fighters"][0]["strategy"].startswith("🎭")
+    b = (await do(client, "spar", **{"with": foe}))["battle"]
+    assert "error" not in b and b["paused"] and b["duel"] and b["round"] == 1 and b["tell"]
+    assert [m["key"] for m in b["moves"]][:3] == ["strike", "guard", "trick"] and all(m["power"] > 0 for m in b["moves"][:3])
+    fid, seen = b["fight"], len(b["log"])
+    for _ in range(b["rounds"] + 1):   # play it out: every answer carries only the new lines
+        b = (await do(client, "spar_move", "strike", fight=fid))["battle"]
+        assert "error" not in b and b["from"] == seen and b["log"]
+        seen += len(b["log"])
+        if not b.get("paused"):
+            break
+    assert b["winner"] and b["rec"] and b["log"][-1]["text"].startswith("🏆") and b["rounds"] <= 7
 
 
 @pytest.mark.parametrize("npcs", [2, 4, 6])  # 3, 5, 7 fighters: brackets with byes
@@ -236,28 +247,71 @@ async def test_pending_event_carries_the_inner_voice(client):
     assert seen == {True, False}
 
 
-async def test_spar_decision_is_single_use_and_belongs_to_the_caller(client):
+async def test_a_duel_belongs_to_the_caller_and_ends_once(client):
     await do(client, "create", "pig")
     await do(client, "npcs", 1)
     await ready_for_tournament(client, 2)
     foe = next(p["owner"] for p in (await state(client))["players"] if p["npc"])
-    for _ in range(12):   # most spars pause at half health
-        b = (await do(client, "spar", "aggressive", **{"with": foe}))["battle"]
-        if b.get("paused"):
-            break
-        assert "error" not in b and b["rec"]
-    assert b.get("paused"), "a spar should stop for the decision"
-    assert b["fight"] and [t[0] for t in b["tactics"]] == ["allin", "defend", "surrender"] and b["seconds"] == 20
-    assert "winner" not in b and b["log"] and b["fighters"][0]["emoji"]
-    stolen = (await do(client, "spar_tactic", "surrender", who=2, fight=b["fight"]))["battle"]
+    b = (await do(client, "spar", **{"with": foe}))["battle"]
+    assert b["paused"] and "winner" not in b and b["log"] and b["fighters"][0]["emoji"]
+    stolen = (await do(client, "spar_move", "surrender", who=2, fight=b["fight"]))["battle"]
     assert "error" in stolen   # somebody else's fight id
-    assert "error" in (await do(client, "spar_tactic", "cheat", fight=b["fight"]))["battle"]   # the id survives a bad tactic
-    r = (await do(client, "spar_tactic", "surrender", fight=b["fight"]))["battle"]
+    assert "error" in (await do(client, "spar_move", "cheat", fight=b["fight"]))["battle"]   # the id survives a bad move
+    r = (await do(client, "spar_move", "surrender", fight=b["fight"]))["battle"]
     assert r["winner"] == foe and r["surrendered"] == 0 and r["from"] == len(b["log"])
     assert r["log"][-1]["text"].startswith("🏆") and r["highlights"][-1]["text"] == r["log"][-1]["text"]
     assert r["rec"]["1"]["line"].startswith("🥊") and r["rec"]["1"]["rank"]
     assert any("без травм" in n for n in r["notes"]["1"])   # JSON object keys are strings
-    assert "error" in (await do(client, "spar_tactic", "allin", fight=b["fight"]))["battle"]   # single use
+    assert "error" in (await do(client, "spar_move", "strike", fight=b["fight"]))["battle"]   # the fight is over
+
+
+async def test_my_tournament_match_is_a_duel_and_moves_the_bracket(client):
+    await do(client, "create", "pig")
+    await do(client, "npcs", 3)
+    await ready_for_tournament(client, 4)
+    assert "Турнір на" in (await do(client, "t_new"))["message"]
+    mine = left = 0
+    for _ in range(60):
+        t = (await (await client.get("/api/tour?as=1")).json())["tour"]
+        if t["status"] != "running":
+            break
+        cur = t["current"]
+        b = (await do(client, "t_next", duel=True))["battle"]
+        assert "error" not in b, b
+        if not b.get("paused"):
+            assert not cur or 1 not in (cur["a"]["owner"], cur["b"]["owner"])   # somebody else's match plays by itself
+            continue
+        mine += 1
+        assert b["duel"] and b["owners"][0] == 1 and b["key"] == cur["key"] and b["moves"] and b["tell"]
+        assert "error" in (await do(client, "spar_move", "strike", who=2, fight=b["fight"]))["battle"]
+        if mine == 1 and not left:   # walk away from the first one: asking for the match again finishes it, no second try
+            left = 1
+            again = (await do(client, "t_next", duel=True))["battle"]
+            assert not again.get("paused") and again["key"] == b["key"] and again["winner"] in again["owners"]
+            assert "error" in (await do(client, "spar_move", "strike", fight=b["fight"]))["battle"]
+            continue
+        fid = b["fight"]
+        while b.get("paused"):
+            b = (await do(client, "spar_move", "strike", fight=fid))["battle"]
+            assert "error" not in b, b
+        assert b["key"] == cur["key"] and b["winner"] in b["owners"] and "bets" in b
+        after = (await (await client.get("/api/tour?as=1")).json())["tour"]
+        assert next(m for r in after["rounds"] for m in r if m["key"] == cur["key"])["winner"] == b["winner"]
+    t = (await (await client.get("/api/tour?as=1")).json())["tour"]
+    assert t["status"] == "done" and t["champion"] and mine >= 1
+
+
+async def test_an_abandoned_duel_is_fought_out_by_the_pets(client):
+    await do(client, "create", "pig")
+    await do(client, "npcs", 1)
+    await ready_for_tournament(client, 2)
+    foe = next(p["owner"] for p in (await state(client))["players"] if p["npc"])
+    first = (await do(client, "spar", **{"with": foe}))["battle"]
+    second = (await do(client, "spar", **{"with": foe}))["battle"]   # the page was closed and the player starts again
+    assert second["paused"] and second["fight"] != first["fight"]
+    assert "error" in (await do(client, "spar_move", "strike", fight=first["fight"]))["battle"]
+    me = next(p for p in (await state(client))["players"] if p["owner"] == 1)
+    assert me   # the first duel was finished and counted without the player
 
 
 async def test_tournament_title_sets_arena_champ_and_fame():
@@ -277,3 +331,43 @@ async def test_tournament_title_sets_arena_champ_and_fame():
     champ = sb._finish(t, {p.owner_id: p for p in pets}, {})
     assert champ["owner"] == 1 and t["status"] == "done"
     assert pets[0].flags["arena_champ"] == 1 and pets[0].life["fame"] == 5 and "arena_champ" not in pets[1].flags
+
+
+async def _adult(c, who=1):
+    await do(c, "create", "cat", who=who)
+    await do(c, "hatch", who=who)
+    await do(c, "advance", 24 * 30, care=True)
+
+
+async def _png(c, url):
+    r = await c.get(url)
+    return r.status, (await r.read())[:4]
+
+
+async def test_result_screen_keeps_the_picture_of_the_adventure(client):
+    await _adult(client)
+    assert (await _png(client, "/img/event/1.png"))[0] == 404  # no adventure yet
+    await do(client, "adventure")
+    assert (await _png(client, "/img/event/1.png")) == (200, b"\x89PNG")
+    await do(client, "choose", None)
+    for mood in ("", "happy", "sad", "nonsense"):
+        assert (await _png(client, f"/img/event/1.png?mood={mood}")) == (200, b"\x89PNG")
+
+
+async def test_try_on_only_what_is_owned_or_sold_today(client):
+    await _adult(client)
+    lists = await (await client.get("/api/lists?as=1")).json()
+    sold = next(x for x in lists["stock"] if x["kind"] == "item")
+    assert (await _png(client, f"/img/tryon/1.png?item={quote(sold['id'])}")) == (200, b"\x89PNG")
+    assert (await _png(client, "/img/tryon/1.png?item=gen:head:%21%21"))[0] == 404
+    assert (await _png(client, "/img/tryon/1.png?bg=kyiv")) == (200, b"\x89PNG")
+    assert (await _png(client, "/img/tryon/1.png?bg=../../etc"))[0] == 200  # an unknown place is just home
+
+
+async def test_state_shows_quests_achievements_ancestors_and_an_idle_line(client):
+    await _adult(client)
+    s = (await state(client))["pet"]
+    assert s["idle"] and "{" not in s["idle"]
+    assert s["ancestors"] == [] and s["ach_total"] >= len(s["achievements"])
+    assert all(q["title"] and q["ep"] >= 0 and isinstance(q["end"], str) for q in s["quests"])
+    assert all(":" in g and g.isascii() is False for g in s["genes"])

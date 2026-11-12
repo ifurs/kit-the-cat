@@ -20,7 +20,8 @@ Ids used by the engine:
 
 Hybrids: ears, face, tail and body can come from different species, so a child of a pig and a cat
 may have a pig body, cat ears and a dog tail. Palette and pattern are seeded per pet. Every part is
-painted "outline first, then fill", which gives the classic pixel-art look.
+painted "outline first, then fill". The look is chibi: a big head on a small body (GEOM), flat colours
+with a thin shade line (Canvas.flat), the face low on the head (FACE_DY), the tail on the left.
 """
 from __future__ import annotations
 
@@ -37,13 +38,14 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
 
 
+from . import art as _art
 from .sprites_bg import (BACKGROUNDS, BG_MODS, OUTDOOR, bg_name, bg_parse, paint_bg,  # noqa: F401
                                       random_background)
 from .sprites_core import _pil  # noqa: F401
 from .sprites_core import (BLACK, BLUE, BLUSH, GOLD, GOLD_D, N, OUTLINE, RED, SCALE, WHITE,  # noqa: F401
                                         YELLOW, Body, Canvas, Px, _eye_xy, _held, _top, dilate, ellipse, hsv,
                                         light_of, line, lum, mix, poly, rect, shade_of)
-from .sprites_gen import GEN, GEN_SLOTS, gen_count, gen_item, random_item  # noqa: F401
+from .sprites_gen import GEN, GEN_SLOTS, gen_count, gen_item, gen_kind, random_item  # noqa: F401
 
 # --- genome ----------------------------------------------------------------------------------
 # A pet's look is a Genome. Natural genes come from the species; each gene can mutate into a
@@ -266,8 +268,12 @@ def rarity(g: Genome) -> tuple[int, str]:
     return score, tier
 
 
+GENE_NAMES = {"ears": "вуха", "tail": "хвіст", "face": "морда", "head": "голова", "body": "тіло", "eyes": "очі",
+              "pattern": "візерунок", "mark": "мітка", "extra": "особливість", "color": "окрас"}
+
+
 def describe(g: Genome) -> list[str]:
-    return [f"{gene}: {GENES[gene][getattr(g, gene)][0]}" for gene in VISIBLE]
+    return [f"{GENE_NAMES[gene]}: {GENES[gene][getattr(g, gene)][0]}" for gene in VISIBLE]
 
 
 def dna_code(g: Genome) -> str:
@@ -330,8 +336,12 @@ def palette(g: Genome, role: str = "") -> tuple:
         h, s, v = 0.55, 0.25, 1.0
     elif c == "sunset":
         h, s, v = 0.04, 0.7, 1.0
+    if s > 0.08:  # bold sticker colours; greys and whites stay as they are
+        s = min(1, s * 1.12)
+    if v >= 0.35:
+        v = min(1, v * 1.06 + 0.03)
     base = hsv(h, s, v)
-    shade = hsv(h, s * 1.1 + 0.05, v * 0.76)
+    shade = mix(base, OUTLINE, 0.2)
     light = hsv(h, s * 0.6, min(1, v * 1.12 + 0.06))
     if g.species == "dog":
         accent = hsv(h, min(1, s + 0.1), v * 0.6)
@@ -359,13 +369,14 @@ def palette(g: Genome, role: str = "") -> tuple:
     return base, shade, light, accent, second, il, ir
 
 
-# stage geometry: head (cx, cy, rx, ry), body (cx, cy, rx, ry), eye dx
+# stage geometry: head (cx, cy, rx, ry), body (cx, cy, rx, ry), eye dx. Chibi: a big head on a small body.
 GEOM = {
-    1: dict(head=(24, 23, 11, 10), body=(24, 35, 8, 6), ex=4),
-    2: dict(head=(24, 20, 10, 9), body=(24, 33, 10, 8), ex=4),
-    3: dict(head=(24, 17, 10, 9), body=(24, 31, 12, 10), ex=4),
-    4: dict(head=(24, 18, 10, 9), body=(24, 32, 12, 9), ex=4),  # elder: a bit hunched
+    1: dict(head=(24, 26, 13, 10), body=(24, 37, 6, 4), ex=6),
+    2: dict(head=(24, 23, 13, 10), body=(24, 36, 7, 5), ex=6),
+    3: dict(head=(24, 21, 14, 11), body=(24, 35, 9, 6), ex=6),
+    4: dict(head=(24, 22, 14, 11), body=(24, 36, 9, 5), ex=6),  # elder: a bit hunched
 }
+FACE_DY = 3  # the face (eyes, nose, mouth, glasses) sits low on the big head
 HEAD_SHAPE = {"round": (0, 0), "wide": (2, -1), "tall": (-1, 1), "small": (-1, -1), "big": (1, 1)}
 BODY_SHAPE = {"round": (0, 0), "chubby": (3, 1), "slim": (-3, 0), "tall": (-1, 2)}
 
@@ -403,6 +414,36 @@ def _geom(lk: Look, f: int) -> tuple[tuple, tuple, int]:
     return (hx, hy, hrx, hry), (bx, by, brx, bry), st["ex"]
 
 
+# --- redrawn art ----------------------------------------------------------------------------
+# Any part below can be replaced by a picture in assets/ (see art.py). Pictures are drawn for REF, a grown cat with a
+# round head and body, and are moved and stretched to fit the pet they land on.
+REF = Look(stage=3)
+
+
+def ref_body(f: int) -> Body:
+    head, body, ex = _geom(REF, f)
+    return Body(head, body, ex, ellipse(*head), ellipse(*body), palette(REF.genes), REF.stage)
+
+
+def _low(b: Body) -> Body:
+    """The same body with the head centre moved down to the face: what eyes, mouth and face items hang on."""
+    hx, hy, hrx, hry = b.head
+    return replace(b, head=(hx, hy + FACE_DY, hrx, hry))
+
+
+def _keys(**pet) -> dict:
+    """Template colour → this pet's colour, for the colour names given."""
+    return {_art.KEYS[name]: c for name, c in pet.items()}
+
+
+def _redrawn(cv: Canvas, kind: str, style: str, f: int, at: tuple, ref: tuple, keys: dict) -> bool:
+    """Paint the redrawn picture of a body part, if there is one."""
+    art = _art.load(kind, style)
+    if art:
+        _art.place(cv, art.frame(f), ref, at, keys)
+    return art is not None
+
+
 # --- creature ------------------------------------------------------------------------------
 
 BACK_EARS = {"cat_pointy", "cat_big", "cat_lynx", "pig_floppy", "pig_up", "dog_pointy", "dog_round", "bunny", "devil",
@@ -410,41 +451,43 @@ BACK_EARS = {"cat_pointy", "cat_big", "cat_lynx", "pig_floppy", "pig_up", "dog_p
 
 
 def _ears(cv: Canvas, style: str, hx, hy, hrx, hry, base, shade, accent, f):
-    top = hy - hry
+    if _redrawn(cv, "ears", style, f, (hx, hy, hrx, hry), _geom(REF, f)[0], _keys(base=base, shade=shade, accent=accent)):
+        return
+    top, kx = hy - hry, hrx / 10
     for s in (-1, 1):
         if style in ("cat_pointy", "cat_big", "cat_lynx"):
             k = 1.35 if style == "cat_big" else 1.0
-            tip = (hx + s * 8 * k, top - 4 * k)
-            cv.part(poly([(hx + s * 9.5, hy - 2), tip, (hx + s * 2, top + 1)]), base, shade)
-            cv.paint(poly([(hx + s * 8, hy - 3), (hx + s * 7.6 * k, top - 1.5 * k), (hx + s * 4, top + 1.5)]), accent)
+            tip = (hx + s * 8 * kx * k, top - 4 * k)
+            cv.part(poly([(hx + s * 9.5 * kx, hy - 2), tip, (hx + s * 2 * kx, top + 1)]), base, shade)
+            cv.paint(poly([(hx + s * 8 * kx, hy - 3), (hx + s * 7.6 * kx * k, top - 1.5 * k), (hx + s * 4 * kx, top + 1.5)]), accent)
             if style == "cat_lynx":
                 cv.paint(line(tip[0], tip[1], tip[0] + s, tip[1] - 3), OUTLINE)
         elif style == "dog_pointy":
-            cv.part(poly([(hx + s * 9, hy - 1), (hx + s * 7, top - 6), (hx + s * 2, top + 1)]), base, shade)
-            cv.paint(poly([(hx + s * 7, hy - 2), (hx + s * 6.5, top - 3), (hx + s * 3.5, top + 1.5)]), mix(base, WHITE, 0.5))
+            cv.part(poly([(hx + s * 9 * kx, hy - 1), (hx + s * 7 * kx, top - 6), (hx + s * 2 * kx, top + 1)]), base, shade)
+            cv.paint(poly([(hx + s * 7 * kx, hy - 2), (hx + s * 6.5 * kx, top - 3), (hx + s * 3.5 * kx, top + 1.5)]), mix(base, WHITE, 0.5))
         elif style == "pig_floppy":
-            cv.part(poly([(hx + s * 2.5, top + 1.5), (hx + s * 10.5, top - 1.5), (hx + s * 9.5, top + 5.5)]), base, shade)
-            cv.paint(poly([(hx + s * 4.5, top + 1.8), (hx + s * 9, top - 0.2), (hx + s * 8.5, top + 3.5)]), accent)
+            cv.part(poly([(hx + s * 2.5 * kx, top + 1.5), (hx + s * 10.5 * kx, top - 1.5), (hx + s * 9.5 * kx, top + 5.5)]), base, shade)
+            cv.paint(poly([(hx + s * 4.5 * kx, top + 1.8), (hx + s * 9 * kx, top - 0.2), (hx + s * 8.5 * kx, top + 3.5)]), accent)
         elif style == "pig_up":
-            cv.part(ellipse(hx + s * 6, top, 2.5, 3.5), base, shade)
-            cv.paint(ellipse(hx + s * 6, top + 0.5, 1.2, 2), accent)
+            cv.part(ellipse(hx + s * 6 * kx, top, 2.5, 3.5), base, shade)
+            cv.paint(ellipse(hx + s * 6 * kx, top + 0.5, 1.2, 2), accent)
         elif style == "dog_round":
-            cv.part(ellipse(hx + s * 7.5, top + 1, 3.2, 3.2), base, shade)
-            cv.paint(ellipse(hx + s * 7.5, top + 1.5, 1.6, 1.6), accent)
+            cv.part(ellipse(hx + s * 7.5 * kx, top + 1, 3.2, 3.2), base, shade)
+            cv.paint(ellipse(hx + s * 7.5 * kx, top + 1.5, 1.6, 1.6), accent)
         elif style == "bunny":
             sway = (f % 2) * s
-            cv.part(ellipse(hx + s * 4 + sway, top - 6, 2.5, 7), base, shade)
-            cv.paint(ellipse(hx + s * 4 + sway, top - 6, 1, 5), accent)
+            cv.part(ellipse(hx + s * 4 * kx + sway, top - 6, 2.5, 7), base, shade)
+            cv.paint(ellipse(hx + s * 4 * kx + sway, top - 6, 1, 5), accent)
         elif style in ("fox_ears", "fennec"):
             k = 1.5 if style == "fennec" else 1.15
-            tip = (hx + s * 8.5 * (1.1 if style == "fennec" else 1), top - 5 * k)
-            cv.part(poly([(hx + s * 9.5, hy - 1), tip, (hx + s * 2, top + 1)]), base, shade)
-            cv.paint(poly([(hx + s * 8, hy - 2.5), (tip[0] - s * 0.8, tip[1] + 3), (hx + s * 4, top + 1.5)]), accent)
+            tip = (hx + s * 8.5 * kx * (1.1 if style == "fennec" else 1), top - 5 * k)
+            cv.part(poly([(hx + s * 9.5 * kx, hy - 1), tip, (hx + s * 2 * kx, top + 1)]), base, shade)
+            cv.paint(poly([(hx + s * 8 * kx, hy - 2.5), (tip[0] - s * 0.8, tip[1] + 3), (hx + s * 4 * kx, top + 1.5)]), accent)
             cv.paint(poly([(tip[0] - s * 2, tip[1] + 2.5), tip, (tip[0] + s * 0.5, tip[1] + 3)]) | {(int(tip[0]), int(tip[1]))},
                      OUTLINE if style == "fox_ears" else shade)
         elif style in ("horse_ears", "unicorn_mane"):
-            cv.part(poly([(hx + s * 2.5, top + 2), (hx + s * 5.5, top - 5), (hx + s * 7.5, top + 2)]), base, shade)
-            cv.paint(poly([(hx + s * 4, top + 1.5), (hx + s * 5.5, top - 2.5), (hx + s * 6.5, top + 1.5)]), accent)
+            cv.part(poly([(hx + s * 2.5 * kx, top + 2), (hx + s * 5.5 * kx, top - 5), (hx + s * 7.5 * kx, top + 2)]), base, shade)
+            cv.paint(poly([(hx + s * 4 * kx, top + 1.5), (hx + s * 5.5 * kx, top - 2.5), (hx + s * 6.5 * kx, top + 1.5)]), accent)
         elif style in ("gills", "gills_big"):
             n = 4 if style == "gills_big" else 3
             for i in range(n):
@@ -462,28 +505,33 @@ def _ears(cv: Canvas, style: str, hx, hy, hrx, hry, base, shade, accent, f):
                 col = accent if big and i == 1 else (shade if i % 2 else base)
                 cv.part(poly([(hx + dx * k - 1.2, top + 2), tip, (hx + dx * k + 1.2, top + 2)]), col, shade)
         elif style == "devil":
-            cv.part(poly([(hx + s * 5, top + 3), (hx + s * 14, top - 3), (hx + s * 11, top + 2), (hx + s * 12, top + 5),
-                          (hx + s * 8, top + 6)]), shade, mix(shade, OUTLINE, 0.3))
+            cv.part(poly([(hx + s * 5 * kx, top + 3), (hx + s * 14 * kx, top - 3), (hx + s * 11 * kx, top + 2), (hx + s * 12 * kx, top + 5),
+                          (hx + s * 8 * kx, top + 6)]), shade, mix(shade, OUTLINE, 0.3))
 
 
 def _front_ears(cv: Canvas, style: str, hx, hy, hrx, hry, base, shade, accent, f):
-    flap = (0, 0, 1, 0)[f % 4]
+    if _redrawn(cv, "ears", style, f, (hx, hy, hrx, hry), _geom(REF, f)[0], _keys(base=base, shade=shade, accent=accent)):
+        return
+    flap, kx = (0, 0, 1, 0)[f % 4], hrx / 10
     for s in (-1, 1):
         if style == "dog_floppy":
             cv.part(ellipse(hx + s * (hrx - 0.5), hy + 1 + flap, 3, 5.5), accent, mix(accent, OUTLINE, 0.3))
         elif style == "dog_long":
             cv.part(ellipse(hx + s * (hrx - 1), hy + 4 + flap, 3, 8), accent, mix(accent, OUTLINE, 0.3))
         elif style == "cat_fold":
-            cv.part(poly([(hx + s * 7.5, hy - hry + 1), (hx + s * 3, hy - hry + 1.5), (hx + s * 6.5, hy - hry + 4.5)]),
+            cv.part(poly([(hx + s * 7.5 * kx, hy - hry + 1), (hx + s * 3 * kx, hy - hry + 1.5), (hx + s * 6.5 * kx, hy - hry + 4.5)]),
                     base, shade)
 
 
 def _tail(cv: Canvas, style: str, bx, by, brx, bry, base, shade, light, f):
+    rx, ry, rrx, _ = _geom(REF, f)[1]
+    if _redrawn(cv, "tail", style, f, (bx + brx - 1, by, 1, 1), (rx + rrx - 1, ry, 1, 1), _keys(base=base, shade=shade, light=light)):
+        return
     wag = (0, 1, 0, -1)[f % 4]
     x0 = bx + brx - 1
     if style in ("cat_long", "cat_fluffy"):
-        r = 2.4 if style == "cat_fluffy" else 1.6
-        pts = [(x0 + i * 0.9, by + 2 - i * 1.6 + wag * i / 6) for i in range(7)]
+        r = 2.2 if style == "cat_fluffy" else 1.5
+        pts = [(x0 + 2, by + 3), (x0 + 4, by + 3), (x0 + 6, by + 2), (x0 + 7, by), (x0 + 7 + wag * 0.5, by - 2), (x0 + 6 + wag, by - 4)]
         cv.part(set().union(*(ellipse(x, y, r, r) for x, y in pts)), base, shade)
         if style == "cat_fluffy":
             cv.paint(ellipse(*pts[-1], r - 0.5, r - 0.5), light)
@@ -525,7 +573,10 @@ def _tail(cv: Canvas, style: str, bx, by, brx, bry, base, shade, light, f):
         cv.part(poly([(x0 + 5, by - 8), (x0 + 9, by - 10), (x0 + 8, by - 6)]), RED)
 
 
-def _snout(cv: Canvas, style: str, hx, hy, hrx, hry, light, accent, shade):
+def _snout(cv: Canvas, style: str, hx, hy, hrx, hry, light, accent, shade, f: int = 0):
+    rx, ry = _geom(REF, f)[0][:2]
+    if _redrawn(cv, "face", style, f, (hx, hy, 1, 1), (rx, ry, 1, 1), _keys(light=light, accent=accent, shade=shade)):
+        return
     if style in ("pig", "pig_big"):
         r = 5.2 if style == "pig_big" else 4.2
         cv.part(ellipse(hx, hy + 3, r, 3 + (0.6 if style == "pig_big" else 0)), accent, mix(accent, shade, 0.5))
@@ -539,8 +590,8 @@ def _snout(cv: Canvas, style: str, hx, hy, hrx, hry, light, accent, shade):
         cv.part(poly([(hx - 5, hy + 1), (hx + 5, hy + 1), (hx + 1, hy + 6), (hx - 1, hy + 6)]), accent, outline=None)
         cv.part(ellipse(hx, hy + 2.3, 1.6, 1.2), BLACK, outline=None)
     elif style == "horse_muzzle":  # long muzzle that sticks out under the head
-        my = hy + hry - 2.5
-        cv.part(ellipse(hx, my, 5, 3.8), mix(light, WHITE, 0.3), mix(light, shade, 0.5))
+        my = hy + 4.5
+        cv.part(ellipse(hx, my, 5, 3.2), mix(light, WHITE, 0.3), mix(light, shade, 0.5))
         cv.paint({(hx - 3, int(my)), (hx + 2, int(my))}, OUTLINE)
     elif style == "axo_smile":
         pass
@@ -572,7 +623,7 @@ def _pattern(cv: Canvas, g: Genome, head_px: Px, body_px: Px, hx, hy, hrx, hry, 
             cv.paint({(x, y), (x + 1, y)} & skin, BLACK)
     elif p == "patch":
         s = prng.choice((-1, 1))
-        cv.paint(ellipse(hx + s * 4, hy - 1, 3.5, 3) & head_px, dark)
+        cv.paint(ellipse(hx + s * 6, hy - 1 + FACE_DY, 3.5, 3) & head_px, dark)
     elif p == "tabby":
         st = mix(shade, OUTLINE, 0.3)
         for dx in (-2, 0, 2):
@@ -598,7 +649,7 @@ def _pattern(cv: Canvas, g: Genome, head_px: Px, body_px: Px, hx, hy, hrx, hry, 
             cv.paint({(x, y)} & skin, mix(shade, second, 0.25))
     elif p == "points":
         pc = mix(shade, OUTLINE, 0.4)
-        cv.paint(ellipse(hx, hy + 3, 5, 4) & head_px, mix(pc, shade, 0.3))
+        cv.paint(ellipse(hx, hy + 3 + FACE_DY, 5, 4) & head_px, mix(pc, shade, 0.3))
         cv.paint({q for q in head_px if q[1] < hy - hry + 2}, mix(shade, pc, 0.5))
     elif p == "pinto":
         for _ in range(3):
@@ -610,13 +661,13 @@ def _pattern(cv: Canvas, g: Genome, head_px: Px, body_px: Px, hx, hy, hrx, hry, 
                 x, y = prng.choice(sorted(skin))
                 cv.paint(ellipse(x, y, 3.2, 2.6) & skin, col)
     elif p == "mask":
-        cv.paint(rect(hx - hrx + 1, hy - 3, hx + hrx - 1, hy) & head_px, dark)
+        cv.paint(rect(hx - hrx + 1, hy - 3 + FACE_DY, hx + hrx - 1, hy + 1 + FACE_DY) & head_px, dark)
     elif p == "gradient":
         cv.paint({q for q in head_px if q[1] < hy - hry + 4} | {q for q in body_px if q[1] < by - bry + 3}, shade)
     elif p == "saddle":  # dark sides, light front
         cv.paint({q for q in body_px if abs(q[0] + 0.5 - bx) > brx * 0.55}, dark)
     elif p == "tuxedo":
-        cv.paint(ellipse(hx, hy + 4, 5, 3.5) & head_px, WHITE)
+        cv.paint(ellipse(hx, hy + 4 + FACE_DY, 5, 3.5) & head_px, WHITE)
 
 
 def _rainbow_galaxy(cv: Canvas, g: Genome, px: Px, f: int) -> None:
@@ -639,10 +690,18 @@ def _rainbow_galaxy(cv: Canvas, g: Genome, px: Px, f: int) -> None:
             cv.paint({q}, WHITE if (q[1] + f) % 3 else (170, 220, 255))
 
 
-def _mark(cv: Canvas, mark: str, hx, hy, hry, light, second):
-    y = hy - hry + 2
-    col = GOLD if mark in ("trident", "lightning") else mix(light, WHITE, 0.5) if lum(light) < 200 else mix(second, OUTLINE, 0.3) \
+def _mark_col(mark: str, light: tuple, second: tuple) -> tuple:
+    return GOLD if mark in ("trident", "lightning") else mix(light, WHITE, 0.5) if lum(light) < 200 else mix(second, OUTLINE, 0.3) \
         if lum(second) < 170 else (150, 120, 200)
+
+
+def _mark(cv: Canvas, mark: str, hx, hy, hry, light, second, f: int = 0):
+    y = hy - hry + 2
+    col = _mark_col(mark, light, second)
+    tpl = _mark_col(mark, _art.KEYS["light"], _art.KEYS["second"])
+    rx, ry, _, rry = _geom(REF, f)[0]
+    if _redrawn(cv, "mark", mark, f, (hx, y, 1, 1), (rx, ry - rry + 2, 1, 1), {tpl: col}):
+        return
     rows = {
         "star": [".a.", "aaa", ".a."], "heart": ["a.a", "aaa", ".a."], "moon": [".aa", "a..", ".aa"],
         "diamond": [".a.", "a.a", ".a."], "lightning": [".a", "a.", ".a"], "trident": ["a.a.a", "a.a.a", "aaaaa", "..a.."],
@@ -664,26 +723,27 @@ def _mark(cv: Canvas, mark: str, hx, hy, hry, light, second):
 
 def _eye(cv: Canvas, style: str, x: int, ey: int, iris: tuple, mood: str, f: int, s: int):
     """One open eye (neutral/sad/angry moods)."""
+    box = rect(x - 1, ey - 1, x + 1, ey + 1)
     if style == "big":
-        cv.paint(rect(x - 1, ey - 2, x + 1, ey + 1), BLACK)
-        cv.paint({(x - 1, ey - 2), (x + 1, ey)}, WHITE)
+        cv.paint(rect(x - 1, ey - 2, x + 1, ey + 1) | {(x - 2, ey - 1), (x - 2, ey), (x + 2, ey - 1), (x + 2, ey)}, BLACK)
+        cv.paint({(x - 1, ey - 2), (x, ey - 2), (x - 1, ey - 1), (x + 1, ey + 1)}, WHITE)
     elif style in ("slit", "hetero"):
-        cv.paint(rect(x - 1, ey - 1, x + 1, ey + 1), iris)
-        cv.paint({(x, ey - 1), (x, ey), (x, ey + 1)} if style == "slit" else {(x, ey)}, BLACK)
-        cv.paint(dilate(rect(x - 1, ey - 1, x + 1, ey + 1)) - {(x - 2, ey - 2)}, OUTLINE)
+        cv.paint(dilate(box), OUTLINE)
+        cv.paint(box, iris)
+        cv.paint({(x, ey - 1), (x, ey), (x, ey + 1)} if style == "slit" else {(x, ey), (x, ey + 1)}, BLACK)
     elif style == "sleepy":
-        cv.paint(rect(x, ey, x + 1, ey + 1), BLACK)
-        cv.paint({(x - 1, ey - 1), (x, ey - 1), (x + 1, ey - 1), (x + 2, ey - 1)}, OUTLINE)
+        cv.paint(rect(x - 1, ey, x + 1, ey + 1), BLACK)
+        cv.paint(rect(x - 2, ey - 1, x + 2, ey - 1), OUTLINE)
     elif style == "button":
-        cv.paint(rect(x, ey - 1, x + 1, ey), BLACK)
+        cv.paint(rect(x - 1, ey - 1, x, ey), BLACK)
     elif style == "star":
         cv.paint({(x, ey - 2), (x - 1, ey), (x, ey), (x + 1, ey), (x, ey - 1), (x, ey + 1),
                   (x - 1, ey - 1 + f % 2), (x + 1, ey + 1 - f % 2)}, iris)
-    else:  # dot, three
-        cv.paint(rect(x, ey - 1, x + 1, ey + 1), BLACK)
-        cv.paint({(x, ey - 1)}, WHITE)
+    else:  # dot, three: a round black eye with a glint
+        cv.paint(box, BLACK)
+        cv.paint({(x - 1, ey - 1)}, WHITE)
     if mood == "angry":
-        cv.paint({(x - 1, ey - 3), (x + 1, ey - 2)} if s < 0 else {(x + 1, ey - 3), (x - 1, ey - 2)}, OUTLINE)
+        cv.paint({(x - s * 2, ey - 4), (x - s, ey - 3), (x, ey - 3), (x + s, ey - 2)}, OUTLINE)
     if mood == "sad" and s > 0:
         cv.paint({(x + 1, ey + 2), (x + 1, ey + 3 + f % 2)}, (90, 170, 255))
 
@@ -743,11 +803,11 @@ def _eyes_mouth(cv: Canvas, lk: Look, b: Body, f: int, roles: set[str]) -> None:
     if mood in ("happy", "ok") and face not in ("dog", "dog_muzzle") and blush:
         for x, s in positions:
             if s:
-                cv.paint({(x - 1 + (2 if s > 0 else 0), ey + 2 + (2 if pigface else 1))}, BLUSH)
+                cv.paint({(x + s, ey + 2 + (2 if pigface else 1)), (x + 2 * s, ey + 2 + (2 if pigface else 1))}, BLUSH)
     if mood == "sick":
         cv.paint({(hx - ex - 2, hy + 1), (hx + ex + 1, hy + 1)}, (150, 210, 110))
 
-    my = hy + 6 if pigface else hy + hry - 1 if face == "horse_muzzle" else hy + 4
+    my = hy + 6 if pigface else hy + 6 if face == "horse_muzzle" else hy + 4
     if face == "axo_smile" and mood in ("happy", "ok"):
         cv.paint({(hx - 4, my - 1), (hx - 3, my), (hx - 2, my), (hx - 1, my), (hx, my), (hx + 1, my), (hx + 2, my - 1)}, OUTLINE)
     elif mood == "happy":
@@ -760,6 +820,10 @@ def _eyes_mouth(cv: Canvas, lk: Look, b: Body, f: int, roles: set[str]) -> None:
         cv.paint({(hx - 2, my), (hx - 1, my + 1), (hx, my + 1), (hx + 1, my)}, OUTLINE)
     else:
         cv.paint({(hx - 1, my), (hx, my)}, OUTLINE)
+    if face == "cat" and mood != "dead":  # whiskers across the cheek line
+        for sd in (-1, 1):
+            x = hx + sd * (hrx - 2) - (1 if sd < 0 else 0)
+            cv.paint(line(x, hy + 2, x + sd * 3, hy + 1) | line(x, hy + 4, x + sd * 3, hy + 5), OUTLINE)
     if g.extra == "tongue" and mood not in ("happy", "dead"):
         cv.paint({(hx, my + 1), (hx, my + 2)}, (255, 120, 140))
     if "vampire" in roles and mood != "dead":
@@ -776,11 +840,13 @@ def _eyes_mouth(cv: Canvas, lk: Look, b: Body, f: int, roles: set[str]) -> None:
 def _extra(cv: Canvas, g: Genome, b: Body, second, f):
     hx, hy, hrx, hry = b.head
     base, shade, light = b.pal[:3]
-    top = hy - hry
+    if _redrawn(cv, "extra", g.extra, f, b.head, _geom(REF, f)[0], _keys(base=base, shade=shade, light=light, second=second)):
+        return
+    top, fy = hy - hry, hy + FACE_DY  # fy: the face line
     e = g.extra
     if e == "freckles":
         for s in (-1, 1):
-            cv.paint({(hx + s * 5, hy + 2), (hx + s * 6, hy + 3), (hx + s * 4, hy + 3)}, mix(second, OUTLINE, 0.4))
+            cv.paint({(hx + s * 8, fy + 1), (hx + s * 9, fy + 2), (hx + s * 7, fy + 2)}, mix(second, OUTLINE, 0.4))
     elif e == "mohawk":
         for i, dx in enumerate(range(-3, 4, 2)):
             cv.part(poly([(hx + dx - 1, top + 1), (hx + dx, top - 4 - (i % 2) * 2), (hx + dx + 1.5, top + 1)]),
@@ -797,7 +863,7 @@ def _extra(cv: Canvas, g: Genome, b: Body, second, f):
         cv.paint({q for q in px if (q[1] + q[0]) % 3 == 0}, (255, 170, 210))
     elif e == "whiskers":
         for s in (-1, 1):
-            cv.paint(line(hx + s * (hrx - 3), hy + 2, hx + s * (hrx + 5), hy + 1 - f % 2), OUTLINE)
+            cv.paint(line(hx + s * (hrx - 3), fy + 3, hx + s * (hrx + 4), fy + 2 - f % 2), OUTLINE)
     elif e == "fluff":  # пухнастий комір
         y = hy + hry
         fl = set()
@@ -812,7 +878,7 @@ def _extra(cv: Canvas, g: Genome, b: Body, second, f):
     elif e == "brows":
         for s in (-1, 1):
             x = hx + s * b.ex - (1 if s < 0 else 0)
-            cv.paint(rect(x - 1, hy - 5, x + 2, hy - 4) - {(x - 1 if s < 0 else x + 2, hy - 5)}, mix(second, OUTLINE, 0.5))
+            cv.paint(rect(x - 1, fy - 5, x + 2, fy - 4) - {(x - 1 if s < 0 else x + 2, fy - 5)}, mix(second, OUTLINE, 0.5))
     elif e == "horns":
         for s in (-1, 1):
             cv.part(poly([(hx + s * 3, top + 2), (hx + s * 5.5, top - 4), (hx + s * 6.5, top + 2)]), (238, 228, 200),
@@ -953,7 +1019,11 @@ def creature(cv: Canvas, lk: Look, f: int, roles: set[str] | None = None) -> Bod
 
     if g.extra == "wings" and not lk.ghost:
         _gene_wings(cv, b, f)
-    _tail(cv, "devil_tail" if "demon" in roles else g.tail, bx, by, brx, bry, pointc or base, shade, light, f)
+    # the tail goes to the left: the right side of the small body is where the pet holds things
+    side = Canvas(cv.w, cv.h, cv.ox)
+    side.flat = cv.flat
+    _tail(side, "devil_tail" if "demon" in roles else g.tail, bx, by, brx, bry, pointc or base, shade, light, f)
+    cv.px.update({(2 * (bx + cv.ox) - 1 - x, y): c for (x, y), c in side.px.items() if 0 <= 2 * (bx + cv.ox) - 1 - x < cv.w})
     if horse:  # mane flows down the back of the neck
         mane = mix(accent, OUTLINE, 0.2)
         px = poly([(hx + 1, hy - hry - 1), (hx + hrx - 1, hy - hry + 1), (hx + hrx + 3, hy + 1), (hx + hrx + 2, hy + hry + 3),
@@ -999,7 +1069,7 @@ def creature(cv: Canvas, lk: Look, f: int, roles: set[str] | None = None) -> Bod
     if not lk.ghost and not roles & set(ROLE_TINT):
         _rainbow_galaxy(cv, g, head_px | {p for p in body_px if p not in belly}, f)
         _pattern(cv, g, head_px, body_px, hx, hy, hrx, hry, bx, by, brx, bry, shade, second)
-        _mark(cv, g.mark, hx, hy, hry, light, second)
+        _mark(cv, g.mark, hx, hy, hry, light, second, f)
     if horse:  # forelock
         mane = mix(accent, OUTLINE, 0.2)
         cv.part(poly([(hx - 3, hy - hry - 1), (hx + 2, hy - hry - 1), (hx + 1, hy - hry + 3), (hx - 1, hy - hry + 4)]), mane)
@@ -1009,8 +1079,8 @@ def creature(cv: Canvas, lk: Look, f: int, roles: set[str] | None = None) -> Bod
         _front_ears(cv, g.ears, hx, hy, hrx, hry, base, shade, accent if g.species == "dog" else shade, f)
     if roles:
         _role_head(cv, roles, b, f)
-    _snout(cv, g.face, hx, hy, hrx, hry, light, accent, shade)
-    _eyes_mouth(cv, lk, b, f, roles)
+    _snout(cv, g.face, hx, hy + FACE_DY, hrx, hry, light, accent, shade, f)
+    _eyes_mouth(cv, lk, _low(b), f, roles)
     if not lk.ghost:
         _extra(cv, g, b, second, f)
     if roles:
@@ -1018,7 +1088,7 @@ def creature(cv: Canvas, lk: Look, f: int, roles: set[str] | None = None) -> Bod
     if lk.stage == 4 and not lk.ghost:
         for s in (-1, 1):
             x = hx + s * ex - (1 if s < 0 else 0)
-            cv.paint({(x - 1, hy - 4), (x, hy - 4), (x + 1, hy - 4)}, (220, 220, 225))
+            cv.paint({(x - 1, hy - 4 + FACE_DY), (x, hy - 4 + FACE_DY), (x + 1, hy - 4 + FACE_DY)}, (220, 220, 225))
     return b
 
 
@@ -1589,11 +1659,39 @@ def _split(item: str) -> tuple[str, int]:
     return base, int(var) if var.isdigit() and int(var) < len(TINTS) else 0
 
 
+def _anchor(slot: str, b: Body) -> tuple:
+    """Where a picture of an item in this slot hangs on a body: (x, y, width scale, height scale)."""
+    hx, hy, hrx, hry = b.head
+    bx, by, brx, bry = b.body
+    return {"head": (hx, hy - hry, hrx, hrx), "face": (hx, hy, hrx, hry), "neck": (hx, hy + hry, hrx, hrx),
+            "held": (*b.hand, 1, 1), "outfit": (bx, by, brx, bry), "back": (bx, by, brx, bry), "aura": (bx, by, 1, 1)
+            }.get(slot, (0, 0, 1, 1))  # fg: the whole frame
+
+
+def _item_picture(slot: str, art: _art.Art, keys: dict | None = None) -> Callable:
+    def paint(cv: Canvas, b: Body, f: int) -> None:
+        _art.place(cv, art.frame(f), _anchor(slot, ref_body(f)), _anchor(slot, b), keys)
+    return paint
+
+
+def gen_keys(c: tuple, c2: tuple) -> dict:
+    """Template colours of a generated item's picture → its colours (main, second and their shades)."""
+    a, b = _art.KEYS["base"], _art.KEYS["accent"]
+    return {a: c, shade_of(a): shade_of(c), light_of(a): light_of(c), b: c2, shade_of(b): shade_of(c2), light_of(b): light_of(c2)}
+
+
 def _item(item: str) -> tuple[str, str, Callable | None]:
     base = _split(item)[0]
     if base.startswith("gen:"):
-        return gen_item(base) or ("?", "", None)
-    return ITEMS.get(base, ("?", "", None))
+        got = gen_item(base)
+        if not got:
+            return "?", "", None
+        slot, key, c, c2 = gen_kind(base)
+        art = _art.load("generated", f"{slot}.{key}")
+        return (got[0], got[1], _item_picture(slot, art, gen_keys(c, c2))) if art else got
+    name, slot, fn = ITEMS.get(base, ("?", "", None))
+    art = _art.load("items", base) if fn else None
+    return name, slot, _item_picture(slot, art) if art else fn
 
 
 def item_name(item: str) -> str:
@@ -1622,15 +1720,17 @@ def _tint(c: tuple, mode) -> tuple:
 
 
 def _draw_item(cv: Canvas, item: str, b: Body, f: int) -> None:
-    _, _, fn = _item(item)
+    _, slot, fn = _item(item)
     if not fn:
         return
+    if slot == "face":
+        b = _low(b)
     v = _split(item)[1]
     if not v:
         fn(cv, b, f)
         return
     tmp = Canvas(cv.w, cv.h, cv.ox)
-    tmp.base, tmp.bx = cv.px, 0
+    tmp.base, tmp.bx, tmp.flat = cv.px, 0, cv.flat
     fn(tmp, b, f)
     mode = TINTS[v][1]
     cv.px.update({p: _tint(c, mode) for p, c in tmp.px.items() if cv.px.get(p) != c})
@@ -1718,7 +1818,7 @@ def pet_layer(lk: Look, f: int, base: dict | None = None, bx: int = 0) -> tuple[
     """The pet alone on a transparent 48x48 layer (+ the Body anchors). `base` = backdrop pixels for translucency."""
     layer = Canvas(N, N)
     layer.base, layer.bx = base, bx
-    layer.fg, layer.ghost = [], False
+    layer.fg, layer.ghost, layer.flat = [], False, lk.stage > 0
     if lk.stage == 0:
         _shadow(layer, 24, 41, 9)
         egg(layer, lk, f)
@@ -1792,7 +1892,7 @@ def draw(cv: Canvas, lk: Look, f: int, mirror: bool = False) -> Body | None:
         grave(cv)
     if layer.fg and b:
         fg = Canvas(N, N)
-        fg.base, fg.bx = under, ox
+        fg.base, fg.bx, fg.flat = under, ox, True
         for it in layer.fg:
             _draw_item(fg, it, b, f)
         for (x, y), c in fg.px.items():
@@ -1903,7 +2003,12 @@ def _group_canvases(looks: list[Look], background: str, per_row: int, between: s
                     continue
                 x = (a[0] + b2[0]) // 2 - len(rows_g[0]) // 2
                 y = min(a[2], b2[2]) - 7 + (f % 2 if between != "fight" else 0)
-                cv.grid(x, y + 1, rows_g, colors)
+                art = _art.load("markers", between)
+                if art:
+                    for (dx, dy), c in art.frame(f).items():
+                        cv.paint({(x + dx, y + 1 + dy)}, c)
+                else:
+                    cv.grid(x, y + 1, rows_g, colors)
                 if between == "fight" and f % 2:
                     cv.paint({(x - 2, y + 2), (x + 8, y + 5), (x - 1, y + 7), (x + 8, y)}, (255, 240, 120))
         out.append(cv)

@@ -115,6 +115,14 @@ main > * { min-width: 0; }
 .ask { border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-top: 10px; text-align: center; display: flex; flex-direction: column; gap: 8px; }
 .ask .seg { justify-content: center; }
 .ask button small { display: block; font-weight: 400; font-size: 11.5px; opacity: .8; }
+.ask.duel { text-align: left; }
+.tell { font-style: italic; text-align: center; }
+.moves { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.moves.x { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.moves button { margin: 0; min-height: 60px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.moves button b { font-size: 15px; white-space: nowrap; } .moves button span { font-size: 12.5px; color: var(--muted); }
+.ask.duel > small { text-align: center; } .ask.duel > .ghost { align-self: center; }
+.blog .rnd { font-weight: 600; border-bottom: 0; padding-top: 8px; }
 .rew { border-left: 3px solid var(--line); padding: 4px 10px; margin-top: 8px; text-align: left; }
 .rew.win { border-left-color: var(--good); }
 .blog { max-height: 240px; overflow: auto; font-size: 13.5px; margin-top: 8px; }
@@ -137,6 +145,13 @@ main > * { min-width: 0; }
 .who-head { display: flex; justify-content: space-between; gap: 8px; }
 .who-actions { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 6px; }
 .zoo { width: 100%; image-rendering: pixelated; border-radius: 12px; margin-top: 10px; }
+.thumb { width: 56px; height: 56px; flex: none; image-rendering: pixelated; border: 2px solid var(--line); background: var(--bg); display: block; }
+.row:has(> .thumb) { flex-wrap: nowrap; justify-content: flex-start; } .row:has(> .thumb) > span { flex: 1 1 auto; } .row:has(> .thumb) > button { flex: none; }
+.legacy { border-bottom: 2px solid var(--line); padding-bottom: 8px; margin-bottom: 8px; }
+.legacy h3 { font-size: 13px; margin: 10px 0 4px; color: var(--cyan); text-transform: uppercase; letter-spacing: .05em; }
+.legacy h3:first-child { margin-top: 0; }
+.legacy .q { font-size: 14px; padding: 2px 0; } .legacy .q small { color: var(--muted); }
+.legacy .chips { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 14px; }
 
 #loader { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: var(--bg); padding-inline: 16px; }
 #loader .box { max-width: 420px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
@@ -195,7 +210,7 @@ button.ghost { background: none; box-shadow: none; border-color: transparent; ma
 #askImport::backdrop { background: #0009; } #askImport p { margin: 0; padding: 14px 16px; }
 #askImport form { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 10px 16px; border-top: 2px solid var(--line); }
 #update { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 35; display: flex; gap: 10px; align-items: center;
-  max-width: calc(100% - 32px); padding: 8px 12px; background: var(--dialog); border: 2px solid var(--frame); }
+  width: max-content; max-width: calc(100% - 32px); padding: 8px 12px; background: var(--dialog); border: 2px solid var(--frame); }
 #helpBtn { min-width: 36px; padding: 6px 10px; font-weight: 700; }
 .sprite, .zoo { border-radius: 0; border: 2px solid var(--line); background: var(--bg); }
 .event-img { border-radius: 0; background: var(--bg); }
@@ -226,23 +241,24 @@ a { color: var(--cyan); }
 .tabs button.on::before { content: "▶"; position: absolute; left: 0; color: var(--accent); }
 .dot::after { background: var(--bad); border-radius: 0; }
 #view.book { padding: 0 0 14px; }
-#view.book > .event-img { display: block; width: 100%; height: clamp(220px, calc(100vh - 460px), 560px); object-fit: contain; border-bottom: 2px solid var(--line); }
+#view.book > .event-img { display: block; width: 100%; height: clamp(220px, calc(100vh - 460px), 560px); object-fit: contain; }
 #view .event-img { margin-inline: auto; }
-.dialog, .result { background: var(--dialog); border: 3px solid var(--frame); box-shadow: 0 0 0 3px var(--bg), 0 0 0 6px var(--ring);
-  margin: 16px 10px 6px; padding: 12px 12px 10px; border-radius: 0; white-space: normal; }
+/* one frame per screen: the card. The story is plain text in it; a result is marked by a line on the left */
+.dialog { margin: 12px 12px 4px; padding: 0; white-space: normal; }
+.result { background: none; border: 0; border-left: 3px solid var(--accent); border-radius: 0; margin: 12px 12px 6px; padding: 2px 0 2px 10px; }
 .result { white-space: pre-wrap; }
 .dialog > p { margin: 6px 0 10px; font-size: 17px; line-height: 1.55; white-space: pre-line; }
 .story-head { font-size: 14px; color: var(--cyan); margin: 0; }
 .story-head b { color: var(--cyan); font-weight: 600; }
 .prev { color: var(--muted); font-size: 14.5px; margin-top: 6px; }
 .choices { gap: 6px; margin-top: 6px; }
-.choices button, .choices button.ghost { background: var(--bg); border: 2px solid var(--line); box-shadow: inset 0 -2px 0 #0006; margin: 0;
+.choices button, .choices button.ghost { background: var(--bg); border: 0; box-shadow: inset 0 -2px 0 #0006; margin: 0;
   padding: 9px 10px 9px 28px; position: relative; text-align: left; font: 500 16px/1.4 var(--ui); color: var(--ink); cursor: pointer; }
 .choices button::before { content: "▶"; position: absolute; left: 9px; top: 10px; color: var(--muted); font-size: 13px; }
-.choices button:is(:hover, :focus-visible) { background: var(--ring); border-color: var(--frame); outline: 0; }
+.choices button:is(:hover, :focus-visible) { background: var(--ring); outline: 0; }
 .choices button:is(:hover, :focus-visible)::before { color: var(--accent); }
 .choices button:active:not(:disabled) { background: var(--ring); box-shadow: inset 0 2px 0 #0006; }
-.choices button.ghost { color: var(--muted); font-size: 14.5px; border-style: dashed; box-shadow: none; }
+.choices button.ghost { color: var(--muted); font-size: 14.5px; background: none; box-shadow: none; }
 .choices small { color: var(--good); font-size: 13px; }
 .empty { text-align: left; padding: 14px 12px 0; }
 .empty .primary { width: calc(100% - 6px); }
@@ -262,12 +278,21 @@ a { color: var(--cyan); }
 }
 /* phones: a compact pet header, stats folded away, one row of tabs and the main action in a bottom dock */
 .pet-head > div { min-width: 0; }
-.stats-toggle { display: none; }
+.stats-toggle, .fold-toggle { display: none; }
 .dock { display: none; }
 @media (max-width: 900px) {
   main { padding: 12px 16px; gap: 12px; }
   .pet-head { display: flex; gap: 12px; align-items: center; }
   .pet-head .sprite { width: 96px; flex: none; }
+  #pet.fold { padding: 10px 12px; } #pet.fold .pet-head .sprite { width: 64px; } #pet.fold .pet-more { display: none; }
+  #pet.fold .bars { margin: 8px 0 2px; } #pet.fold .name { font-size: 19px; }
+  .fold-toggle { display: block; width: 100%; text-align: left; padding: 2px 0; color: var(--muted); font-size: 13.5px; }
+  .fold-toggle::before { content: "▸ "; } .fold-toggle[aria-expanded=true]::before { content: "▾ "; }
+  .tabs { position: sticky; top: 0; z-index: 15; background: var(--bg); padding: 6px 0; margin: 0 0 6px; }
+  .tabs button, .tabs button.on { min-height: 44px; }
+  .choices button { min-height: 48px; }
+  header { padding: 6px 16px; gap: 8px; } header h1 { font-size: 15px; }
+  .card .event-img.duel { height: 24vh; } .blog.duel { max-height: 132px; }
   .pet-head .name { margin-top: 0; }
   .stats-toggle { display: block; width: 100%; text-align: left; padding: 2px 0; color: var(--muted); font-size: 13.5px; }
   .stats-toggle::before { content: "▸ "; } .stats.open .stats-toggle::before { content: "▾ "; }
@@ -289,7 +314,7 @@ a { color: var(--cyan); }
 <div id="loader" role="status" aria-live="polite"><div class="box">
   <div class="paw">🐾</div>
   <b>Запускаємо Kit the Cat у твоєму браузері</b>
-  <ol><li id="st1">Завантажуємо Python (≈13 МБ, лише першого разу)</li><li id="st2">Розпаковуємо гру: 690+ пригод, генератор спрайтів</li><li id="st3">Відновлюємо збережену гру</li></ol>
+  <ol><li id="st1">Завантажуємо Python (≈13 МБ, лише першого разу)</li><li id="st2">Розпаковуємо гру: 1000+ пригод, генератор спрайтів</li><li id="st3">Відновлюємо збережену гру</li></ol>
   <small class="muted">Усе працює локально: нічого не надсилається на сервер.</small>
   <div class="err" id="loadErr" hidden></div>
 </div></div>
@@ -321,7 +346,7 @@ a { color: var(--cyan); }
     <h2 id="helpTitle">Як це працює</h2>
     <ol>
       <li><b>Заведи пета.</b> Обери стать і вид: з яйця вилупиться пет із власним характером і мрією.</li>
-      <li><b>Тисни «▶ Пригода».</b> З'явиться ситуація й 2–4 варіанти. Вирішуй сам або натисни «Хай вирішить сам»: пет вчинить за характером.</li>
+      <li><b>Тисни «▶ Пригода».</b> З'явиться ситуація й 2–4 варіанти. Вирішуй або натисни «Хай вирішить пет»: пет вчинить за характером.</li>
       <li><b>Кожне рішення забирає частину життя</b> (скільки саме, гра не каже). Світ іде далі: зарплати, свята, сусіди. Одне життя — десь 140 пригод.</li>
       <li><b>Пет колись помирає</b>, але спадкоємець продовжує рід. Якщо здоров'я падає до нуля, це може статися раніше.</li>
     </ol>
@@ -339,7 +364,7 @@ a { color: var(--cyan); }
     <h3>Вкладки</h3>
     <dl>
       <dt>Пригоди</dt><dd>головна гра</dd>
-      <dt>Арена</dt><dd>бої й турніри (потрібно щонайменше 3 пети-підлітки)</dd>
+      <dt>Арена</dt><dd>бій у раундах: удар, захист або хитрість, речі додають сили; турніри (потрібно щонайменше 3 пети-підлітки)</dd>
       <dt>Сусіди</dt><dd>інші пети; побачення, подарунки, бійки</dd>
       <dt>Щоденник</dt><dd>що з петом було</dd>
     </dl>
@@ -451,9 +476,10 @@ async function act(action, x, extra = {}) {
   try {
     const r = await api("/api/do", {action, x, ...extra});
     if (r.result) { lastResult = r.result.error ? null : r.result; toast(r.result.error); if (lastResult && lastResult.swap) swapBust = Date.now(); }
-    else if (r.battle) { if (r.battle.error) toast(r.battle.error); else if (r.battle.log) battle = r.battle; else if (r.battle.champion) toast("👑 " + r.battle.champion.name); }
+    else if (r.battle) { if (r.battle.error) toast(r.battle.error); else if (r.battle.log) { battle = r.battle; if (battle.duel) battle.maxRounds = battle.rounds; } else if (r.battle.champion) toast("👑 " + r.battle.champion.name); }
     else toast(r.message);
     await refresh();
+    if (!wide.matches && (r.result || r.battle) && !(r.result || r.battle).error) $("#tabs").scrollIntoView({block: "start"});
   } catch (e) { toast("Помилка: " + e.message); } finally { busy = false; }
 }
 const bar = (icon, v, k = "") => `<span>${icon}</span><div class="bar ${k} ${v < 25 ? "low" : ""}" title="${v}"><i style="width:${v}%"></i></div><small class="muted">${v}</small>`;
@@ -475,7 +501,7 @@ function renderDock() {  // phones: the main action is always one thumb away
   if (!on) { el.innerHTML = ""; return; }
   const healthy = p.stats.health >= 90;
   el.innerHTML = `<button class="primary" id="dockGo">${p.pending ? "▶ Вирішити" : "▶ Пригода"}</button>
-    <button id="dockHeal" title="${healthy ? "Здоровий: лікар не потрібен" : "Лікувати"}" ${healthy ? "disabled" : ""}>Лікар</button><button id="dockPet" title="До пета">Пет ↑</button>`;
+    <button id="dockHeal" title="${healthy ? "Здоровий: лікар не потрібен" : "Лікувати"}" ${healthy ? "disabled" : ""}>Лікар</button><button id="dockPet" title="Розгорнути картку пета: речі, базар, дім, робота">Пет</button>`;
   const toView = () => $("#view").scrollIntoView({block: "end"});  // choices right above the dock
   $("#dockGo").onclick = async () => {
     if (tab !== "adv") { tab = "adv"; store.set("ks-tab", tab); battle = null; renderTabs(); }
@@ -483,9 +509,10 @@ function renderDock() {  // phones: the main action is always one thumb away
     toView();
   };
   $("#dockHeal").onclick = () => act("care", "heal");
-  $("#dockPet").onclick = () => window.scrollTo(0, 0);
+  $("#dockPet").onclick = () => { store.set("ks-fold", "0"); renderPet(); window.scrollTo(0, 0); };
 }
 const statsOpen = () => store.get("ks-stats") === "1";
+const folded = () => store.get("ks-fold") !== "0" && !more;  // phones: folded unless opened, or a menu of the card is open
 
 let adoptGender = Math.random() < 0.5 ? "m" : "f";  // preselected by a coin flip; the player can switch
 function renderPet() {
@@ -505,11 +532,12 @@ function renderPet() {
       const s = p.stats;
       const dream = p.dream_done ? `Мрія збулася: ${esc(p.persona.dream)}` : p.goal_step >= 3 ? `Мрія лишилася мрією: ${esc(p.persona.dream)}`
         : `Мрія: ${esc(p.persona.dream)} <span title="крок ${p.goal_step} з 3">${"▰".repeat(p.goal_step)}${"▱".repeat(3 - p.goal_step)}</span>`;
-      h += `<div class="meta" style="margin-top:6px" title="Риса характеру діє в кожній пригоді">Характер: ${esc(p.persona.temper)} · ${esc(p.perk)}</div>
+      h += `<div class="bars">${bar("здоров'я", s.health, "hp")}${bar("настрій", s.mood, "mp")}</div>
+        <button class="ghost fold-toggle" aria-expanded="${!folded()}" aria-controls="petMore">${folded() ? "Докладніше про пета" : "Згорнути"}</button>
+        <div class="pet-more" id="petMore"><div class="meta" title="Риса характеру діє в кожній пригоді">Характер: ${esc(p.persona.temper)} · ${esc(p.perk)}</div>
         <div class="meta">${dream}</div>
         ${p.income ? `<div class="meta income" title="Рахунок за добу: робота, надбавки, побут і податок">${esc(p.income)}</div>` : ""}
         <div class="meta" title="Рейтинг арени">🥊 ${esc(p.rank)} · ${p.elo}</div>
-        <div class="bars">${bar("здоров'я", s.health, "hp")}${bar("настрій", s.mood, "mp")}</div>
         <div class="stats ${statsOpen() ? "open" : ""}"><button class="ghost stats-toggle" aria-expanded="${statsOpen()}">Навички й статус</button><div class="stats-body">
         <div class="life">${[["сила", "str"], ["розум", "int"], ["харизма", "cha"], ["удача", "luck"]].map(([n, k]) => `<span class="stat"${p.item_bonus[k] ? ` title="речі дають +${p.item_bonus[k]}"` : ""}>${n} <b>${p.power[k]}</b>${p.item_bonus[k] ? ` <small>(річ +${p.item_bonus[k]})</small>` : ""}</span>`).join("")}</div>
         <div class="meta">${esc(p.money_tier)}</div>
@@ -517,10 +545,13 @@ function renderPet() {
         ${p.cast.length ? `<div class="life" title="Люди, з якими ${esc(p.name)} живе пліч-о-пліч: що ближчі стосунки, то частіше вони допомагають">${p.cast.map(c => `<span class="stat" title="${esc(c.who)}">${c.icon} ${esc(c.name)} <small>${c.state === "here" ? esc(c.word) : c.state === "away" ? "далеко" : "лише спогад"}</small></span>`).join("")}</div>` : ""}</div></div>
         <div class="care"><button data-care="heal" title="${s.health >= 90 ? "Здоровий: лікар не потрібен" : "Лікувати"}" ${s.health >= 90 ? "disabled" : ""}>Лікар</button><button data-more="casino" title="${p.casino.length ? "Казино" : "Казино — лише для дорослих при грошах"}" ${p.casino.length ? "" : "disabled"}>Казино</button>
           <button data-more="menu" title="Речі, базар, дім, робота…">Ще…</button></div>
-        <div id="more"></div>`;
+        <div id="more"></div></div>`;
     }
     el.innerHTML = h;
+    el.classList.toggle("fold", p.state === "alive" && folded());
   }
+  const ft = el.querySelector(".fold-toggle");  // phones only: the card is a strip until asked for
+  if (ft) ft.onclick = () => { store.set("ks-fold", folded() ? "0" : "1"); renderPet(); };
   const st = el.querySelector(".stats-toggle");  // phones only: wider screens always show the stats (CSS)
   if (st) st.onclick = () => { const on = st.parentElement.classList.toggle("open"); st.ariaExpanded = on; store.set("ks-stats", on ? "1" : ""); };
   el.querySelectorAll("[data-g]").forEach(b => b.onclick = () => {
@@ -551,19 +582,27 @@ function renderPet() {
   if (p) frames("pet_frames", S.owner).then(pk => draw($("#petCv"), pk, 6));
 }
 
+const thumb = (item, bg = "") => `<canvas class="thumb" data-item="${esc(item)}" data-bg="${esc(bg)}" width="48" height="48" aria-hidden="true"></canvas>`;
+async function paintThumbs(el) {  // one at a time: Python draws them between the player's clicks
+  for (const c of el.querySelectorAll("canvas.thumb")) {
+    const pk = await frames("tryon_frames", S.owner, c.dataset.item, c.dataset.bg);
+    if (c.isConnected) draw(c, pk, 1);
+  }
+}
+
 function renderMore() {
   const el = $("#more"); if (!el) return;
   if (!more) { el.innerHTML = ""; return; }
-  const row = (l, r, btn) => `<div class="row"><span>${l}${r ? ` <small class="muted">${r}</small>` : ""}</span>${btn || ""}</div>`;
+  const row = (l, r, btn, pic) => `<div class="row">${pic || ""}<span>${l}${r ? ` <small class="muted">${r}</small>` : ""}</span>${btn || ""}</div>`;
   const opts = [["wardrobe", "👗 Речі"], ["shop", "🛒 Базар"], ["homes", "🏠 Дім"], ["jobs", "💼 Робота"], ["dna", "🧬 Гени"], ["name", "✏️ Ім'я"]];
   const head = more === "casino" ? "" : `<div class="seg">${opts.map(([k, n]) => `<button data-sec="${k}" class="${more === k ? "on" : ""}">${n}</button>`).join("")}</div>`;
   let list = "";
   if (more === "casino") list = S.pet.casino.length ? S.pet.casino.map(v => `<div class="row"><span>${esc(v.name)} <small class="muted">${v.lo}–${v.hi} ₴</small></span>
       <span class="bet"><input type="number" inputmode="numeric" min="${v.lo}" max="${v.hi}" value="${v.lo}" data-stake="${v.id}"><button data-bet="${v.id}">Ставка</button></span></div>`).join("")
     : `<p class="muted">Казино — лише для дорослих при грошах. Автомати в переході пускають від 20 ₴.</p>`;
-  if (more === "wardrobe") list = L.wardrobe.length ? L.wardrobe.map(w => row((w.on ? "✅ " : "") + esc(w.name), esc(w.stats), `<button data-eq="${w.i}">${w.on ? "Зняти" : "Одягти"}</button>`)).join("") : `<p class="muted">Поки порожньо — загляни на базар.</p>`;
-  if (more === "shop") list = L.stock.map(x => row(esc(x.name), x.price + " ₴" + (x.stats ? " · " + esc(x.stats) : "") + (x.price > S.pet.money ? " · не вистачає" : ""), `<button data-buy="${x.i}" ${x.price > S.pet.money ? "disabled" : ""}>Купити</button>`)).join("");
-  if (more === "homes") list = L.homes.map(x => row((x.here ? "📍 " : "") + esc(x.name), "", x.here ? "" : `<button data-mv="${x.i}">Сюди</button>`)).join("");
+  if (more === "wardrobe") list = L.wardrobe.length ? L.wardrobe.map(w => row((w.on ? "✅ " : "") + esc(w.name), esc(w.stats), `<button data-eq="${w.i}">${w.on ? "Зняти" : "Одягти"}</button>`, thumb(w.id))).join("") : `<p class="muted">Поки порожньо — загляни на базар.</p>`;
+  if (more === "shop") list = L.stock.map(x => row(esc(x.name), x.price + " ₴" + (x.stats ? " · " + esc(x.stats) : "") + (x.price > S.pet.money ? " · не вистачає" : ""), `<button data-buy="${x.i}" ${x.price > S.pet.money ? "disabled" : ""}>Купити</button>`, x.kind === "item" ? thumb(x.id) : x.kind === "home" ? thumb("", x.id) : "")).join("");
+  if (more === "homes") list = L.homes.map(x => row((x.here ? "📍 " : "") + esc(x.name), "", x.here ? "" : `<button data-mv="${x.i}">Сюди</button>`, thumb("", x.bg))).join("");
   if (more === "jobs") list = (S.pet.job ? row("Зараз: " + esc(S.pet.job), esc(S.pet.income.replace(/^💼 [^·]*· /, "")), `<button data-quit>Звільнитися</button>`) : "") +
     `<p class="muted" style="margin:2px 0">Зарплата росте: +2% за кожен день стажу (до +60%).</p>` +
     (L.jobs.length ? L.jobs.map(j => row(esc(j.name), (j.range.length ? j.range[0] + "…" + j.range[1] : j.pay) + " ₴/день", `<button data-job="${j.id}">Спробувати</button>`)).join("") : `<p class="muted">Вакансій нема — підрости або вляпайся в історію.</p>`);
@@ -571,6 +610,7 @@ function renderMore() {
     row("🦶 Копнути свого пета", "темна сторона", `<button data-care="kick">🦶</button>`);
   if (more === "name") list = `<div class="row"><input type="text" id="newName" maxlength="24" value="${esc(S.pet.name)}" style="flex:1;min-width:0"><button id="saveName">OK</button></div>`;
   el.innerHTML = `<div class="sub">${head}<div class="list">${list}</div></div>`;
+  paintThumbs(el);
   el.querySelectorAll("[data-sec]").forEach(b => b.onclick = () => { more = b.dataset.sec; renderMore(); });
   el.querySelectorAll("[data-bet]").forEach(b => b.onclick = () => act("casino", b.dataset.bet, {stake: +el.querySelector(`[data-stake="${b.dataset.bet}"]`).value}));
   el.querySelectorAll("[data-eq]").forEach(b => b.onclick = () => act("equip", +b.dataset.eq));
@@ -605,6 +645,7 @@ function resultHtml(r) {
   return `<div class="result">${r.twist ? "🌀 <b>Сюжетний поворот!</b>\n" : ""}<b>${esc(r.label)}</b>${verdict ? ` — ${verdict}${how}` : ""}
 ${esc(r.text)}${r.tail ? `\n🌀 ${esc(r.tail)}` : ""}${r.died ? `\n⚰️ <b>${esc(r.name)} помер.</b> ${esc(r.cause)}` : ""}${notes.length ? `<div class="notes">${esc(notes.join(" · "))}</div>` : ""}${r.hint ? `<div class="notes hint">${esc(r.hint)}</div>` : ""}${recapHtml(r.story)}${seriesHtml(r.series)}</div>`;
 }
+const resultMood = r => r.died ? "" : r.ok === true ? "happy" : r.ok === false ? "sad" : "";  // the pet reacts to how it went
 function swapBanner() {  // a body swap is loud: the avatar changed, and the player must see why
   const t = (lastResult && lastResult.swap ? [lastResult.swap.text] : []).concat(swapNews);
   return t.length ? `<div class="banner swap" role="alert">🔄 <b>Обмін тілами!</b> ${t.map(esc).join(" · ")}</div>` : "";
@@ -631,12 +672,14 @@ function renderAdv() {
       <p>${ev.twist ? "🌀 " : ""}${ev.other ? `👥 <b>${esc(ev.other)}</b> · ` : ""}${esc(ev.text)}</p>
       ${ev.voice ? `<p class="voice" title="Голос характеру">🎭 <b>${esc(p.persona.temper)}</b>: «${esc(ev.voice)}»</p>` : ""}
       <div class="choices">${ev.choices.map(c => `<button data-ch="${c.i}"${c.chance != null ? ` title="${esc(partsTip(c.parts))}"` : ""}><span>${esc(c.label)}</span>${c.chance != null ? `<small class="muted">${SK[c.skill] || ""} ${Math.round(c.chance * 100)}%</small>` : ""}</button>`).join("")}${(ev.locked || []).map(c => `<button class="ghost" disabled title="${esc(c.why)}"><span>🔒 ${esc(c.label)}</span><small class="muted">${esc(c.why)}</small></button>`).join("")}
-        <button data-ch="auto" class="ghost muted">Хай вирішить сам</button></div></div>`;
+        <button data-ch="auto" class="ghost muted">Хай вирішить пет</button></div></div>`;
     frames("event_frames", S.owner).then(pk => draw($("#evCv"), pk, pk && pk.w > 48 ? 4 : 6));
     el.querySelectorAll("[data-ch]").forEach(b => b.onclick = () => act("choose", b.dataset.ch === "auto" ? null : +b.dataset.ch));
     return;
   }
-  el.innerHTML = `${swapBanner()}${resultHtml(lastResult) || `<div class="dialog"><p>${esc(p.name)} нудьгує. Час для пригоди.</p></div>`}<div class="empty"><button class="primary" id="go">▶ Нова пригода</button></div>`;
+  const scene = lastResult ? `<canvas class="event-img" id="evCv" role="img" aria-label="Сцена пригоди"></canvas>` : "";
+  el.innerHTML = `${scene}${swapBanner()}${resultHtml(lastResult) || `<div class="dialog"><p>${esc(p.idle)}</p></div>`}<div class="empty"><button class="primary" id="go">▶ Нова пригода</button></div>`;
+  if (scene) frames("event_frames", S.owner, resultMood(lastResult)).then(pk => draw($("#evCv"), pk, pk && pk.w > 48 ? 4 : 6));
   $("#go").onclick = () => { lastResult = null; act("adventure"); };
 }
 
@@ -659,7 +702,7 @@ function renderArena() {
   if (c) {
     const mine = c.a.mine || c.b.mine;
     const myBet = t.rounds.flat().find(m => m.key === c.key)?.my_bet;
-    const side = mine ? `Моя тактика: ${tactic}` : myBet ? `<small class="muted">Твоя ставка: ${myBet[1]} ₴ ×${myBet[2]}</small>` : S.pet ?
+    const side = mine ? `<small class="muted">Твій бій — у раундах. Тактика для «До фіналу»: ${tactic}</small>` : myBet ? `<small class="muted">Твоя ставка: ${myBet[1]} ₴ ×${myBet[2]}</small>` : S.pet ?
       `<button data-bet="0">🎰 50 ₴ на ${esc(c.a.name)} ×${c.odds[0]}</button><button data-bet="1">🎰 50 ₴ на ${esc(c.b.name)} ×${c.odds[1]}</button>` : "";
     h += `<div class="vs"><div>${c.a.emoji}<b>${esc(c.a.name)}</b><small class="muted">${Math.round(c.chance * 100)}%</small></div><b>VS</b>
         <div>${c.b.emoji}<b>${esc(c.b.name)}</b><small class="muted">${Math.round((1 - c.chance) * 100)}%</small></div></div>
@@ -673,7 +716,7 @@ function renderArena() {
       <p class="muted">${T.eligible < 3 ? "Потрібно щонайменше 3 пети-підлітки (вкладка «Сусіди» → «Заселити 3 сусідів»; вони дорослішають, поки ти граєш)" : `бійців готово: ${T.eligible} · приз 300 ₴ за кожного`}</p></div>`;
     if (S.pet && S.pet.state === "alive" && foes.length)
       h += `<div class="row"><span class="seg">⚔️ Спаринг з <select id="foe">${foes.map(f => `<option value="${f.owner}">${f.emoji} ${esc(f.name)}</option>`).join("")}</select></span>
-        <span class="seg">${tactic}<button id="spar">Бій</button></span></div>`;
+        <span class="seg"><button id="spar" class="primary">⚔️ Бій у раундах</button></span></div>`;
     if (t && t.status === "done") h += `<details style="margin-top:10px"><summary class="muted">Сітка останнього турніру</summary>${bracketHtml(t)}</details>`;
   }
   if (T.history.length) h += `<details style="margin-top:10px"><summary class="muted">Попередні чемпіони</summary>${T.history.map(x => `<div><small>${esc(x)}</small></div>`).join("")}</details>`;
@@ -681,9 +724,9 @@ function renderArena() {
   const st = $("#strat"); if (st) st.onchange = e => { store.set("ks-strat", e.target.value); if (live) act("t_strategy", e.target.value); };
   el.querySelectorAll("[data-bet]").forEach(b => b.onclick = () => act("t_bet", +b.dataset.bet, {key: c.key, amount: 50}));
   const nt = $("#newTour"); if (nt) nt.onclick = async () => { await act("t_new"); act("t_strategy", strat()); };
-  const fi = $("#fight"); if (fi) fi.onclick = () => act("t_next");
+  const fi = $("#fight"); if (fi) fi.onclick = () => act("t_next", null, {duel: true});
   const te = $("#toEnd"); if (te) te.onclick = toEnd;
-  const sp = $("#spar"); if (sp) sp.onclick = () => act("spar", strat(), {with: +$("#foe").value});
+  const sp = $("#spar"); if (sp) sp.onclick = () => act("spar", null, {with: +$("#foe").value});
 }
 
 async function toEnd() {
@@ -703,11 +746,11 @@ async function toEnd() {
 function renderBattle() {
   const el = $("#view"), r = battle;
   const [fa, fb] = r.fighters;
-  el.innerHTML = `<canvas class="event-img" id="fightCv" role="img" aria-label="Бій"></canvas>
-    <div class="vs">${[fa, fb].map((f, i) => `<div><b>${esc(f.name)}</b><small class="muted">${esc(f.strategy)}</small><div class="hp"><i id="hp${i}" style="width:100%"></i></div></div>`).join("<b>VS</b>")}</div>
+  el.innerHTML = `<canvas class="event-img${r.duel ? " duel" : ""}" id="fightCv" role="img" aria-label="Бій"></canvas>
+    <div class="vs">${[fa, fb].map((f, i) => `<div><b>${esc(f.name)}</b><small class="muted">${esc(r.duel ? f.passive : f.strategy)}</small><div class="hp"><i id="hp${i}" style="width:100%"></i></div></div>`).join("<b>VS</b>")}</div>
     <div class="tick" id="tick"></div>
-    <div class="blog" id="blog"></div>
-    <p class="seg bctl" id="bctl"><button id="bHold">⏸ Пауза</button><button id="bFast">⏩ ×2</button><button id="bSkip">⏭ До фіналу</button></p>
+    <div class="blog${r.duel ? " duel" : ""}" id="blog"></div>
+    <p class="seg bctl" id="bctl"${r.duel ? " hidden" : ""}><button id="bHold">⏸ Пауза</button><button id="bFast">⏩ ×2</button><button id="bSkip">⏭ До фіналу</button></p>
     <div id="bAsk"></div><div id="bEnd"></div>`;
   frames("fight_frames", r.owners[0], r.owners[1]).then(pk => draw($("#fightCv"), pk, 4));
   pace.hold = false;
@@ -715,7 +758,7 @@ function renderBattle() {
 }
 
 /* A fight is read, not skimmed: 1.1 s a line, 1.6 s for a crit, a special or an ultimate, 0.7 s for a miss.
-   The fight stops once, when somebody drops below half health: that is the player's decision (spar_tactic). */
+   A duel (spar) stops before every round for the player's move (spar_move); a tournament fight plays through. */
 const BEAT = {crit: 1600, special: 1600, ult: 1600, miss: 700};
 const loud = k => k === "crit" || k === "special" || k === "ult";
 const pace = {speed: store.get("ks-speed") === "2" ? 2 : 1, hold: false, wake: null};
@@ -724,9 +767,9 @@ const nap = ms => new Promise(res => { const t = setTimeout(res, ms); pace.wake 
 async function play(r) {
   const log = $("#blog"), tick = $("#tick"), fs = r.fighters, hold = $("#bHold"), fast = $("#bFast");
   const bars = e => fs.forEach((f, i) => $("#hp" + i).style.width = Math.max(0, e.hp[i] / f.max_hp * 100) + "%");
-  const put = e => { const d = document.createElement("div"); d.className = "s" + e.side + (loud(e.k) ? " key" : ""); d.textContent = e.text;
+  const put = e => { const d = document.createElement("div"); d.className = "s" + e.side + (loud(e.k) ? " key" : "") + (e.k === "round" ? " rnd" : ""); d.textContent = e.text;
     log.appendChild(d); log.scrollTop = log.scrollHeight; };
-  const sync = e => { bars(e); tick.textContent = `Раунд ${Math.max(1, e.r)} · ` + fs.map((f, i) => `${f.emoji || "🐾"} ${e.hp[i]} ❤️`).join(" · "); };
+  const sync = e => { bars(e); tick.textContent = `Раунд ${Math.max(1, e.r)}${r.duel ? ` з ${r.maxRounds}` : ""} · ` + fs.map((f, i) => `${f.emoji || "🐾"} ${e.hp[i]} ❤️`).join(" · "); };
   const lit = () => { fast.classList.toggle("on", pace.speed === 2); fast.setAttribute("aria-pressed", pace.speed === 2); };
   lit();
   hold.onclick = () => { pace.hold = !pace.hold; hold.textContent = pace.hold ? "▶️ Далі" : "⏸ Пауза"; if (!pace.hold && pace.wake) pace.wake(); };
@@ -742,10 +785,10 @@ async function play(r) {
     if (!want) { sync(e); r.shown = n + 1; continue; }
     while (pace.hold && log.isConnected) await nap(200);
     put(e); sync(e); r.shown = n + 1;
-    if (!r.skip) await nap((BEAT[e.k] || 1100) / pace.speed);
+    if (!r.skip) await nap((BEAT[e.k] || (r.duel ? 800 : 1100)) / pace.speed);
   }
   if (!log.isConnected) return;
-  if (r.paused) return decide(r);
+  if (r.paused) return duelAsk(r);
   r.played = true; r.shown = r.log.length;
   $("#bctl").style.display = "none";
   const bets = (r.bets || []).length ? `<div class="notes">Ставки: ${esc(r.bets.join(" · "))}</div>` : "";
@@ -753,34 +796,36 @@ async function play(r) {
     + `<div class="notes">${((r.notes || {})[o] || []).map(esc).join(" · ")}</div>${(r.rec || {})[o] ? `<div class="meta">${esc(r.rec[o].line)} · ${esc(r.rec[o].rank)}</div>` : ""}</div>`).join("");
   $("#bEnd").innerHTML = `<div class="result">🏆 ${esc(r.text)}${r.champion ? `\n👑 <b>Чемпіон турніру: ${esc(r.champion.name)}!</b>` : ""}${bets}</div>${gave}
     <p class="seg" style="justify-content:center;margin-top:10px">${T.tour && T.tour.status === "running" ? `<button class="primary" id="nextFight">▶️ Наступний бій</button>` : ""}<button id="back">← Арена</button></p>`;
-  const nf = $("#nextFight"); if (nf) nf.onclick = () => { battle = null; act("t_next"); };
+  const nf = $("#nextFight"); if (nf) nf.onclick = () => { battle = null; act("t_next", null, {duel: true}); };
   $("#back").onclick = () => { battle = null; renderArena(); };
+  if (!wide.matches && r.duel) $("#bEnd").scrollIntoView({block: "nearest"});  // the verdict, not the top of the page
 }
 
-function decide(r) {  // the one decision: the fight is paused on the server until we answer (or 20 s pass)
-  clearInterval(r.timer);
-  r.until = r.until || Date.now() + r.seconds * 1000;
-  const low = r.fighters[r.low] || r.fighters[0];
-  $("#bAsk").innerHTML = `<div class="ask"><div><b>Критичний момент!</b> ${esc(low.name)} опускається нижче половини здоров'я. Що робимо?</div>
-    <div class="seg">${r.tactics.map(([k, n, hint]) => `<button data-t="${k}">${esc(n)}<small>${esc(hint)}</small></button>`).join("")}</div>
-    <small class="muted">Не обереш тактику за <span id="bLeft"></span> с — бій піде далі як раніше.</small></div>`;
-  const upd = () => {
-    const el = $("#bLeft"); if (!el || !el.isConnected) return clearInterval(r.timer);
-    const left = Math.max(0, Math.ceil((r.until - Date.now()) / 1000)); el.textContent = left;
-    if (!left) { clearInterval(r.timer); choose(r, "hold"); }
-  };
-  r.timer = setInterval(upd, 250); upd();
-  $("#bAsk").querySelectorAll("[data-t]").forEach(b => b.onclick = () => choose(r, b.dataset.t));
+const TRIANGLE = ["strike", "guard", "trick"];
+function duelAsk(r) {  // a round of a duel: the opponent's look, three moves with what they would do, the named moves
+  const main = r.moves.filter(m => TRIANGLE.includes(m.key)), extra = r.moves.filter(m => !TRIANGLE.includes(m.key));
+  const gear = ((r.gear || [])[0] || []).map(g => `${esc(g.name)} ${esc(g.label)}`).join(" · ");
+  $("#bAsk").innerHTML = `<div class="ask duel">
+    <div class="tell">👀 ${esc(r.tell)}</div>
+    <div class="moves">${main.map(m => `<button data-m="${m.key}" title="${esc(m.hint)}"><b>${esc(m.label)}</b><span>≈ ${m.power} шкоди</span></button>`).join("")}</div>
+    ${extra.length ? `<div class="moves x">${extra.map(m => `<button data-m="${m.key}"><b>${esc(m.label)}</b><small>${esc(m.hint)}</small></button>`).join("")}</div>` : ""}
+    <small class="muted">⚔️ удар б'є 🎭 хитрість · 🎭 хитрість б'є 🛡 захист · 🛡 захист б'є ⚔️ удар</small>
+    <small class="muted">${gear ? `Твої речі в бою: ${gear}` : "Речей для бою нема: шабля, каска чи бронік додають шкоди й захисту"}</small>
+    <button class="ghost muted" data-m="surrender">🏳 Здатися</button></div>`;
+  $("#bAsk").querySelectorAll("[data-m]").forEach(b => b.onclick = () => duelMove(r, b.dataset.m));
+  $("#bAsk").scrollIntoView({block: "nearest"});
 }
-async function choose(r, tactic) {
-  if (r.sent) return; r.sent = true; clearInterval(r.timer);
+async function duelMove(r, move) {
+  if (r.sent) return; r.sent = true;
+  $("#bAsk").querySelectorAll("button").forEach(b => b.disabled = true);
   try {
-    const b = (await api("/api/do", {action: "spar_tactic", x: tactic, fight: r.fight})).battle;
-    if (b.error) { toast(b.error); if (battle === r) battle = null; }
-    else Object.assign(r, b, {log: r.log.concat(b.log), paused: false, shown: r.log.length, until: 0});
-    r.sent = false;
-    await refresh();
-  } catch (e) { r.sent = false; toast("Помилка: " + e.message); }
+    const b = (await api("/api/do", {action: "spar_move", x: move, fight: r.fight})).battle;
+    if (b.error) { toast(b.error); if (battle === r) { battle = null; await refresh(); } return; }
+    const seen = r.log.length;
+    Object.assign(r, b, {log: r.log.concat(b.log), paused: !!b.paused, shown: seen, maxRounds: r.maxRounds});
+    if (r.paused && $("#blog")) { $("#bAsk").innerHTML = ""; $("#blog").innerHTML = ""; play(r); }
+    else { await refresh(); if (!wide.matches) $("#tabs").scrollIntoView({block: "start"}); }
+  } catch (e) { toast("Помилка: " + e.message); } finally { r.sent = false; }
 }
 
 function renderNb() {
@@ -805,15 +850,23 @@ function renderNb() {
     if (!a) { openNb = openNb === o ? 0 : o; return renderNb(); }
     if (a === "pat" || a === "kick") act("care", a, {owner: o});
     if (a === "date" || a === "fight") { lastResult = null; tab = "adv"; store.set("ks-tab", tab); act("adventure", null, {kind: a, with: o}); }
-    if (a === "spar") { tab = "arena"; store.set("ks-tab", tab); act("spar", strat(), {with: o}); }
+    if (a === "spar") { tab = "arena"; store.set("ks-tab", tab); act("spar", null, {with: o}); }
   });
   $("#zooBtn").onclick = async () => { const z = $("#zoo"); z.hidden = false; await draw(z, await frames("zoo_frames"), 4); };
 }
 
 function renderLog() {
   const j = S.journal || [];
-  $("#view").innerHTML = j.length ? `<div class="journal">${j.map(e => `<div class="k-${e.kind}"><time>${e.ts}</time>${esc(e.text)}</div>`).join("")}</div>`
-    : `<p class="empty muted">Тут з'явиться історія життя твого пета.</p>`;
+  $("#view").innerHTML = legacyHtml(S.pet) + (j.length ? `<div class="journal">${j.map(e => `<div class="k-${e.kind}"><time>${e.ts}</time>${esc(e.text)}</div>`).join("")}</div>`
+    : `<p class="empty muted">Тут з'явиться історія життя твого пета.</p>`);
+}
+function legacyHtml(p) {  // what this life has amounted to: quests, achievements, the ancestors
+  if (!p || p.state === "egg" || !(p.quests.length || p.achievements.length || p.ancestors.length)) return "";
+  const quests = p.quests.map(q => `<div class="q">📺 ${esc(q.title)} <small>${q.end ? esc(q.end) : `серія ${q.ep}, далі буде`}</small></div>`).join("");
+  const more = p.ach_total - p.achievements.length;
+  return `<div class="legacy">${quests ? `<h3>Квести й серіали</h3>${quests}` : ""}
+    ${p.achievements.length ? `<h3>Досягнення · ${p.ach_total}</h3><div class="chips">${p.achievements.map(a => `<span>🏆 ${esc(a)}</span>`).join("")}${more > 0 ? `<span class="muted">і ще ${more}</span>` : ""}</div>` : ""}
+    ${p.ancestors.length ? `<h3>Рід · покоління ${p.gen}</h3>${p.ancestors.map(a => `<div class="q">🪦 ${esc(a.name)} <small>${esc(a.cause || "")}</small></div>`).join("")}` : ""}</div>`;
 }
 
 /* ---------- glue ---------- */

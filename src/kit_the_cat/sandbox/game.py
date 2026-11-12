@@ -9,8 +9,9 @@ import asyncio
 import random
 import secrets
 import time
+import zlib
 from collections import OrderedDict
-from dataclasses import asdict
+from dataclasses import asdict, replace
 
 from .. import battle as B
 from .. import card
@@ -21,8 +22,22 @@ from ..content.economy import FOOD, JOBS
 from ..storage import MemoryStore
 
 SANDBOX = -777
-FIGHT_TTL, FIGHT_CAP, DECISION_SECONDS = 600, 32, 20   # paused spars wait this long (s) / at most this many / the UI countdown
+FIGHT_TTL, FIGHT_CAP = 600, 32   # an unfinished duel waits this long (s) / at most this many of them
 NPC_BASE = 100
+MOODS = ("happy", "sad")  # the face after a decision worked out or didn't
+# between adventures, by age: {name} and the {він|вона} pairs go through Pet.fmt
+IDLE = {
+    "kid": ["{name} будує фортецю з подушок. Фортеці бракує ворога.", "{name} питає «чому» вже двадцятий раз. Час для пригоди.",
+            "{name} {знайшов|знайшла} палицю. Це найкраща палиця у світі.", "{name} нудьгує. Час для пригоди."],
+    "teen": ["{name} лежить і дивиться в стелю. Стеля мовчить.", "{name} гортає стрічку. Нічого нового, крім реклами.",
+             "{name} {сказав|сказала}, що все нудно. Перевіримо.", "{name} нудьгує. Час для пригоди."],
+    "young": ["{name} {поставив|поставила} чайник і чекає, поки життя почне робити хоч щось.", "У {name_gen} вільна хвилина. Підозріло.",
+              "{name} перевіряє телефон утретє за хвилину. Нічого нового.", "{name} нудьгує. Час для пригоди."],
+    "middle": ["{name} {поставив|поставила} чайник і чекає, поки життя почне робити хоч щось.", "У {name_gen} вільна хвилина. Підозріло.",
+               "{name} дивиться у вікно. Там щось відбувається без {name_gen}.", "{name} нудьгує. Час для пригоди."],
+    "grand": ["{name} сидить на лавці й оцінює перехожих. Перехожі не проходять.", "{name} розв'язує кросворд. Слово із семи літер: «пригода».",
+              "{name} {згадав|згадала} молодість. Час додати ще спогадів.", "{name} нудьгує. Час для пригоди."],
+}
 HUMANS = {1: "Ти", 2: "Друг", 3: "Сусідка"}
 NPC_NAMES = ["Тьотя Валя", "Дядько Толік", "Кума Оксана", "Петрович", "Студент Діма", "Баба Галя", "Айтішник Ігор",
              "Бариста Соня", "Таксист Вітя", "Вчителька Ніна"]
@@ -38,6 +53,7 @@ class Sandbox:
         self.lock = asyncio.Lock()
         self.world_feed: list[str] = []
         self.news: dict[int, list[str]] = {}  # owner -> things that happened to their pet while they were not looking
+        self.last_scene: dict[int, tuple] = {}  # owner -> (background, other pet's pid) of the latest adventure
         self._fights: OrderedDict[str, dict] = OrderedDict()   # spars paused at the decision: fight id -> state (in memory)
         E.clock = (lambda: time.time() + self.offset) if epoch is None else (lambda: epoch + self.offset)
 
@@ -110,7 +126,8 @@ class Sandbox:
             skills={k: round(p.skills.get(k, 0)) for k in E.SKILLS}, jailed=p.jailed, pending=None,
             genes=sprites.describe(p.genome), dna=sprites.dna_code(p.genome), rarity=sprites.rarity(p.genome)[1],
             rank=B.rank(p), elo=int(p.flags.get("elo", 1000)),
-            gen=p.gen, dynasty=p.dynasty, achievements=[p.ach_name(a) for a in p.achievements[-12:]], heir=bool(p.heir), look=_look_key(p),
+            gen=p.gen, dynasty=p.dynasty, achievements=[p.ach_name(a) for a in p.achievements[-12:]], ach_total=len(p.achievements), heir=bool(p.heir), look=_look_key(p),
+            quests=_quests(p), ancestors=self._ancestors(owner), idle=_idle(p),
             persona=dict(temper=p.temper_name(), dream=p.dream_text(), fear=p.persona.get("fear", "")), emoji=E.SPECIES_EMOJI.get(p.species, "🐾"),
             swap=p.swap_label(names), news=self.news.pop(owner, []),
             cast=p.cast_list(), perk=E.perk_text(p), goal_step=p.goal_step(), dream_done=bool(p.flags.get("dream_done")),
@@ -304,7 +321,7 @@ class Sandbox:
     async def wardrobe(self, owner: int) -> list[dict]:
         p = await self.pet(owner, tick=False)
         eq = set(p.equipped.values()) if p else set()
-        return [dict(i=i, name=E.item_name(it), slot=E.item_slot(it), on=it in eq, stats=B.item_label(it))
+        return [dict(i=i, id=it, name=E.item_name(it), slot=E.item_slot(it), on=it in eq, stats=B.item_label(it))
                 for i, it in enumerate(p.items if p else [])]
 
     async def equip(self, owner: int, i: int) -> str:
@@ -325,7 +342,7 @@ class Sandbox:
 
     def stock(self) -> list[dict]:
         day = E.kyiv().strftime("%Y-%m-%d")
-        return [dict(i=i, stats=B.item_label(s["id"]) if s["kind"] == "item" else "", **{k: s[k] for k in ("name", "price", "kind")})
+        return [dict(i=i, stats=B.item_label(s["id"]) if s["kind"] == "item" else "", **{k: s[k] for k in ("id", "name", "price", "kind")})
                 for i, s in enumerate(E.shop_stock(SANDBOX, day))]
 
     async def buy(self, owner: int, i: int) -> str:
@@ -344,7 +361,7 @@ class Sandbox:
 
     async def homes(self, owner: int) -> list[dict]:
         p = await self.pet(owner, tick=False)
-        return [dict(i=i, name=E.bg_name(h), here=h == p.home) for i, h in enumerate(p.homes)] if p else []
+        return [dict(i=i, bg=h, name=E.bg_name(h), here=h == p.home) for i, h in enumerate(p.homes)] if p else []
 
     async def move(self, owner: int, i: int) -> str:
         async with self.lock:
@@ -534,9 +551,9 @@ class Sandbox:
         return "🧹 Пісочницю очищено"
 
     # --- battles & tournament -------------------------------------------------------------------
-    async def spar(self, owner: int, foe: int, strategy: str) -> dict:
-        """Friendly 1-on-1. Non-lethal; rating counts. When a fighter first drops below half health the fight pauses
-        (`paused`, `fight`, `tactics`): the caller answers with `spar_tactic`."""
+    async def spar(self, owner: int, foe: int, strategy: str = "") -> dict:
+        """Friendly 1-on-1 in rounds. Non-lethal; rating counts. Returns the duel waiting for the first move
+        (`paused`, `fight`, `moves`, `tell`); the caller answers every round with `spar_move`."""
         async with self.lock:
             pets = await self.pets()
             await self._flush_fights(owner, pets)
@@ -546,57 +563,79 @@ class Sandbox:
                 return dict(error="Обери суперника")
             if not B.eligible(a) or not B.eligible(b):
                 return dict(error="Битися можуть живі пети від підлітка, не в тюрмі й не в лікарні")
-            fa, fb = B.Fighter.of(a, strategy), B.Fighter.of(b, B.auto_strategy(b, self.rng))
+            fa, fb = B.Fighter.of(a, B.DUEL), B.Fighter.of(b, B.DUEL)
             chance = B.win_chance(fa, fb)
-            st = B.fight(fa, fb, self.rng, stop_at=B.STOP_AT)
-            if st.done:
-                res = self._after(a, b, st.result, chance)
-            else:
-                for k in [k for k, v in self._fights.items() if time.time() - v["at"] > FIGHT_TTL]:
-                    del self._fights[k]
-                while len(self._fights) >= FIGHT_CAP:
-                    self._fights.popitem(last=False)
-                fid = secrets.token_hex(8)
-                self._fights[fid] = dict(owner=owner, foe=foe, st=st, chance=chance, at=time.time())
-                return dict(owners=[a.owner_id, b.owner_id], paused=True, fight=fid, log=st.log, fighters=st.info(),
-                            low=st.low, chance=round(chance, 3), seconds=DECISION_SECONDS,
-                            tactics=[(k, *v) for k, v in B.TACTICS.items()])
-            await self.save(a, b)
-        return res
+            d = B.duel(fa, fb, self.rng)
+            for k in [k for k, v in self._fights.items() if time.time() - v["at"] > FIGHT_TTL and not v.get("tour")]:
+                del self._fights[k]
+            while len(self._fights) >= FIGHT_CAP:
+                self._fights.popitem(last=False)
+            fid = secrets.token_hex(8)
+            self._fights[fid] = dict(owner=owner, foe=foe, d=d, chance=chance, at=time.time())
+            return self._duel_view(a, b, fid, d, chance, 0)
 
-    async def spar_tactic(self, owner: int, fight: str, tactic: str) -> dict:
-        """The decision of a paused spar. The fight id is single-use and belongs to the player who started it;
-        the opponent picks its own tactic. Returns the rest of the fight (`log` holds only the new lines, from `from`)."""
-        tactic = tactic or B.HOLD
-        if tactic != B.HOLD and tactic not in B.TACTICS:
-            return dict(error="Невідома тактика")
+    def _duel_view(self, a: E.Pet, b: E.Pet, fid: str, d: B.Duel, chance: float, since: int) -> dict:
+        """A duel between rounds: what happened since log line `since`, and what the player can do now."""
+        gear = [[dict(name=sprites.item_name(it), label=B.item_label(it)) for it in p.equipped.values() if B.item_label(it)]
+                for p in (a, b)]
+        return dict(owners=[a.owner_id, b.owner_id], paused=True, duel=True, fight=fid, log=d.log[since:], **{"from": since},
+                    fighters=d.info(), round=d.rnd, rounds=d.max_rounds, chance=round(chance, 3), gear=gear,
+                    moves=B.duel_moves(d, 0), tell=B.duel_tell(d, 1, self.rng))
+
+    async def spar_move(self, owner: int, fight: str, move: str) -> dict:
+        """One round of a duel: the player's move against the opponent's. The fight id belongs to the player who
+        started it. Returns the next round to decide (`paused`) or the finished fight; `log` holds only the new lines."""
         async with self.lock:
             ent = self._fights.get(fight)
             if not ent or ent["owner"] != owner:
                 return dict(error="Цей бій уже скінчився")
-            del self._fights[fight]   # single use
+            d: B.Duel = ent["d"]
+            if move != B.SURRENDER and move not in {m["key"] for m in B.duel_moves(d, 0)}:
+                return dict(error="Такого ходу зараз нема")
             pets = await self.pets()
             a = next((x for x in pets if x.owner_id == owner), None)
             b = next((x for x in pets if x.owner_id == ent["foe"]), None)
             if not a or not b or not B.eligible(a) or not B.eligible(b):
+                del self._fights[fight]
                 return dict(error="Суперник вибув із бою")
-            st, n = ent["st"], len(ent["st"].log)
-            r = B.resume(st, tactic, B.auto_tactic(st.fighters[1]), self.rng)
-            res = self._after(a, b, r, ent["chance"])
-            res.update(log=r.log[n:], **{"from": n})
-            await self.save(a, b)
+            n = len(d.log)
+            r = B.duel_round(d, move, None, self.rng)
+            ent["at"] = time.time()
+            if not r:
+                return self._duel_view(a, b, fight, d, ent["chance"], n)
+            del self._fights[fight]
+            res = await self._duel_done(ent, pets)
+            res.update(log=r.log[n:], duel=True, **{"from": n})
+        return res
+
+    async def _duel_done(self, ent: dict, pets: list[E.Pet]) -> dict:
+        """A duel is over (or abandoned: then the pets fight it out themselves): the consequences, and the bracket if
+        it was a tournament match. Call with the lock held and the entry already taken out of `_fights`."""
+        d: B.Duel = ent["d"]
+        while not d.done:
+            B.duel_round(d, None, None, self.rng)
+        by = {x.owner_id: x for x in pets}
+        a, b = by[ent["owner"]], by[ent["foe"]]
+        res = self._after(a, b, d.result, ent["chance"])
+        if ent.get("tour"):
+            st = await self._state()
+            t = st.get("tour")
+            if t and t["status"] == "running" and ent["tour"] not in t["results"]:
+                self._tour_record(st, t, by, ent["tour"], res)
+                await self.save(*pets)
+                await self._save_state(st)
+                return res
+        await self.save(a, b)
         return res
 
     async def _flush_fights(self, owner: int, pets: list[E.Pet]) -> None:
-        """A decision nobody answered (the page was closed): the old spar is finished without a tactic."""
+        """A duel nobody finished (the page was closed): the pets fight it out themselves."""
+        by = {x.owner_id: x for x in pets}
         for fid in [k for k, v in self._fights.items() if v["owner"] == owner]:
             ent = self._fights.pop(fid)
-            a = next((x for x in pets if x.owner_id == owner), None)
-            b = next((x for x in pets if x.owner_id == ent["foe"]), None)
+            a, b = by.get(owner), by.get(ent["foe"])
             if a and b and B.eligible(a) and B.eligible(b):
-                st = ent["st"]
-                self._after(a, b, B.resume(st, B.HOLD, B.auto_tactic(st.fighters[1]), self.rng), ent["chance"])
-                await self.save(a, b)
+                await self._duel_done(ent, pets)
 
     def _battle(self, a: E.Pet, b: E.Pet, sa: str, sb: str) -> dict:
         fa, fb = B.Fighter.of(a, sa), B.Fighter.of(b, sb)
@@ -742,8 +781,10 @@ class Sandbox:
             self._promote(t, ri, mi, win)
             self._refund(t, key, by)
 
-    async def tour_next(self) -> dict:
-        """Play the next match (byes and walkovers resolve instantly). Returns the battle or a status."""
+    async def tour_next(self, owner: int = 0, duel: bool = False) -> dict:
+        """Play the next match (byes and walkovers resolve instantly). Returns the battle or a status. With `duel`,
+        a match of `owner`'s own pet is a duel in rounds: the answer is the duel waiting for a move (see `spar`),
+        and `spar_move` plays it; the bracket moves on when it ends."""
         async with self.lock:
             st = await self._state()
             t = st.get("tour")
@@ -760,24 +801,32 @@ class Sandbox:
                 a, b = t["rounds"][ri][mi]
                 pa, pb = by.get(a), by.get(b)
                 ok_a, ok_b = bool(pa and B.eligible(pa)), bool(pb and B.eligible(pb))
+                left = next((k for k, v in self._fights.items() if v.get("tour") == key), None)
+                if left:  # this match was started as a duel and left: the pets finish it, no second try
+                    ent = self._fights.pop(left)
+                    if ok_a and ok_b:
+                        return await self._duel_done(ent, pets)
                 if not (ok_a and ok_b):  # bye or walkover (pet died / jailed / in hospital)
                     win = a if ok_a else b if ok_b else 0
                     t["results"][key] = dict(winner=win, bye=True)
                     self._promote(t, ri, mi, win)
                     self._refund(t, key, by)
                     continue
+                if duel and owner in (a, b) and owner < NPC_BASE:
+                    me, foe = (pa, pb) if owner == a else (pb, pa)
+                    fa, fb = B.Fighter.of(me, B.DUEL), B.Fighter.of(foe, B.DUEL)
+                    chance = B.win_chance(fa, fb)
+                    d = B.duel(fa, fb, self.rng)
+                    fid = secrets.token_hex(8)
+                    self._fights[fid] = dict(owner=owner, foe=foe.owner_id, d=d, chance=chance, at=time.time(), tour=key)
+                    await self.save(*pets)
+                    await self._save_state(st)
+                    return dict(self._duel_view(me, foe, fid, d, chance, 0), key=key)
                 strat = t["strategies"]
                 sa = strat.get(str(a)) or B.auto_strategy(pa, self.rng)
                 sb = strat.get(str(b)) or B.auto_strategy(pb, self.rng)
                 res = self._battle(pa, pb, sa, sb)
-                res["key"], res["round"] = key, ri
-                t["results"][key] = dict(winner=res["winner"])
-                self._promote(t, ri, mi, res["winner"])
-                res["bets"] = self._settle(t, key, 0 if res["winner"] == a else 1, by)
-                t["last"] = key
-                self._skip_byes(t, by)
-                if not self._next_match(t):
-                    res["champion"] = self._finish(t, by, st)
+                self._tour_record(st, t, by, key, res)
                 await self.save(*pets)
                 await self._save_state(st)
                 return res
@@ -785,6 +834,19 @@ class Sandbox:
             await self.save(*pets)
             await self._save_state(st)
             return dict(done=True, champion=champ)
+
+    def _tour_record(self, st: dict, t: dict, by: dict, key: str, res: dict) -> None:
+        """Write a played match into the bracket: the winner moves on, bets are paid, the champion is crowned."""
+        ri, mi = (int(x) for x in key.split("-"))
+        a = t["rounds"][ri][mi][0]
+        res["key"], res["round"] = key, ri
+        t["results"][key] = dict(winner=res["winner"])
+        self._promote(t, ri, mi, res["winner"])
+        res["bets"] = self._settle(t, key, 0 if res["winner"] == a else 1, by)
+        t["last"] = key
+        self._skip_byes(t, by)
+        if not self._next_match(t):
+            res["champion"] = self._finish(t, by, st)
 
     @staticmethod
     def _promote(t: dict, ri: int, mi: int, win: int) -> None:
@@ -850,22 +912,59 @@ class Sandbox:
         summary = E.life_summary(p, {x.pid: x.name for x in pets})
         return await asyncio.to_thread(card.render_life_card, p.look(), summary)
 
-    async def event_png(self, owner: int) -> bytes | None:
+    async def scene(self, owner: int, mood: str = "") -> tuple | None:
+        """The adventure picture: (looks, background, between); between is None for a pet alone. With nothing pending
+        it is the latest adventure again (the result screen), and `mood` sets the pet's face."""
         pets = await self.pets(tick=False)
         p = next((x for x in pets if x.owner_id == owner), None)
         e = E.EVENTS.get(p.pending.get("id", "")) if p and p.pending else None
-        if not e:
+        if e:
+            self.last_scene[owner] = (e.bg if E.bg_ok(e.bg) else "", p.pending.get("other"))
+        if not p or owner not in self.last_scene:
             return None
-        bg = e.bg if E.bg_ok(e.bg) else ""
-        other = next((x for x in pets if x.pid == p.pending.get("other")), None)
-        if other:
-            bgx = E.scene(bg or p.home, p.flags)
-            st = p.status.get(other.pid, "")
-            between = ("heart" if st in ("crush", "partner") else "fight" if st in ("rival", "enemy")
-                       else "broken" if st == "ex" else "chat")
-            return await asyncio.to_thread(sprites.render_group, [p.look(bgx), other.look(bgx)],
-                                           bgx if E.bg_ok(bgx) else "meadow", 2, between)
-        return await asyncio.to_thread(sprites.render_png, p.look(bg))
+        bg, pid = self.last_scene[owner]
+        bgx = E.scene(bg or p.home, p.flags)  # the season and the night, like the two-pet scenes always had
+        me = p.look(bgx)
+        if p.alive and mood in MOODS:
+            me = replace(me, mood=mood)
+        other = next((x for x in pets if x.pid == pid), None) if pid else None
+        if not other:
+            return [me], bgx, None
+        st = p.status.get(other.pid, "")
+        between = ("heart" if st in ("crush", "partner") else "fight" if st in ("rival", "enemy")
+                   else "broken" if st == "ex" else "chat")
+        return [me, other.look(bgx)], bgx if E.bg_ok(bgx) else "meadow", between
+
+    async def event_png(self, owner: int, mood: str = "") -> bytes | None:
+        got = await self.scene(owner, mood)
+        if not got:
+            return None
+        looks, bg, between = got
+        if between is None:
+            return await asyncio.to_thread(sprites.render_png, looks[0])
+        return await asyncio.to_thread(sprites.render_group, looks, bg, 2, between)
+
+    async def tryon(self, owner: int, item: str = "", bg: str = "") -> sprites.Look | None:
+        """The pet in an item it owns or could buy today, or in a place: the pictures of the wardrobe, bazaar and homes."""
+        p = await self.pet(owner, tick=False)
+        if not p or p.state == "egg":
+            return None
+        look = p.look(bg if E.bg_ok(bg) else "")
+        if item:
+            sold = {s["id"] for s in E.shop_stock(SANDBOX, E.kyiv().strftime("%Y-%m-%d")) if s["kind"] == "item"}
+            if item not in sold and item not in p.items:
+                return None
+            slot = E.item_slot(item)
+            look = replace(look, items=[i for i in look.items if E.item_slot(i) != slot] + [item])
+        return look
+
+    async def tryon_png(self, owner: int, item: str = "", bg: str = "") -> bytes | None:
+        look = await self.tryon(owner, item, bg)
+        return await asyncio.to_thread(sprites.render_png, look) if look else None
+
+    def _ancestors(self, owner: int) -> list[dict]:
+        rows = [r for r in self.db.graves if r["chat_id"] == SANDBOX and r["owner_id"] == owner]
+        return [dict(name=r["name"], gen=r["gen"], cause=r["cause"]) for r in rows[-8:][::-1]]
 
     async def zoo_png(self) -> bytes | None:
         pets = [p for p in await self.pets(tick=False) if p.state != "dead"][:12]
@@ -873,6 +972,22 @@ class Sandbox:
             return None
         return await asyncio.to_thread(sprites.render_group, [p.look() for p in pets], "meadow", 4, "",
                                        [p.name[:12] for p in pets])
+
+
+def _quests(p: E.Pet) -> list[dict]:
+    """The serials and quests of this life: how far they went and how they ended."""
+    out = []
+    for sid, st in p.series.items():
+        s = E.SERIES.get(sid)
+        if s:
+            out.append(dict(title=s["title"], ep=st.get("ep", 0), end=p.fmt(s["ends"].get(st.get("end"), "")) if st.get("end") else ""))
+    return out
+
+
+def _idle(p: E.Pet) -> str:
+    """What the pet is up to between adventures; stays the same until the next decision moves the clock."""
+    lines = IDLE[p.phase()]
+    return p.fmt(lines[zlib.crc32(f"{p.pid}:{p.years}".encode()) % len(lines)])
 
 
 def _pay_view(p: E.Pet) -> dict:

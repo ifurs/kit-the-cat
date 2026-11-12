@@ -30,6 +30,9 @@ helpers.
 - Paint: `cv.part(px, fill, shade, light)` (auto outline + shading — use for solid objects), `cv.paint(px, color)`
   (flat pixels, details), `cv.grid(x, y, rows, colors)` for tiny hand-drawn glyphs, `_held(...)` for things in
   the hand.
+- Look: chibi — a big head (28 px wide for an adult) on a small body, see `GEOM`. On the pet layer `cv.part` is flat
+  (`Canvas.flat`): one fill colour and a thin shade line along the bottom, no gradient; backgrounds keep the gradient.
+  The face (eyes, mouth, face items) sits `FACE_DY` px below the head centre; the tail is on the left, the hand on the right.
 - Animation: `f` is the frame 0–3; small sways (`f % 2`), blinking lights, orbiting particles. Keep it subtle.
 - Palette: saturated but not neon; outline `OUTLINE`; shade with `shade_of(c)`, highlight `light_of(c)`. Items
   are tintable via `id@N`, so a base colour that tints well (mid-lightness) is better than near-black/white.
@@ -57,5 +60,7 @@ uv run python scripts/gallery.py      # refresh docs/sprites/ sheets when adding
 Look at the PNG yourself (Read it) and check: readable at 1×, doesn't cover the eyes (unless it's a mask), no
 gaps or stray pixels across species and stages, animation doesn't jitter. For new genes also run
 `uv run python scripts/uniqueness.py` — the 200-pet chat must still have 0 look-alikes.
+
+Run `uv run python scripts/art.py export` after any change in the drawing code (new or changed item, background or gene): it refreshes `src/kit_the_cat/assets/`, and `tests/test_art.py` fails without it. To redraw existing art by hand, edit the PNG there instead (`assets/README.md`).
 
 Then wire it into content if asked (`item="id"`, `home=`/`bg=`), and add a line to `CHANGELOG.md` under Unreleased.

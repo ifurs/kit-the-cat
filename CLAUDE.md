@@ -15,6 +15,7 @@ Kit the Cat: the pet life-sim of the Ukrainian Telegram bot «Кошеня», as
 - `content/gated.py` — extra choices (a skill or an owned item opens them) appended to existing events by id; locked ones show as 🔒 buttons (`Pet.locked_why`)
 - `grammar.py` — declension of pet names into 7 cases (`decline`, `inflect`; `{name_gen}`…) and the `{він|вона}` gender pairs (`pick`); pure stdlib
 - `sprites*.py` — procedural pixel art: genome, species, roles, items (fixed + generated), backgrounds, groups
+- `art.py` + `assets/` — redrawable art: PNG files that replace what the code draws, one asset at a time (`assets/README.md`); after a change in the sprite code run `scripts/art.py export`
 - `card.py` + `cardfont.py` — the life card: a whole life as one PNG (stdlib only: baked bitmap font, pixel icons, zlib
   PNG encoder); `scripts/bake_font.py` regenerates `cardfont.py` from a Spleen BDF file (BSD-2)
 - `battle.py` — fighters, battles, tournaments (brackets, Elo)
@@ -50,3 +51,4 @@ uv run ruff check src scripts tests web && uv run pytest -q && uv run python -m 
 uv run python scripts/gen_dsl_docs.py --check && uv run python scripts/content_stats.py --strict
 uv run python scripts/ua_lint.py --strict
 uv run python scripts/balance.py && uv run python scripts/preview.py --smoke
+uv run python scripts/art.py export --check

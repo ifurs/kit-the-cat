@@ -117,6 +117,7 @@ class Canvas:
     def __init__(self, w: int = N, h: int = N, ox: int = 0):
         self.w, self.h, self.ox = w, h, ox
         self.px: dict[tuple[int, int], tuple] = {}
+        self.flat = False              # pets and their things: flat colour with a thin shade rim, no gradient
         self.base: dict | None = None  # read-only backdrop (e.g. background under a pet layer)
         self.bx = 0                    # backdrop x offset
 
@@ -142,6 +143,12 @@ class Canvas:
             self.paint(dilate(pixels), outline)
         if not shade:
             self.paint(pixels, fill)
+            return pixels
+        if self.flat:
+            self.paint(pixels, fill)
+            if len(pixels) > 60:  # a shade line along the bottom edge of a big shape
+                self.paint({(x, y) for x, y in pixels if (x, y + 1) not in pixels
+                            or (x, y + 2) not in pixels and (x + 1, y + 1) not in pixels}, shade)
             return pixels
         xs, ys = [p[0] for p in pixels], [p[1] for p in pixels]
         x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
