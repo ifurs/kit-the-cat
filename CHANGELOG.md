@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+## [0.23.1] — 2026-11-13
+
+### Fixed
+- Browser build: after an update the installed app could hang on launch and «Перезапустити» did nothing. The worker
+  of 0.21–0.22 stored the 2 MB page before handing it over, and a request stuck there kept the new worker waiting
+  for ever. The page of the GitHub Pages build is now small (the game code is a file of its own, `py-<hash>.json`,
+  cached for offline play), a waiting version is switched on at launch before the game starts, and when the old
+  worker does not answer in 4 seconds the page drops it and loads without one. A deploy no longer downloads the
+  game code twice.
+
 ## [0.23.0] — 2026-11-13
 
 ### Added
@@ -768,7 +778,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.23.1...HEAD
+[0.23.1]: https://github.com/ifurs/kit-the-cat/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/ifurs/kit-the-cat/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/ifurs/kit-the-cat/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/ifurs/kit-the-cat/compare/v0.21.0...v0.22.0

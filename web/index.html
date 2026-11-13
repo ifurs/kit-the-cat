@@ -960,14 +960,34 @@ if (PWA) {  // listen from the start: Chrome may offer the install while Python 
   const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
   if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone) $("#iosHint").hidden = false;
 }
+let stuck = false;
+async function freshen() {  // a version downloaded during the last visit: switch to it before the game starts
+  if (!PWA || !navigator.serviceWorker.controller) return;
+  const reg = await navigator.serviceWorker.getRegistration().catch(() => null);
+  if (!reg?.waiting) return;
+  const done = new Promise(ok => navigator.serviceWorker.addEventListener("controllerchange", () => ok(true), {once: true}));
+  reg.waiting.postMessage("SKIP_WAITING");
+  if (await Promise.race([done, new Promise(ok => setTimeout(() => ok(false), SWAP_WAIT))])) return;
+  stuck = true;  // the old worker holds a request that never ends: drop it, the next launch installs a clean one
+  await reg.unregister().catch(() => {});
+}
+const SWAP_WAIT = 4000;
 function offline() {  // after the boot: the worker's precache then reuses what the page has just downloaded
-  if (!PWA) return;
+  if (!PWA || stuck) return;
   navigator.storage?.persist?.().catch(() => {});  // Safari evicts unused sites' storage (and the save) otherwise
   let reloading = false;
   const offer = w => {  // a new version is waiting: never swap it under a running game, ask first
     if (!w || !navigator.serviceWorker.controller) return;
     $("#update").hidden = false;
-    $("#updateBtn").onclick = () => { save(); w.postMessage("SKIP_WAITING"); };
+    $("#updateBtn").onclick = () => {
+      save(); w.postMessage("SKIP_WAITING");
+      setTimeout(async () => {  // no answer: the old worker is stuck on a request, so load without it
+        if (reloading) return;
+        reloading = true;
+        try { await (await navigator.serviceWorker.getRegistration())?.unregister(); } catch {}
+        location.reload();
+      }, SWAP_WAIT);
+    };
   };
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (!reloading && !$("#update").hidden) { reloading = true; location.reload(); }
@@ -986,10 +1006,12 @@ function step(n, state) { const li = $("#st" + n); if (li) li.className = state;
 async function start(data) {
   try {
     step(1, "now");
+    await freshen();
     if (typeof WebAssembly !== "object") throw new Error("Цей браузер не підтримує WebAssembly.");
     py = await loadPyodide({indexURL: new URL("pyodide/", location.href).href});
     step(1, "done"); step(2, "now");
-    const files = JSON.parse($("#py-sources").textContent);
+    let files = JSON.parse($("#py-sources").textContent);
+    if (files["@src"]) files = await (await fetch(files["@src"])).json();  // GitHub Pages: the code is a file of its own
     for (const [path, text] of Object.entries(files)) {
       const full = "/home/pyodide/game/" + path;
       py.FS.mkdirTree(full.slice(0, full.lastIndexOf("/")));

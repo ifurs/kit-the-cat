@@ -77,21 +77,31 @@ def standalone(page: str, pwa: bool = False) -> str:
             + (PWA_HEAD if pwa else "") + "</head><body>" + page + "</body></html>")
 
 
-def precache() -> list[str]:
-    """What sw.js stores for offline play, relative to the site root."""
-    return ["./", "index.html", *STATIC, *(f"pyodide/{f}" for f in RUNTIME)]
+def precache(extra: tuple[str, ...] = ()) -> list[str]:
+    """What sw.js stores for offline play, relative to the site root; `extra` is the game code file of this build."""
+    return ["./", "index.html", *STATIC, *(f"pyodide/{f}" for f in RUNTIME), *extra]
 
 
-def stamp_sw(page: str) -> str:
+def split(srcs: dict[str, str]) -> tuple[str, str, str]:
+    """The Pages build keeps the game code out of the page: (file name, its text, the page that fetches it).
+    A 2 MB page is what hung the worker of 0.21–0.22 (it stored the page before handing it over); a small page
+    passes through that worker at once, and a deploy no longer downloads the code twice."""
+    blob = json.dumps(srcs, ensure_ascii=False)
+    name = f"py-{hashlib.sha256(blob.encode()).hexdigest()[:12]}.json"
+    page = (ROOT / "web" / "index.html").read_text().replace("/*__PY_SOURCES__*/{}", json.dumps({"@src": name}))
+    return name, blob, page
+
+
+def stamp_sw(page: str, extra: tuple[str, ...] = ()) -> str:
     """sw.js with its cache named after the build: a hash of the served page, the static files, the runtime list
     and the Pyodide version. Another build → another cache name → the old cache is dropped on activate."""
     h = hashlib.sha256(page.encode())
     for f in STATIC:
         h.update(f.encode() + (WEB / f).read_bytes())
-    h.update(f"{PYODIDE}:{','.join(RUNTIME)}".encode())
+    h.update(f"{PYODIDE}:{','.join((*RUNTIME, *extra))}".encode())
     sw = (WEB / "sw.js").read_text()
     out = (sw.replace('"/*__CACHE__*/kit-dev"', json.dumps(f"kit-{h.hexdigest()[:12]}"))
-             .replace('/*__PRECACHE__*/["./"]', json.dumps(precache())))
+             .replace('/*__PRECACHE__*/["./"]', json.dumps(precache(extra))))
     if "__CACHE__" in out or "__PRECACHE__" in out:
         raise SystemExit("web/sw.js: the CACHE/PRECACHE placeholders changed, stamp_sw can't fill them")
     return out
