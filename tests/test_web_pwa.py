@@ -49,7 +49,17 @@ def test_deploy_precaches_only_files_the_site_has():
     sw = (site / "sw.js").read_text()
     for f in json.loads(re.search(r"const PRECACHE = (\[.*?\]);", sw).group(1)):
         assert f == "./" or (site / f).is_file(), f
-    assert 'rel="manifest"' in (site / "index.html").read_text()
+    page = (site / "index.html").read_text()
+    assert 'rel="manifest"' in page
+    code = json.loads(re.search(r'id="py-sources">(.*?)</script>', page).group(1))["@src"]
+    assert code in sw and "bridge.py" in json.loads((site / code).read_text())
+    assert len(page) < 300_000, "the Pages page stays small: the worker of 0.21–0.22 hangs on a big one"
+
+
+def test_a_stuck_worker_never_blocks_the_update():
+    """The worker of 0.21–0.22 can hold a request forever, and then skipWaiting never takes effect."""
+    page = (ROOT / "web" / "index.html").read_text()
+    assert page.count("unregister()") == 2 and "await freshen();" in page
 
 
 def test_save_file_restore_rejects_garbage_and_keeps_the_game():
