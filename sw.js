@@ -1,8 +1,8 @@
 /* Service worker of the GitHub Pages build: install as an app and play offline.
    build_web.stamp_sw() fills in CACHE (a content hash of the build) and PRECACHE; a new deploy gets a new cache and
    the old ones are deleted on activate. The page is network-first (updates when online), the runtime cache-first. */
-const CACHE = "kit-52c735a54630";
-const PRECACHE = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "pyodide/pyodide.js", "pyodide/pyodide.asm.mjs", "pyodide/pyodide.asm.wasm", "pyodide/python_stdlib.zip", "pyodide/pyodide-lock.json"];
+const CACHE = "kit-8943f9ab49dc";
+const PRECACHE = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "pyodide/pyodide.js", "pyodide/pyodide.asm.mjs", "pyodide/pyodide.asm.wasm", "pyodide/python_stdlib.zip", "pyodide/pyodide-lock.json", "py-6a1993781571.json"];
 const PAGE_TIMEOUT = 3000;
 
 self.addEventListener("install", e => {
