@@ -57,9 +57,9 @@ async def dispatch(sb: Sandbox, o: int, b: dict) -> dict:
         parts += [f"🌍 {w}" for w in s["world"]] + [f"⚰️ {d}" for d in s["deaths"]]
         msg = "\n".join(parts)
     elif a == "spar":
-        return dict(battle=await sb.spar(o, int(b.get("with") or 0), str(x or "careful")))
-    elif a == "spar_tactic":
-        return dict(battle=await sb.spar_tactic(o, str(b.get("fight", "")), str(x or "")))
+        return dict(battle=await sb.spar(o, int(b.get("with") or 0)))
+    elif a == "spar_move":
+        return dict(battle=await sb.spar_move(o, str(b.get("fight", "")), str(x or "")))
     elif a == "t_new":
         msg = await sb.tour_new()
     elif a == "t_strategy":
@@ -67,7 +67,7 @@ async def dispatch(sb: Sandbox, o: int, b: dict) -> dict:
     elif a == "t_bet":
         msg = await sb.tour_bet(o, str(b.get("key", "")), int(x or 0), max(10, min(int(b.get("amount") or 50), 5000)))
     elif a == "t_next":
-        return dict(battle=await sb.tour_next())
+        return dict(battle=await sb.tour_next(o, duel=bool(b.get("duel"))))
     elif a == "reset":
         msg = await sb.reset()
     else:

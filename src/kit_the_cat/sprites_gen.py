@@ -925,6 +925,23 @@ def gen_item(item: str):
     return gen_name(slot, k, v), slot, (lambda cv, b, f: fn(cv, b, f, p))
 
 
+def gen_kind(item: str) -> tuple | None:
+    """(slot, kind key, colour, second colour) of a generated item: the redrawable picture and how to colour it."""
+    _, slot, code = item.split(":")
+    d = decode(slot, code)
+    if not d:
+        return None
+    p = _params(*d)
+    return slot, p.kind, p.c, p.c2
+
+
+def template_params(k: Kind, c: tuple, c2: tuple) -> SimpleNamespace:
+    """A plain item of a kind (no pattern, ornament or trim) in the given colours: what scripts/art.py exports."""
+    p = _params(k, {})
+    p.c, p.c2 = c, c2
+    return p
+
+
 def random_item(slot: str | None, rng: random.Random) -> str:
     """Random generated item id for a slot (any generated slot if None)."""
     slot = slot if slot in GEN else rng.choice(GEN_SLOTS)

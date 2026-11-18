@@ -49,7 +49,17 @@ def test_deploy_precaches_only_files_the_site_has():
     sw = (site / "sw.js").read_text()
     for f in json.loads(re.search(r"const PRECACHE = (\[.*?\]);", sw).group(1)):
         assert f == "./" or (site / f).is_file(), f
-    assert 'rel="manifest"' in (site / "index.html").read_text()
+    page = (site / "index.html").read_text()
+    assert 'rel="manifest"' in page
+    code = json.loads(re.search(r'id="py-sources">(.*?)</script>', page).group(1))["@src"]
+    assert code in sw and "bridge.py" in json.loads((site / code).read_text())
+    assert len(page) < 300_000, "the Pages page stays small: the worker of 0.21–0.22 hangs on a big one"
+
+
+def test_a_stuck_worker_never_blocks_the_update():
+    """The worker of 0.21–0.22 can hold a request forever, and then skipWaiting never takes effect."""
+    page = (ROOT / "web" / "index.html").read_text()
+    assert page.count("unregister()") == 2 and "await freshen();" in page
 
 
 def test_save_file_restore_rejects_garbage_and_keeps_the_game():
@@ -72,3 +82,9 @@ def test_save_file_restore_rejects_garbage_and_keeps_the_game():
         assert await bridge.restore(good) and bridge.dump() == good
         assert json.loads(await bridge.call("state", 1))
     asyncio.run(go())
+
+
+def test_worker_never_waits_for_the_cache_before_giving_the_page():
+    """`await cache.put(x, res.clone())` before returning `res` hangs Chrome on a big page: an endless load after a deploy."""
+    sw = (build_web.WEB / "sw.js").read_text()
+    assert "await cache.put" not in sw and "e.waitUntil(cache.put(" in sw

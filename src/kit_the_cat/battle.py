@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from . import engine as E
 from .grammar import inflect, pick
 
+DUEL = "duel"   # the strategy of a fighter in a duel: no bonus of its own, the moves decide
 STRATEGIES = {
     "aggressive": ("⚔️ Агресивно", "більше шкоди, менше захисту"),
     "careful": ("🛡 Обережно", "захист і шанс підлікуватися"),
@@ -53,7 +54,7 @@ def item_label(item: str) -> str:
 # trait -> (move name, cooldown turns)
 SPECIALS = {
     "toxic": ("🤬 Токсичний коментар", 3), "gambler": ("🎰 Ва-банк", 3), "dark": ("💀 Прокляття", 4),
-    "party": ("🪩 Дискотека", 4), "patriot": ("🇺🇦 Бойовий гопак", 3), "glutton": ("🍔 Перекус", 4),
+    "party": ("🪩 Дискотека", 4), "patriot": ("🔥 Друге дихання", 3), "glutton": ("🍔 Перекус", 4),
     "love": ("🤗 Обійми", 4), "mystic": ("🔮 Таро в бою", 3),
 }
 ULTIMATES = {
@@ -103,6 +104,7 @@ class Fighter:
     revived: bool = False
     ult_used: bool = False
     first_hit: bool = True
+    wit: float = 0.0                               # the pet's intellect: how well it reads the opponent in a duel
 
     def g(self, masculine: str, feminine: str) -> str:
         return feminine if self.gender == "f" else masculine
@@ -125,7 +127,7 @@ class Fighter:
                 spd=5 + sk("luck") * 0.05 + sk("int") * 0.05 + (3 if p.species in ("cat", "fox") else 5 if p.species == "bird" else 0),
                 crit=0.05 + sk("luck") * 0.003 + (0.06 if p.species == "fox" else 0),
                 dodge=0.04 + sk("luck") * 0.002 + (0.08 if p.species == "cat" else 0.12 if p.species == "bird" else 0) + (0.25 if p.role == "quantum" else 0),
-                strategy=strategy if strategy in STRATEGIES else "careful",
+                strategy=strategy if strategy in STRATEGIES or strategy == DUEL else "careful", wit=float(sk("int")),
                 specials=[(t, *SPECIALS[t]) for t in p.top_traits(2)],
                 ultimate=ULTIMATES.get(p.role, ""), elo=float(p.flags.get("elo", 1000)))
         if f.strategy == "aggressive":
@@ -210,7 +212,7 @@ def auto_tactic(f: "Fighter") -> str:
 
 def _info(fs: list) -> list:
     return [dict(name=f.name, emoji=E.SPECIES_EMOJI.get(f.species, "🐾"), max_hp=round(f.max_hp),
-                 hp=round(max(0, f.hp)), strategy=STRATEGIES[f.strategy][0],
+                 hp=round(max(0, f.hp)), strategy=STRATEGIES.get(f.strategy, ("🥊 Дуель", ""))[0],
                  passive=SPECIES_PASSIVE.get(f.species, ("", ""))[0], specials=[s[1] for s in f.specials],
                  ultimate=f.ultimate, power=f.power) for f in fs]
 
@@ -480,6 +482,248 @@ def _ultimate(me: Fighter, foe: Fighter, i: int, rng: random.Random, say) -> Non
     elif r == "alien":
         foe.stun = 2
         say(i, f"{u}: {foe.name} на два ходи зник у тарілці")
+
+
+# --- duel: a fight the player plays round by round -------------------------------------------------------------
+# Each round both sides pick a move in secret. Strike beats Trick, Trick beats Guard, Guard beats Strike; how much a
+# move does comes from the fighter's numbers (skills, level, worn items), so the choice and the build both matter.
+MOVES = {
+    "strike": ("⚔️ Удар", "сила й зброя; б'є хитрість, програє захисту"),
+    "guard": ("🛡 Захист", "блок і контрудар; б'є удар, програє хитрості"),
+    "trick": ("🎭 Хитрість", "удача, повз броню; б'є захист, програє удару"),
+}
+BEATS = {"strike": "trick", "trick": "guard", "guard": "strike"}
+SPECIAL, ULT, SURRENDER = "special", "ult", "surrender"
+DUEL_ROUNDS = 7
+DUEL_HP = 0.58       # a duel is short: fighters enter it with this share of their health pool
+TELLS = {
+    "strike": ["{name} стискає лапи й дивиться просто в очі", "{name} нахиляється вперед і сопе", "{name} бере розгін"],
+    "guard": ["{name} задкує і прикриває ніс", "{name} втягує голову в плечі", "{name} стає боком і чекає"],
+    "trick": ["{name} підозріло всміхається й дивиться вбік", "{name} щось ховає за спиною", "{name} насвистує, ніби нічого не задумує"],
+    "special": ["{name} щось шепоче собі під ніс", "{name} робить глибокий вдих", "В очах {name_gen} щось блиснуло"],
+}
+
+
+@dataclass
+class Duel:
+    """A fight in rounds. `duel_round()` plays one; plain data in between, nothing is rolled while it waits."""
+    fighters: list
+    log: list
+    rnd: int = 1
+    max_rounds: int = DUEL_ROUNDS
+    plan: list = field(default_factory=lambda: [None, None])   # a move already decided for the next round (see duel_tell)
+    used: list = field(default_factory=lambda: [[], []])       # what each side has played, in order
+    done: bool = False
+    result: "BattleResult | None" = None
+
+    def info(self) -> list:
+        return _info(self.fighters)
+
+
+def duel(a: Fighter, b: Fighter, rng: random.Random, max_rounds: int = DUEL_ROUNDS) -> Duel:
+    """Start a duel between two fighters built with `Fighter.of(pet, DUEL)`."""
+    for f in (a, b):
+        f.max_hp = f.hp = f.max_hp * DUEL_HP
+    d = Duel([a, b], [], max_rounds=max_rounds)
+    _say(d, -1, f"🔔 {a.name} проти {inflect(b.name, "gen", b.gender)}! До {max_rounds} раундів.", "", 0)
+    return d
+
+
+def _ready(f: Fighter) -> tuple | None:
+    return next((s for s in f.specials if f.cd.get(s[0], 0) == 0), None)
+
+
+def _kind(move: str) -> str:
+    return move if move in MOVES else "strike"   # a special or an ultimate meets the other move like a strike
+
+
+def duel_moves(d: Duel, side: int) -> list[dict]:
+    """What `side` can play this round: [{key, label, hint, power}]. `power` is the damage to expect if the move wins."""
+    me, foe = d.fighters[side], d.fighters[1 - side]
+    atk = me.atk * me.buff * (0.8 if me.weak else 1.0)
+    hit = max(1.0, atk - foe.dfn * 0.5)
+    power = {"strike": hit * 1.15, "guard": hit, "trick": atk * 1.1}
+    out = [dict(key=k, label=n, hint=h, power=round(power[k])) for k, (n, h) in MOVES.items()]
+    sp = _ready(me)
+    if sp:
+        out.append(dict(key=SPECIAL, label=sp[1], hint=f"прийом характеру, потім {sp[2]} раунди перерви", power=0))
+    if me.ultimate and not me.ult_used:
+        out.append(dict(key=ULT, label=me.ultimate, hint="раз на бій", power=0))
+    return out
+
+
+def auto_move(d: Duel, side: int, rng: random.Random) -> str:
+    """The move of an NPC (or an absent owner): leans on its best numbers and on what the opponent keeps playing."""
+    me = d.fighters[side]
+    if me.ultimate and not me.ult_used and (me.hp < me.max_hp * 0.5 or rng.random() < 0.15):
+        return ULT
+    if _ready(me) and rng.random() < 0.3:
+        return SPECIAL
+    w = {m["key"]: 1.0 + m["power"] / 40 for m in duel_moves(d, side) if m["key"] in MOVES}
+    if me.hp < me.max_hp * 0.3:
+        w["guard"] += 0.4
+    seen = d.used[1 - side][-3:]
+    for m in seen:   # answer the habit: play what beats the move the opponent repeats
+        if m in MOVES:
+            w[next(k for k, v in BEATS.items() if v == m)] += 1.8 / len(seen)
+    return rng.choices(list(w), weights=list(w.values()))[0]
+
+
+def duel_tell(d: Duel, side: int, rng: random.Random) -> str:
+    """Decide the next move of `side` now and say how it looks to the opponent. The sharper the opponent's wit, the
+    more often the look is honest (45–80%); otherwise it shows a move the fighter is not going to play."""
+    me, foe = d.fighters[side], d.fighters[1 - side]
+    move = d.plan[side] = auto_move(d, side, rng)
+    shown = SPECIAL if move in (SPECIAL, ULT) else move
+    if rng.random() > min(0.8, 0.45 + foe.wit * 0.004):
+        shown = rng.choice([k for k in MOVES if k != shown])
+    return rng.choice(TELLS[shown]).format(name=me.name, name_gen=inflect(me.name, "gen", me.gender))
+
+
+def duel_round(d: Duel, move_a: str | None, move_b: str | None, rng: random.Random) -> "BattleResult | None":
+    """Play one round. A move is a key of MOVES, "special", "ult" or "surrender"; None = the fighter decides itself
+    (the move `duel_tell` announced, if any). Returns the BattleResult when the duel is over, else None."""
+    if d.done:
+        return d.result
+    fs = d.fighters
+    moves = []
+    for side, m in enumerate((move_a, move_b)):
+        m = m or d.plan[side] or auto_move(d, side, rng)
+        ok = {x["key"] for x in duel_moves(d, side)} | {SURRENDER}
+        moves.append(m if m in ok else "strike")
+    d.plan = [None, None]
+    for side in (0, 1):
+        if moves[side] == SURRENDER:
+            _say(d, side, f"🏳 {fs[side].name} здається", "surrender")
+            _verdict(d, 1 - side, rng, side)
+            return d.result
+    say = lambda side, text, kind="": _say(d, side, text, kind)  # noqa: E731
+    # start of the round: timers, damage over time, regeneration
+    stunned = [False, False]
+    for i, me in enumerate(fs):
+        for dot in me.dot:
+            me.hp -= dot[0]
+            say(i, f"💀 Прокляття гризе {inflect(me.name, "acc", me.gender)}: −{dot[0]:.0f}", "dot")
+        me.dot = [(x, t - 1) for x, t in me.dot if t > 1]
+        if me.species == "axolotl" and me.hp > 0:
+            me.hp = min(me.max_hp, me.hp + me.max_hp * 0.03)
+        me.weak = max(0, me.weak - 1)
+        for k in list(me.cd):
+            me.cd[k] = max(0, me.cd[k] - 1)
+        if me.stun:
+            me.stun -= 1
+            stunned[i] = True
+    if not _duel_over(d, rng):
+        for i in (0, 1):
+            d.used[i].append(moves[i])
+        label = lambda i: "😵 пропускає раунд" if stunned[i] else _move_label(fs[i], moves[i])  # noqa: E731
+        _say(d, -1, f"Раунд {d.rnd}: {fs[0].name} — {label(0)}, {fs[1].name} — {label(1)}", "round")
+        first = 0 if fs[0].spd + rng.random() * 3 >= fs[1].spd + rng.random() * 3 else 1
+        _exchange(d, moves, stunned, first, rng, say)
+        _duel_over(d, rng)
+    if not d.done:
+        d.rnd += 1
+        if d.rnd > d.max_rounds:
+            d.rnd = d.max_rounds
+            _verdict(d, None, rng)
+    return d.result
+
+
+def _move_label(f: Fighter, move: str) -> str:
+    if move == ULT:
+        return f.ultimate
+    if move == SPECIAL:
+        sp = _ready(f)
+        return sp[1] if sp else MOVES["strike"][0]
+    return MOVES[move][0]
+
+
+def _duel_over(d: Duel, rng: random.Random) -> bool:
+    a, b = d.fighters
+    if not d.done and (a.hp <= 0 or b.hp <= 0):
+        _verdict(d, 0 if b.hp <= 0 else 1, rng)
+    return d.done
+
+
+def _land(me: Fighter, foe: Fighter, i: int, rng: random.Random, say, mult: float, how: str, pierce: bool = False,
+          crit: float = 0.0) -> None:
+    """One hit of a duel: `how` is the phrase after the name («б'є першим»)."""
+    if me.hp <= 0 or foe.hp <= 0:
+        return
+    me.crit += crit
+    dmg, tag = _dmg(me, foe, rng, mult, pierce=pierce)
+    me.crit -= crit
+    if tag == "dodge":
+        return say(i, f"💨 {me.name} {how}, але {foe.name} ухиляється", "miss")
+    foe.hp -= dmg
+    if me.species == "fox":
+        me.hp = min(me.max_hp, me.hp + dmg * 0.1)
+    say(i, f"{'💥 КРИТ! ' if tag == 'crit' else ''}{me.name} {how} → {foe.name} −{dmg:.0f}", tag)
+    if foe.hp <= 0 and foe.role == "zombie" and not foe.revived:
+        foe.revived = True
+        foe.hp = foe.max_hp * 0.3
+        say(1 - i, f"🧟 {foe.name} встає з мертвих! (ще {foe.hp:.0f})", "special")
+
+
+def _exchange(d: Duel, moves: list, stunned: list, first: int, rng: random.Random, say) -> None:
+    fs = d.fighters
+    verb = lambda f: rng.choice(HITS.get(f.species, ["б'є"]))  # noqa: E731
+    # the named moves happen whatever the other side does
+    for i in (first, 1 - first):
+        me, foe, m = fs[i], fs[1 - i], moves[i]
+        if stunned[i] or me.hp <= 0 or foe.hp <= 0:
+            continue
+        if m == ULT:
+            me.ult_used = True
+            _ultimate(me, foe, i, rng, lambda side, text, me=me: say(side, f"{me.name} → {text}", "ult"))
+        elif m == SPECIAL and (sp := _ready(me)):
+            me.cd[sp[0]] = sp[2] + 1
+            _special(me, foe, i, sp[0], sp[1], rng, lambda side, text, me=me: say(side, f"{me.name} → {text}", "special"))
+    kinds = [_kind(m) for m in moves]
+    plain = [moves[i] in MOVES and not stunned[i] for i in (0, 1)]   # still has a move to resolve
+    for i in (0, 1):   # a stunned fighter is an open target
+        if stunned[i] and plain[1 - i]:
+            me, foe = fs[1 - i], fs[i]
+            if kinds[1 - i] == "guard":
+                heal = me.max_hp * 0.06
+                me.hp = min(me.max_hp, me.hp + heal)
+                say(1 - i, f"🩹 {me.name} переводить подих: +{heal:.0f}")
+            else:
+                _land(me, foe, 1 - i, rng, say, 1.15, f"{verb(me)} без опору", pierce=kinds[1 - i] == "trick")
+    if stunned[0] or stunned[1]:
+        return
+    a, b = kinds
+    if a == b:
+        if a == "strike":
+            for i in (first, 1 - first):
+                if plain[i]:
+                    _land(fs[i], fs[1 - i], i, rng, say, 0.8, f"{verb(fs[i])} в обмін ударами")
+        elif a == "guard":
+            for i in (0, 1):
+                heal = fs[i].max_hp * 0.06
+                fs[i].hp = min(fs[i].max_hp, fs[i].hp + heal)
+            say(-1, f"🛡 Обоє чекають на удар і переводять подих: +{fs[0].max_hp * 0.06:.0f} і +{fs[1].max_hp * 0.06:.0f}")
+        else:
+            luck = [fs[i].crit + fs[i].dodge + rng.random() * 0.3 for i in (0, 1)]
+            w = 0 if luck[0] >= luck[1] else 1
+            say(1 - w, f"🎭 Обоє хитрують, але {fs[w].name} хитрує краще")
+            _land(fs[w], fs[1 - w], w, rng, say, 0.9, "обводить суперника", pierce=True)
+        return
+    w = 0 if BEATS[a] == b else 1
+    me, foe, lose = fs[w], fs[1 - w], 1 - w
+    if kinds[w] == "strike":      # strike beats trick
+        if plain[lose]:
+            say(lose, f"🎭 {foe.name} {foe.g('задумав', 'задумала')} хитрість, але не встигає")
+        if plain[w]:
+            _land(me, foe, w, rng, say, 1.15, f"{verb(me)} на випередження")
+    elif kinds[w] == "guard":     # guard beats strike
+        if plain[lose]:
+            _land(foe, me, lose, rng, say, 0.2, f"{verb(foe)} у блок")
+        _land(me, foe, w, rng, say, 1.0, "відповідає контрударом")
+    else:                         # trick beats guard
+        if plain[lose]:
+            say(lose, f"🛡 {foe.name} закривається, але удару нема")
+        _land(me, foe, w, rng, say, 1.1, "заходить збоку повз захист", pierce=True, crit=0.15)
 
 
 def win_chance(a: Fighter, b: Fighter) -> float:

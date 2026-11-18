@@ -11,6 +11,7 @@ import zlib
 from collections.abc import Callable
 from functools import lru_cache
 
+from . import art as _art
 from .sprites_core import (BLACK, GOLD, GOLD_D, OUTLINE, RED, WHITE, YELLOW, Canvas, dilate, ellipse,
                                         hsv, line, mix, poly, rect)
 
@@ -612,7 +613,11 @@ def _bg_pixels(bg: str, f: int, w: int, h: int) -> dict:
     base, mods = bg_parse(bg)
     cv = Canvas(w, h)
     seed = zlib.crc32(base.encode())
-    BACKGROUNDS[base][1](cv, f, random.Random(seed))
+    art = _art.load("backgrounds", base)
+    if art:
+        _art.fill(cv, art, f)
+    else:
+        BACKGROUNDS[base][1](cv, f, random.Random(seed))
     if mods:
         sky = {p for p, c in cv.px.items() if p[1] < 36 and _is_sky(c)} if base in OUTDOOR else set()
         for m in mods:
