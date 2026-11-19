@@ -3,6 +3,9 @@
     uv run python scripts/deploy_pages.py --dry-run  # only assemble build/site/ (no git, no network)
     uv run python scripts/deploy_pages.py            # build → commit to gh-pages → push
 
+The site is the standalone page with the PWA links, the game code (py-<hash>.json), pyodide/, sw.js (stamped with the build's cache name),
+manifest.webmanifest and icons/.
+
 Turn Pages on once (repo Settings → Pages → branch gh-pages / root, or):
     gh api -X POST repos/<owner>/kit-the-cat/pages -f "source[branch]=gh-pages" -f "source[path]=/"
 """
@@ -30,8 +33,18 @@ def assemble() -> None:
     out = build_web.OUT
     shutil.rmtree(SITE_DIR, ignore_errors=True)
     SITE_DIR.mkdir(parents=True)
-    shutil.copy2(out / "preview.html", SITE_DIR / "index.html")  # standalone page (doctype + head) for a normal host
+    code, blob, raw = build_web.split(build_web.sources())  # the game code is a file next to a small page
+    page = build_web.standalone(raw, pwa=True)  # doctype + head + PWA links
+    (SITE_DIR / "index.html").write_text(page)
+    (SITE_DIR / code).write_text(blob)
     shutil.copytree(out / "pyodide", SITE_DIR / "pyodide")
+    for f in build_web.STATIC:  # install as an app + play offline (web/sw.js)
+        (SITE_DIR / f).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(build_web.WEB / f, SITE_DIR / f)
+    (SITE_DIR / "sw.js").write_text(build_web.stamp_sw(page, (code,)))
+    missing = [f for f in build_web.precache((code,)) if f != "./" and not (SITE_DIR / f).is_file()]
+    if missing:
+        raise SystemExit(f"sw.js precaches files the site does not have: {missing}")
     (SITE_DIR / ".nojekyll").write_text("")
     (SITE_DIR / "README.md").write_text(
         "Built site of kit-the-cat: the pet sandbox running in the browser (Pyodide).\n\n"

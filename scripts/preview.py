@@ -45,6 +45,14 @@ def smoke() -> int:
         except Exception:
             bad += 1
             print(f"FAIL background {bg}\n{traceback.format_exc(limit=3)}")
+    from kit_the_cat import card
+    summary = dict(name="Тест", title="Титул", cause="причина", epitaph="Епітафія", facts=["📅 1 рік"], family="", story=["Раз"])
+    for sp in S.SPECIES:
+        try:
+            card.render_life_card(S.Look(genes=S.random_genome(sp, random.Random(sp)), stage=3, ghost=True), summary)
+        except Exception:
+            bad += 1
+            print(f"FAIL life card {sp}\n{traceback.format_exc(limit=3)}")
     print(f"smoke: {len(items)} items × {len(S.SPECIES)} species × 4 stages, {len(S.BACKGROUNDS)} backgrounds — "
           f"{'OK' if not bad else f'{bad} failures'}")
     return bad

@@ -6,7 +6,7 @@ from kit_the_cat import engine as E
 
 def _adult(owner: int = 1) -> E.Pet:
     p = E.Pet(chat_id=-1, owner_id=owner, name="Бублик", owner_name="Оля")
-    p.state, p.stage, p.hatched = "alive", 3, E.now() - 10 * E.DAY
+    p.state, p.stage, p.years, p.hatched = "alive", 3, 30.0, E.now() - 10 * E.DAY
     p.skills = {s: 30 for s in E.SKILLS}
     p.persona = {"temper": "x", "dream": "y", "fear": "z", "food": "сало", "quirk": "q"}
     return p

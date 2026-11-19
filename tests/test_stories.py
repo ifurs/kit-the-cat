@@ -160,3 +160,30 @@ def test_the_secret_ending_needs_the_quiet_rose_and_a_warm_heart():
     assert ids[-1] == "st_tv_end_secret"
     end = p.resolve(E.EVENTS["st_tv_end_secret"], 0, None, rng)
     assert "Остання троянда" in p.achievements and end.story["steps"][0] == "Підписати чесно"
+
+
+def test_every_ending_of_every_story_is_reachable_by_a_player_who_just_picks():
+    """Random picks, both genders: no ending is dead (≥ 2% of plays) and no story ends in a death on the way."""
+    for root in ROOTS:
+        ends = {e.id for e in ALL if e.story == root.story
+                and not any(o.fx.get("step") for c in e.choices for o in c.outs + c.fail)}
+        seen: dict[str, int] = {}
+        plays = 0
+        for gender in "mf":
+            for seed in range(40):
+                rng = random.Random(seed * 13 + 5)
+                p = _pet()
+                p.gender = gender
+                p.health, p.money = 100, 5000
+                p.start(root, None, "manual")
+                last = None
+                while p.pending and plays < 10_000:
+                    e = E.EVENTS[p.pending["id"]]
+                    opts = p.options(e, None)
+                    p.resolve(e, rng.choice(opts)[0], None, rng)
+                    last = e.id
+                assert p.alive and last, (root.id, gender, seed)
+                seen[last] = seen.get(last, 0) + 1
+                plays += 1
+        assert ends <= set(seen), (root.id, ends - set(seen))
+        assert all(seen.get(x, 0) / plays >= 0.02 for x in ends), (root.id, {x: seen.get(x, 0) for x in ends})

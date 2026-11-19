@@ -9,9 +9,9 @@ JOBS = {
     "courier": dict(name="🛵 Кур'єр на самокаті", name_f="🛵 Кур'єрка на "
                                                         "самокаті", pay=150, req={"skill": {"str": 15}}, drift={"attr": 0.1, "str": 0.6, "party": 0.2},
                     items=["backpack@3"], bg="kyiv", open=True),
-    "taxi": dict(name="🚕 Таксист «Шансон FM»", name_f="🚕 Таксистка «Шансон "
-                                                      "FM»", pay=170, req={}, drift={"blat": 0.2, "toxic": 0.4, "cha": 0.4}, items=["cap"],
-                 bg="kyiv", open=True),
+    "taxi": dict(name="🚕 Таксист «Ялинка FM»", name_f="🚕 Таксистка «Ялинка FM»", pay=170, req={},
+                 drift={"blat": 0.2, "toxic": 0.4, "cha": 0.4}, items=["cap"], bg="kyiv", open=True,
+                 titles={"taxi_classic": ("🚕 Таксист «Класика FM»", "🚕 Таксистка «Класика FM»")}),
     "cook": dict(name="🌯 Кухар у шаурмичній", name_f="🌯 Кухарка у "
                                                      "шаурмичній", pay=150, req={}, drift={"glutton": 0.6, "str": 0.2}, items=["chef", "apron"],
                  bg="kitchen", open=True),
@@ -74,6 +74,19 @@ PRICES = {
     "cane": 150, "laptop": 2500, "sausage": 90, "cards": 70, "sabre": 1800,
     "notes": 300, "sparkles": 2000, "hearts": 600,
 }
+# a small skill bonus (+2…+5) of an item while it is worn; the engine caps the sum at +8 per skill (ITEM_SKILL_CAP).
+# Generated (`gen:`) items give +1 to a skill picked from their seed (engine.item_skill).
+ITEM_SKILL = {
+    "sabre": {"str": 4}, "bronik": {"str": 3}, "helmet": {"str": 2}, "tracksuit": {"str": 2}, "horns": {"str": 3},
+    "scar": {"str": 2}, "eyepatch": {"str": 2},
+    "book": {"int": 3}, "nerd": {"int": 3}, "monocle": {"int": 4}, "laptop": {"int": 4}, "wizard": {"int": 3},
+    "crown": {"cha": 5}, "sunglasses": {"cha": 3}, "guitar": {"cha": 3}, "mic": {"cha": 3}, "suit": {"cha": 4},
+    "vyshyvanka": {"cha": 2}, "bowtie": {"cha": 2}, "flowers": {"cha": 2}, "hearts": {"cha": 3}, "medal": {"cha": 2},
+    "cards": {"luck": 3}, "moneybag": {"luck": 3}, "wand": {"luck": 3}, "korali": {"luck": 2}, "bell": {"luck": 2},
+    "flower": {"luck": 2}, "sparkles": {"luck": 3}, "halo": {"luck": 4},
+}
+ITEM_SKILL_CAP = 8
+
 BACKGROUND_PRICES = {
     "khrushchovka": 0, "meadow": 0, "kitchen": 400, "farm": 800, "office": 1500, "club": 1200, "sea": 3000,
     "mountains": 2500, "kyiv": 2000, "mystic": 1800, "love": 900, "field": 700, "space": 15000, "palace": 25000,
@@ -101,7 +114,7 @@ ROLE_FOOD = {"blood": "vampire", "brains": "zombie"}
 
 POCKET = 60          # ₴/day for babies and teens ("бабуся передала")
 PENSION = 90         # ₴/day for unemployed elders
-WELFARE = 40         # ₴/day for unemployed adults (≈ living costs of a poor student + khrushchovka)
+WELFARE = 65         # ₴/day for unemployed adults: covers the cost of living (35) and slowly pays a small debt off
 WEALTH_TAX = (3000, 0.02)   # above 3000 ₴ — 2%/day goes to «податкова»
 MYSTERY_BOX = 300
 POTION = 3500

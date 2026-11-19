@@ -2,7 +2,7 @@
 
 > Згенеровано `scripts/gen_dsl_docs.py` з коду — не редагуй вручну. Як писати гарні пригоди: [CONTENT_GUIDE.md](CONTENT_GUIDE.md).
 
-Контракт: **55 ефектів**, **33 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
+Контракт: **62 ефектів**, **41 вимог**, ролі: alien, angel, cyborg, demon, quantum, vampire, werewolf, zombie. Рушій гарантовано підтримує кожен ключ; невідома вимога = подія недоступна.
 
 ## Синтаксис (з `content/dsl.py`)
 
@@ -21,6 +21,13 @@ role takes its own case — {name_gen} «Крилатого з Троєщини�
 (кому?), {name_acc} (кого?), {name_ins} (з ким? — «з {name_ins}»), {name_loc} (на/у/при кому?), {name_voc}
 («Ей, {name_voc}!»); the same for {other_gen} … {other_voc}. «До {name} прийшов кур'єр» is a bug, «До {name_gen}
 прийшов кур'єр» is right; scripts/case_scan.py lists the suspicious ones. The rules live in grammar.py.
+
+The favourite food is declined the same way, from a hand-written table (content/persona.py FOOD_FORMS): «{food}» is
+the accusative, as it is stored («їсть {food}», «піти по {food}», «Принести лікарю {food}»), and the other cases are
+{food_nom} («Головне — {food_nom}»), {food_gen} («поменше {food_gen}», «ящик {food_gen}», «банок з-під {food_gen}»),
+{food_dat}, {food_ins} («подякувати {food_ins}») and {food_loc} («у {food_loc}»). A food can be plural
+(«вареники з вишнями», «чебуреки з вокзалу»), so never put a verb or an adjective that agrees with it next to the
+placeholder («{food} дарує» is a bug; «порція {food_gen}» is right); scripts/food_scan.py lists the suspicious ones.
 
 Pets are boys or girls (Pet.gender "m" | "f"), and a text speaks about both: a word that changes with the gender is a
 pair, «{вилупився|вилупилася}» (the first for a boy, the second for a girl), «{other:відмовив|відмовила}» for the other
@@ -42,7 +49,11 @@ Effects (o(..., **fx)):
   time="5y"                            extra life time this outcome costs (coma, a sentence, cryosleep)
   str int cha luck                     skill deltas
   toxic gambler dark party patriot glutton love mystic   trait deltas
-  money xp lifespan                    ₴, experience, years of life
+  money xp lifespan                    ₴, experience, years of life. A loss never digs deeper than engine.DEBT_FLOOR (−500):
+                                       the rest is written off (mood, sometimes an item). A choice whose every outcome
+                                       loses money is a PRICE: the pet cannot pick it without the money (engine.price)
+  credit=-1500                         a loan the pet takes on purpose: ignores the debt floor and marks the pet as
+                                       «у кредиті». Only in events/choices about кредит/борг/позика/розстрочка
   item="cowboy@6" | ["a", "b"]         give & equip;  item_slot="head" → random item for slot
   lose_item="random" | "id"            take away
   unequip="head" | "all"               take off what is worn in that slot (or everything); items stay owned
@@ -53,6 +64,7 @@ Effects (o(..., **fx)):
   jail=48 | hospital=24                hours (outfit + background while there)
   die="cause"                          death
   achievement="…"
+  dream="sea"                          the pet's dream comes true — if its goal is this one (persona.GOALS) and it is not fulfilled yet
   money_mult=0.5                       multiply money (0 = lose everything)
   free=True                            released from jail
   gene={"extra": "fangs"}              set genes directly (sprite changes!)
@@ -67,13 +79,28 @@ Effects (o(..., **fx)):
                                        req (usually sv=) holds; the last one is the fallback. Steps are
                                        ev(..., story="Назва", followup=True); the first step has story= only
   sv={"kind": 1, "risk": 2}            story variables: hidden scores the later steps and the ending read (sv=)
-  # social events only:
+  cast={"galya": 2}                    a recurring character (content/cast.py CAST): met for the first time (bond 0) and
+                                       the bond moves by that much (−6..6); the pet remembers how they were treated
+  cast_state={"galya": "away"}         where the character is now: "here" (default), "away" (moved, may come back),
+                                       "gone" (for good). Only for a character the pet has met
+  ss={"bus.trust": 1}                  series scores: "<series>.<score>" is kept for the whole life, between episodes,
+                                       unlike sv= (episodes are far apart in time; see content/series.py)
+  recap=("bus", "пустили на ніч")      one line of «Раніше в серіалі» (≤ 90 chars, no name needed); a later episode shows
+                                       the last four through {recap_bus} at the start of its text
+  finale=("bus", "good")               the series (season) ends with this ending tag (a key of its `ends`)
+  then=(["bus_end_a", "bus_end"], "1y")  a list of ids picks, right now, the first whose req holds (ss= first!);
+                                       the last is the fallback (no ss= in its req): the ending depends on the scores
+  # social events only (ev(..., date=True) puts a romantic scene into the date pool: /pet_date and the pair's
+  # «not had this date yet» rule; see content/dates.py):
   rel=+10  status="friend|bestie|rival|enemy|crush|partner|ex"  other={...effects for the other pet}
   baby=True                            the couple gets an heir egg (hybrid genes)
-  swap_genes=True                      body swap: the two pets exchange looks
+  swap_genes=True                      body swap: the bodies (genes and species) change places, the souls stay
 
 Requirements (req=dict(...)):
   stage=2 | (2, 3)   species="pig"   flag="crime" | flag={"crime": 2}   noflag="crime"
+  tenure=(0, 1.5)    years in the CURRENT job (min, max): «перший тиждень на новій роботі» needs it, else it would come
+                     after thirty years of work; a pet without a job (or hired before 0.18) never meets it
+  kids=1             the pet has had at least that many children (heir eggs): grandchildren belong only to those who did
   trait={"toxic": 10}   skill={"int": 30}   money=100   job="it"|"any"|"none"   edu="kpi"   noedu="kpi"
   has="sabre"   partner=True|False   night=True   jail=True (only while jailed)
   status=["crush"] (social: relation with the other pet)   other_stage=2   age=(min_days, max_days)
@@ -82,9 +109,14 @@ Requirements (req=dict(...)):
   life={"fame": 40} (life stat at least)   tier={"fame": 2, "money": 3} (tier at least; money tiers too)
   tier_max={"auth": 0}   years=(18, 60) (age in years)   goal="mayor" (the pet's dream, persona.GOALS)
   sv={"kind": (2, 9)} (story variables of the story being played, at least / within a range)
+  cast={"galya": 2} | {"galya": (-6, -2)}   the pet knows the character, who is around ("here"), and the bond is at
+         least that / within the range (negative bonds are grudges); cast_state={"galya": "away"} asks for another state
+         instead; cast_for={"galya": 8} (known for at least that many years); nocast="galya" | [ids] (not met yet)
+  ss={"bus.trust": 2} | {"bus.trust": (2, 9)} (series scores, at least / within a range)
+  finale={"bus": "good"} | {"bus": "any"} (the series has ended with that ending / with any)
   phase="young" | ["young", "middle"]   life phase by age: kid 0–12, teen 12–18, young 18–30, middle 30–60, grand 60+
   season="winter|spring|summer|autumn" | holiday (newyear christmas andriy easter kupala halloween valentine
-         independence) | list of those | month numbers (real Kyiv date)
+         independence malanka vyshyvanka pokrova) | list of those | month numbers (real Kyiv date)
 ```
 
 ## Підстановки в тексті
@@ -93,7 +125,7 @@ Requirements (req=dict(...)):
 |---|---|
 | `{name}` | ім'я пета |
 | `{owner}` | ім'я власника |
-| `{food}` | улюблена їжа пета |
+| `{food}` | улюблена їжа пета, знахідний (їсть кого? що? — «шаурму») |
 | `{dream}` | мрія |
 | `{fear}` | страх |
 | `{quirk}` | дивна звичка |
@@ -108,7 +140,13 @@ Requirements (req=dict(...)):
 | `{name_ins}` | орудний (з ким? — «Муркою») |
 | `{name_loc}` | місцевий, без прийменника (на кому? — «Мурці») |
 | `{name_voc}` | кличний (Ей, «Мурко»!) |
+| `{food_nom}` | їжа в називному (що? — «шаурма», «вареники з вишнями») |
+| `{food_gen}` | родовий (нема чого? — «шаурми») |
+| `{food_dat}` | давальний (чому? — «шаурмі») |
+| `{food_ins}` | орудний (з чим? — «шаурмою») |
+| `{food_loc}` | місцевий, без прийменника (на чому? — «шаурмі») |
 | `{other_gen}…{other_voc}` | ті самі відмінки для імені іншого пета (лише social) |
+| `{recap_hut}` | «Раніше в серіалі…» — до чотирьох останніх рядків `recap=` серіалу `hut` (порожньо до першої серії) |
 | `{він\|вона}` | слово за статтю пета: перша частина для хлопчика, друга для дівчинки («{вилупився\|вилупилася}») |
 | `{other:він\|вона}` | те саме за статтю іншого пета (лише social; без іншого пета — перша частина) |
 
@@ -210,6 +248,9 @@ Requirements (req=dict(...)):
 | `halloween` | (10, 25) → (11, 2) |
 | `valentine` | (2, 10) → (2, 16) |
 | `independence` | (8, 20) → (8, 27) |
+| `malanka` | (1, 12) → (1, 14) |
+| `vyshyvanka` | (5, 15) → (5, 21) |
+| `pokrova` | (10, 12) → (10, 16) |
 | `winter` | 12, 1, 2 |
 | `spring` | 3, 4, 5 |
 | `summer` | 6, 7, 8 |
@@ -221,7 +262,7 @@ Requirements (req=dict(...)):
 |---|---|---|---|
 | `atb` | 🛒 Касир АТБ | 120 | — |
 | `courier` | 🛵 Кур'єр на самокаті | 150 | {'skill': {'str': 15}} |
-| `taxi` | 🚕 Таксист «Шансон FM» | 170 | — |
+| `taxi` | 🚕 Таксист «Ялинка FM» | 170 | — |
 | `cook` | 🌯 Кухар у шаурмичній | 150 | — |
 | `farmer` | 🚜 Фермер | 170 | {'skill': {'str': 25}} |
 | `it` | 💻 Айтішник | 380 | {'skill': {'int': 45}} |

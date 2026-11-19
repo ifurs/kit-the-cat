@@ -11,6 +11,7 @@ uses only the standard library, so the same code runs in a Telegram bot, a local
                        │ Pet.from_dict/to_dict│ tick/pick/resolve     │ look() → sprites
    content/*.py ──► engine.EVENTS ──► engine.Pet ──────────────────► sprites.render_gif/png
    (DSL, dsl.py contract)               │  apply(fx) / meets(req)        frame_canvases (browser)
+                                        └─ life_summary ─► card.render_life_card (PNG, stdlib)
                                         └──► battle.Fighter / fight / bracket / Elo
 ```
 
@@ -21,6 +22,7 @@ uses only the standard library, so the same code runs in a Telegram bot, a local
 | `engine.py` | `Pet` dataclass (a JSON document); ageing and decay in `tick()`; event choice (`pick_event`, weights by traits/`aff`, cooldowns, `once`); `resolve()` → `Result` (text, effects, twists); effects `apply()` and requirements `meets()` — the only implementation of the DSL; roles, world events, economy (`care`, `feed`, `buy`, jobs); `plan()` decides what a chat sees next within `BUDGET` |
 | `content/dsl.py` | `ev/ch/o` builders and the contract: `KNOWN_FX`, `KNOWN_REQ`, `ROLES`. The docstring is the human reference (rendered into `docs/DSL.md`) |
 | `content/{life,daily,chains,jobs,species,social,twists}.py` | 313 events, aggregated in `content/events.py` (`ALL`) |
+| `content/series.py` | serials: episodes years apart, scores `ss=` kept for the life, `recap=` shown as `{recap_<id>}`, endings picked by `then=([…])`; `SERIES` holds titles and endings |
 | `content/economy.py` | `FOOD`, `JOBS`, `EDUCATION`, prices |
 | `content/persona.py` | temperaments, dreams, fears, quirks (names/text for `{dream}` etc.) |
 | `content/validate.py` | contract check: unknown keys, label/text lengths, duplicate ids |
@@ -28,7 +30,7 @@ uses only the standard library, so the same code runs in a Telegram bot, a local
 | `sprites.py` | `Genome` (genes → visible parts), `unique_genome` (min distance 4 within a chat), `breed`, species drawing, roles, fixed `ITEMS` (`it_*` draw functions), tints, eggs, graves, GIF/PNG, group scenes |
 | `sprites_gen.py` | generated items `gen:<slot>:<code>` — kinds × colours × patterns × ornaments, with Ukrainian names in correct grammatical gender |
 | `sprites_bg.py` | backgrounds and modifiers (`farm~winter~snow`) |
-| `battle.py` | `Fighter` from a pet (species passives, trait specials, role ultimates), `fight`, `win_chance`, `update_elo`, `bracket` |
+| `battle.py` | `Fighter` from a pet (species passives, trait specials, role ultimates), `fight` / `resume` (a fight that pauses once for a tactic), `duel` / `duel_round` (a fight the player plays round by round: strike, guard, trick), `win_chance`, `update_elo`, `aftermath`, `rank`, `bracket` |
 | `storage.py` | `MemoryStore` — reference implementation of the storage contract ([INTEGRATION.md](INTEGRATION.md)) |
 | `tz.py` | Kyiv time zone (zoneinfo, or a built-in rule where tzdata is missing) |
 | `sandbox/` | `Sandbox` game service over a store (NPC neighbours, autopilot care, tournaments), `api.dispatch` (HTTP-free), `server.py` (aiohttp), `static/index.html` |
@@ -50,7 +52,8 @@ seasons use the real Kyiv date.
 ## Randomness
 
 Every engine call that rolls dice takes an explicit `random.Random`. Hosts pass their own (seeded in tests,
-`scripts/balance.py`, and the sandbox), which makes runs reproducible.
+`scripts/balance.py`, and the sandbox), which makes runs reproducible. The clock is part of it: `Sandbox(epoch=…)` is a
+purely virtual clock (season, holidays and night follow the simulated date, never real time).
 
 ## Invariants (tests guard them)
 

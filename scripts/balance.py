@@ -15,6 +15,9 @@ import random
 import statistics
 import time
 from collections import Counter
+from datetime import datetime
+
+from kit_the_cat.tz import TZ
 
 from kit_the_cat import engine as E
 from kit_the_cat.sandbox.game import NPC_BASE, Sandbox
@@ -26,20 +29,28 @@ TARGETS = {
     "life_years": (65, 95),                  # median age at death, years
     "life_real_days": (22, 42),              # …and how many real days such a life takes
     "early_death_share": (0.0, 0.25),        # died before 40 years (debt, events, sickness)
-    "debt_share": (0.0, 0.25),               # living adults in debt at the end
+    "debt_share": (0.0, 0.10),               # living adults in debt at the end (accidents stop at DEBT_FLOOR; credit is a choice)
     "tier2_share": (0.35, 1.0),              # lives that reached tier 2 of some life stat (the new content fires)
     "check_success": (0.45, 0.70),           # dice checks: hopeful, not trivial
     "event_coverage": (0.55, 1.0),           # share of content that actually fires in the run
-    "money_median": (150, 6000),             # living pets' wallets
+    "money_median": (500, 6000),             # living pets' wallets
     "event_deaths_share": (0.0, 0.25),       # deaths by events and reckless choices (vs debt/age): dramatic
     "dream_share": (0.25, 0.85),             # lives in which the dream came true: reachable, not guaranteed
 }
 
 
-async def run(pets: int, days: float, neglect: float, seed: int) -> dict:
+START = "2026-03-02"  # the simulated calendar starts here: the run depends on the seed and this date, never on today
+
+
+def epoch(day: str) -> float:
+    """Unix time of 08:00 Kyiv on that date (the sandbox clock is virtual: season, holidays and night follow it)."""
+    return datetime.fromisoformat(day).replace(hour=8, tzinfo=TZ).timestamp()
+
+
+async def run(pets: int, days: float, neglect: float, seed: int, start: str = START, jobs: bool = False) -> dict:
     rng = random.Random(seed)
     store = MemoryStore()
-    sb = Sandbox(store, seed)
+    sb = Sandbox(store, seed, epoch=epoch(start))
     await sb.init()
     fired: Counter = Counter()
     checks = Counter()
@@ -59,6 +70,10 @@ async def run(pets: int, days: float, neglect: float, seed: int) -> dict:
     def autocare(self, p):
         if p.owner_id not in neglected:
             orig_care(self, p)
+        if jobs and p.alive and not p.job and rng.random() < 0.02:   # coverage runs: owners also go job hunting
+            offers = E.job_offers(p)
+            if offers:
+                E.apply_job(p, rng.choice(offers), rng)
 
     Sandbox._autocare = autocare
     try:
@@ -106,7 +121,7 @@ async def run(pets: int, days: float, neglect: float, seed: int) -> dict:
         dream_share=sum(d["dream"] for d in deaths_for_stats) / len(deaths_for_stats) if deaths_for_stats else None,
     )
     return dict(
-        params=dict(pets=pets, days=days, neglect=neglect, seed=seed), seconds=round(time.time() - t0, 1),
+        params=dict(pets=pets, days=days, neglect=neglect, seed=seed, start=start, jobs=jobs), seconds=round(time.time() - t0, 1),
         metrics=m, events_resolved=sum(fired.values()), deaths=len(deaths),
         causes=Counter(d["cause"] for d in deaths).most_common(8),
         roles=Counter(p.role for p in final if p.role).most_common(),
@@ -115,6 +130,7 @@ async def run(pets: int, days: float, neglect: float, seed: int) -> dict:
         tiers={k: Counter(p.tier_name(k, p.counters.get(f"tier_{k}", 0)) for p in final).most_common()
                for k in ("money", *E.LIFE)},
         never_fired=sorted(set(E.EVENTS) - set(fired))[:40], never_fired_total=len(set(E.EVENTS) - set(fired)),
+        fired=dict(fired),
         top_events=fired.most_common(10),
     )
 
@@ -134,10 +150,12 @@ def main() -> None:
     ap.add_argument("--days", type=float, default=40)
     ap.add_argument("--neglect", type=float, default=0.2)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--start", default=START, help="simulated start date, YYYY-MM-DD (default %(default)s)")
+    ap.add_argument("--jobs", action="store_true", help="owners also hunt for jobs (event coverage; shifts the economy)")
     ap.add_argument("--json", help="also write the report as JSON")
     a = ap.parse_args()
-    rep = asyncio.run(run(a.pets, a.days, a.neglect, a.seed))
-    print(f"# Balance: {a.pets} pets × {a.days:g} days (neglect {a.neglect:.0%}, seed {a.seed}) in {rep['seconds']} s")
+    rep = asyncio.run(run(a.pets, a.days, a.neglect, a.seed, a.start, a.jobs))
+    print(f"# Balance: {a.pets} pets × {a.days:g} days (neglect {a.neglect:.0%}, seed {a.seed}, from {a.start}) in {rep['seconds']} s")
     print(f"events resolved: {rep['events_resolved']} · deaths: {rep['deaths']}\n")
     worst = "OK"
     for k, v in rep["metrics"].items():

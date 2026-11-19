@@ -1,7 +1,9 @@
 """Validate content against the DSL contract:  uv run python -m kit_the_cat.content.validate"""
+import re
 from collections import Counter
 
 from . import dsl
+from .cast import BOND_MAX, BOND_MIN, CAST
 from .events import ALL
 from .persona import EPITAPHS
 from ..grammar import pick, template_errors
@@ -54,8 +56,14 @@ def main() -> None:
             ph = r.get("phase")
             if ph is not None and not set([ph] if isinstance(ph, str) else ph) <= dsl.PHASES:
                 errors.append(f"{e.id}: unknown phase {ph!r}")
+            if "season" in r:
+                bad = [x for x in ([r["season"]] if isinstance(r["season"], (str, int)) else r["season"])
+                       if isinstance(x, str) and x not in dsl.SEASONS]
+                errors += [f"{e.id}: unknown season {x!r}" for x in bad]
             if "goal" in r and r["goal"] not in GOALS:
                 errors.append(f"{e.id}: unknown goal {r['goal']!r}")
+    errors += cast_errors()
+    errors += economy_errors()
     by_id = {e.id: e for e in ALL}
     targets = set()
     for e in ALL:
@@ -63,20 +71,127 @@ def main() -> None:
             for out in c.outs + c.fail:
                 if "then" in out.fx:
                     v = out.fx["then"]
-                    ok = isinstance(v, tuple) and len(v) == 2 and v[0] in by_id and by_id[v[0]].followup
+                    ids = [v[0]] if isinstance(v, tuple) and isinstance(v[0], str) else list(v[0]) if isinstance(v, tuple) else []
+                    ok = isinstance(v, tuple) and len(v) == 2 and bool(ids) and all(i in by_id and by_id[i].followup for i in ids)
                     try:
                         ok = ok and dsl.years(v[1]) > 0
                     except ValueError:
                         ok = False
                     if not ok:
-                        errors.append(f"{e.id}/{c.label}: then={v!r} must be (followup event id, duration)")
+                        errors.append(f"{e.id}/{c.label}: then={v!r} must be (followup event id | [ids], duration)")
                     else:
-                        targets.add(v[0])
+                        targets.update(ids)
+                        if len(ids) > 1 and "ss" in by_id[ids[-1]].req:
+                            errors.append(f"{e.id}/{c.label}: the last of then=([…]) is the fallback and must have no ss=")
+                        if len(ids) > 1 and "ss" in out.fx and list(out.fx).index("ss") > list(out.fx).index("then"):
+                            errors.append(f"{e.id}/{c.label}: write ss= before then=([…]): the ending reads the scores")
     errors += story_errors(by_id, targets)
+    errors += series_errors(by_id)
     errors += [f"{e.id}: follow-up that nothing schedules (then= / step=)" for e in ALL if e.followup and e.id not in targets]
     print(f"{len(ALL)} events, {sum(len(e.choices) for e in ALL)} choices")
     print("\n".join(errors) or "OK")
     raise SystemExit(1 if errors else 0)
+
+
+CREDIT_WORDS = ("кредит", "борг", "позик", "позич", "розстроч", "іпотек")
+
+
+def economy_errors() -> list[str]:
+    """A priced choice (every outcome loses money) is locked for a pet that cannot pay, so every event keeps a choice
+    that costs nothing and asks for no money; `credit=` (debt on purpose) belongs only to talk about loans."""
+    errors = []
+    for e in ALL:
+        def free(c):
+            priced = bool(c.outs) and all(isinstance(o.fx.get("money", 0), (int, float)) and o.fx.get("money", 0) < 0
+                                          for o in c.outs)
+            return not priced and not c.req.get("money")
+        if e.choices and not any(free(c) for c in e.choices):
+            errors.append(f"{e.id}: every choice costs money — a broke pet would be stuck; add a free choice")
+        for c in e.choices:
+            if any("credit" in o.fx for o in c.outs + c.fail) and not any(w in (e.text + c.label).lower() for w in CREDIT_WORDS):
+                errors.append(f"{e.id}/{c.label}: credit= only for loans (кредит, борг, позика, розстрочка in the text or label)")
+    return errors
+
+
+def cast_errors() -> list[str]:
+    """Recurring characters (content/cast.py): known ids, bonds inside the scale, valid states."""
+    errors = []
+
+    def ids(where: str, v) -> None:
+        errors.extend(f"{where}: unknown character {c!r}" for c in v if c not in CAST)
+
+    def bond(where: str, v) -> None:
+        for x in (v if isinstance(v, (tuple, list)) else [v]):
+            if isinstance(x, bool) or not isinstance(x, int) or not BOND_MIN <= x <= BOND_MAX:
+                errors.append(f"{where}: bond {v!r} must be whole numbers within {BOND_MIN}..{BOND_MAX}")
+
+    for e in ALL:
+        for where, req in [(e.id, e.req)] + [(f"{e.id}/{c.label}", c.req) for c in e.choices]:
+            ids(where, req.get("cast", {}))
+            ids(where, req.get("cast_state", {}))
+            ids(where, req.get("cast_for", {}))
+            ids(where, [req["nocast"]] if isinstance(req.get("nocast"), str) else req.get("nocast", []))
+            for want in req.get("cast", {}).values():
+                bond(where, want)
+            errors += [f"{where}: unknown cast_state {st!r}" for st in req.get("cast_state", {}).values()
+                       if st not in dsl.CAST_STATES]
+        for c in e.choices:
+            for out in c.outs + c.fail:
+                where = f"{e.id}/{c.label}"
+                ids(where, out.fx.get("cast", {}))
+                ids(where, out.fx.get("cast_state", {}))
+                for d in out.fx.get("cast", {}).values():
+                    bond(where, d)
+                errors += [f"{where}: unknown cast_state {st!r}" for st in out.fx.get("cast_state", {}).values()
+                           if st not in dsl.CAST_STATES]
+    return errors
+
+
+SERIES_RECAP = 90  # chars of a «Раніше в серіалі» line
+
+
+def series_errors(by_id: dict) -> list[str]:
+    """Series (ss=, recap=, finale=, series=): ids and endings exist, every outcome of an episode goes on (then=) or
+    ends (finale=), recap lines are short, {recap_x} names a series, episodes are solo."""
+    from .series import SERIES
+    errors = []
+
+    def key_ok(k: str) -> bool:
+        sid, _, var = k.partition(".")
+        return sid in SERIES and bool(var)
+    for e in by_id.values():
+        if e.series and e.series not in SERIES:
+            errors.append(f"{e.id}: unknown series {e.series!r}")
+        if e.series and e.social:
+            errors.append(f"{e.id}: series episodes are solo (social=False)")
+        for ph in re.findall(r"\{recap_([a-z_0-9]+)\}", e.text):
+            if ph not in SERIES:
+                errors.append(f"{e.id}: {{recap_{ph}}} is not a series")
+        for r in [e.req] + [c.req for c in e.choices]:
+            errors += [f"{e.id}: unknown series score {k!r} in req ss=" for k in r.get("ss", {}) if not key_ok(k)]
+            errors += [f"{e.id}: unknown ending {sid}/{tag} in req finale="
+                       for sid, tag in r.get("finale", {}).items()
+                       if sid not in SERIES or (tag != "any" and tag not in SERIES[sid]["ends"])]
+        for c in e.choices:
+            for out in c.outs + c.fail:
+                fx = out.fx
+                where = f"{e.id}/{c.label}"
+                errors += [f"{where}: unknown series score {k!r} in ss=" for k in fx.get("ss", {}) if not key_ok(k)]
+                if "recap" in fx:
+                    v = fx["recap"]
+                    if not (isinstance(v, tuple) and len(v) == 2 and v[0] in SERIES):
+                        errors.append(f"{where}: recap={v!r} must be (series id, line)")
+                    elif max(len(pick(v[1], g, g)) for g in "mf") > SERIES_RECAP:
+                        errors.append(f"{where}: recap line is longer than {SERIES_RECAP} characters")
+                    elif e.series and v[0] != e.series:
+                        errors.append(f"{where}: recap of another series")
+                if "finale" in fx:
+                    v = fx["finale"]
+                    if not (isinstance(v, tuple) and len(v) == 2 and v[0] in SERIES and v[1] in SERIES[v[0]]["ends"]):
+                        errors.append(f"{where}: finale={v!r} must be (series id, a key of its ends)")
+                if e.series and "then" not in fx and "finale" not in fx:
+                    errors.append(f"{where}: an outcome of a series episode needs then= or finale=")
+    return errors
 
 
 STORY_STEPS = 6  # a story is 1–6 decisions long

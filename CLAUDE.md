@@ -6,9 +6,18 @@ Kit the Cat: the pet life-sim of the Ukrainian Telegram bot «Кошеня», as
 ## Map
 - `engine.py` — Pet (JSON document), years/ageing (decisions cost time), automatic upkeep, life stats with tiers
   (`LIFE`, `MONEY_TIERS`), events, effects, roles, world events, economy, casino, scheduling plan
-- `content/` — 360 life events in a tiny DSL (`status.py`: life-stat events); `content/dsl.py` is the contract (KNOWN_FX / KNOWN_REQ) the engine implements
+- `content/` — 360 life events in a tiny DSL (`status.py`: life-stat events); `content/dsl.py` is the contract (KNOWN_FX / KNOWN_REQ) the engine implements;
+  `content/cast.py` + `cast_home.py` / `cast_town.py` — the recurring characters (bonds, away/back) and their events;
+  `content/quests.py` — the characters' quests (series that start for a pet who knows the character)
+  `content/social.py` + `social_more.py` — two-pet events (kids, teens, strangers, friends, foes, couples, exes, holidays)
+  `content/modern.py` — modern everyday life («Аврора», Threads, ШІ-чат, підписки); `content/family.py` — the age limits
+  of parents and grandparents (an event about a living mother closes at 50 years)
+- `content/gated.py` — extra choices (a skill or an owned item opens them) appended to existing events by id; locked ones show as 🔒 buttons (`Pet.locked_why`)
 - `grammar.py` — declension of pet names into 7 cases (`decline`, `inflect`; `{name_gen}`…) and the `{він|вона}` gender pairs (`pick`); pure stdlib
 - `sprites*.py` — procedural pixel art: genome, species, roles, items (fixed + generated), backgrounds, groups
+- `art.py` + `assets/` — redrawable art: PNG files that replace what the code draws, one asset at a time (`assets/README.md`); after a change in the sprite code run `scripts/art.py export`
+- `card.py` + `cardfont.py` — the life card: a whole life as one PNG (stdlib only: baked bitmap font, pixel icons, zlib
+  PNG encoder); `scripts/bake_font.py` regenerates `cardfont.py` from a Spleen BDF file (BSD-2)
 - `battle.py` — fighters, battles, tournaments (brackets, Elo)
 - `storage.py` — MemoryStore (in-memory, JSON dump/load); hosts may provide their own with the same methods
 - `sandbox/` — Sandbox game service, HTTP-free `api.py`, aiohttp `server.py` (`kit-the-cat`), static UI
@@ -32,7 +41,7 @@ Kit the Cat: the pet life-sim of the Ukrainian Telegram bot «Кошеня», as
   `kit-release`. Agent `.claude/agents/content-reviewer.md` reviews language and boundaries.
 - Content pipeline: `scripts/content_gate.py` runs every content check; `scripts/ua_lint.py` is the Ukrainian lint
   (strict in CI); the `content-reviewer` agent does the human-level language review.
-- Tools: `scripts/case_scan.py` (names in the wrong case), `scripts/gender_scan.py` (masculine words about a pet), `scripts/content_stats.py` (gaps, dead ends, hard checks), `scripts/balance.py` (simulation vs targets),
+- Tools: `scripts/integrity_audit.py` (do stories agree with the pet — age, job, children — and not repeat; `--static` is instant), `scripts/case_scan.py` (names in the wrong case), `scripts/food_scan.py` (favourite food in the wrong case), `scripts/gender_scan.py` (masculine words about a pet), `scripts/content_stats.py` (gaps, dead ends, hard checks), `scripts/balance.py` (simulation vs targets; reproducible: fixed seed and start date), `scripts/event_coverage.py` (events that can never happen; `--sim --union 12` explains the «never fired» list),
   `scripts/preview.py` (sprite sheets, `--smoke`), `scripts/ui_audit.js` (layout audit in a browser).
 - New DSL key = contract in `dsl.py` + its docstring + `engine.apply/meets` + test + regenerate `docs/DSL.md`.
 - Every user-visible change goes into `CHANGELOG.md` → Unreleased.
@@ -42,3 +51,4 @@ uv run ruff check src scripts tests web && uv run pytest -q && uv run python -m 
 uv run python scripts/gen_dsl_docs.py --check && uv run python scripts/content_stats.py --strict
 uv run python scripts/ua_lint.py --strict
 uv run python scripts/balance.py && uv run python scripts/preview.py --smoke
+uv run python scripts/art.py export --check

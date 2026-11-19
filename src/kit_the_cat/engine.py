@@ -20,12 +20,18 @@ from . import sprites
 from .grammar import CASES, GENDERS, inflect, pick
 from .content import events as event_content
 from .content.dsl import years as parse_years
-from .content.dsl import KNOWN_REQ, Choice, Event, Out, ch, ev, o
-from .content.economy import (BACKGROUND_PRICES, EDUCATION, FOOD, HOME_UPKEEP, JOBS, MYSTERY_BOX, PENSION, POCKET,
-                              POTION, PRICES, ROLE_FOOD, WEALTH_TAX, WELFARE)
-from .content.persona import (EPITAPHS, FEARS, FOODS, GOALS, NAME_SUFFIX, NAMES, PERKS, QUIRKS, TEMPER_F,
-                              TEMPERAMENTS)
+from .content.cast import BOND_MAX, BOND_MIN, CAST, bond_word
+from .content.dsl import CAST_STATES, KNOWN_REQ, Choice, Event, Out, ch, ev, o
+from .content.economy import (BACKGROUND_PRICES, EDUCATION, FOOD, HOME_UPKEEP, ITEM_SKILL, ITEM_SKILL_CAP, JOBS,
+                              MYSTERY_BOX, PENSION, POCKET, POTION, PRICES, ROLE_FOOD, WEALTH_TAX, WELFARE)
+from .content.series import SERIES
+from .content.persona import (EPITAPHS, FEARS, FOOD_CASES, FOODS, GOALS, NAME_SUFFIX, NAMES, PERKS, QUIRKS, TEMPER_F,
+                              short_name,
+                              TEMPERAMENTS, food_in)
+from .content.voices import VOICES
 
+VOICE_CHANCE = 0.4   # share of events with the pet's inner voice over them
+VOICE_PUSH = 0.6     # …when a choice is in its character: how often the voice leans towards it instead
 NOBODY = dict(gen="когось", dat="комусь", acc="когось", ins="кимось", loc="комусь", voc="хтосю")  # no second pet
 SPEED = 1.0          # >1 = game time runs faster (set from PET_SPEED)
 DAY = 86400
@@ -85,6 +91,9 @@ YEARS_PER_DAY = {1: 4.0, 2: 2.0, 3: 1.4, 4: 1.4}   # passive ageing per game day
 GOAL_BY_DREAM = {v: k for k, v in GOALS.items()}
 LEAN_BONUS = 8           # skill bonus for a choice in the pet's character (temperament lean)
 LEAN_OUT = 1.6           # weight × for outcomes that feed the pet's lean trait
+LOCK_REQ = ("skill", "has", "money")   # the only requirements a locked button may reveal; any other one stays hidden
+LOCK_MAX = 2             # locked buttons shown under one event (Pet.locked_why)
+LOCK_HINT = 1 / 3        # chance of the «🔒 З 🧠 40 тут був би ще один варіант» line after an event that showed locked buttons
 HEAL_PER_H = 0.3         # natural recovery per game hour (hospital: 3): damage from choices lasts
 HEAL_PRICE = 150         # 💊 a doctor's visit
 LETHAL_HIT = 30          # a choice kills (health → 0) only if it takes at least this much health at once
@@ -122,13 +131,20 @@ TIER_F = {"Бідний студент": "Бідна студентка", "Ма�
 MONEY_TIERS = [(-1e12, "🕳 У боргах"), (0, "🥫 Бідний студент"), (1000, "🧾 Середній клас"), (5000, "🚗 Мажор"),
                (20000, "🛥 Олігарх")]
 UPKEEP = [10, 20, 60, 180, 600]   # ₴/day cost of living by money tier (food, bills, «статус»); adults only
+DEBT_FLOOR = -500                  # ordinary losses stop here (a pet does not stumble into a deeper hole); only `credit` goes lower
 DEBT_SOFT = 1000                   # a small debt only stops healing; collectors start hurting below this
 DEBT_HARD = 3000                   # deeper debt hurts health faster
 EVENT_ENERGY = 0          # energy is automatic (kept for hosts that still check it); pace adventures with cooldowns
+FOLLOWUP_LEGACY_GRACE = 15  # years a follow-up saved without its own grace window may wait (pets saved before the window existed)
 FOLLOWUP_MAX = 3         # a follow-up (e.g. a dream step after a failure) is scheduled at most this often per life
 RECENT = 40              # last N events of a pet are not offered again (unless nothing else fits)
+SOCIAL_LIFE_MAX = 2      # a social event is offered at most this often per life (the pool is small: then a solo event comes)
+INFANT_YEARS = 3         # younger pets only live events written for their age (baby_*, an explicit stage/years/phase)
 REPEAT_DECAY = 0.3       # weight × this per earlier time the pet lived the event: fresh content first
+CAST_BOOST = 2.5         # weight × for events about the recurring characters (content/cast.py): people come back
 STORY_MAX = 10           # highlights kept for the life summary
+RECAP_KEEP = 8           # lines of «Раніше в серіалі» a series remembers…
+RECAP_SHOWN = 4          # …and the last of them an episode shows ({recap_<series>})
 TWIST_TAIL = 0.06        # chance of a random mini-twist after any outcome
 TWIST_DAILY = 0.04       # chance per pet per game day to queue a twist event
 RESURRECT = 0.10         # dead → zombie
@@ -139,9 +155,21 @@ STATUS_NAMES = {"friend": "🤝 друг", "bestie": "💛 найкращий д
 STATUS_NAMES_F = {**STATUS_NAMES, "friend": "🤝 подруга", "bestie": "💛 найкраща подруга", "rival": "😤 суперниця",
                   "enemy": "⚔️ ворогиня", "partner": "💍 партнерка", "ex": "💔 колишня"}  # of the pet it is about
 # journal kinds worth a place in the chronicle / notices (importance 1..3)
-IMPORTANCE = {"died": 3, "twist": 3, "role": 3, "heir": 2, "ach": 2, "love": 2, "jail": 2, "tier": 2, "world": 1, "job": 1,
+IMPORTANCE = {"died": 3, "twist": 3, "role": 3, "heir": 2, "ach": 2, "love": 2, "jail": 2, "tier": 2, "series": 2, "world": 1,
+              "job": 1,
               "casino": 1,
               "grew": 1, "hatched": 1, "social": 1, "hungry": 1}
+
+
+def followup_grace(delay: float) -> float:
+    """How long after it is due a follow-up may still come: half its delay, at least a year («in 8y» → until +4y)."""
+    return max(1.0, 0.5 * delay)
+
+
+def followup_window(f: list) -> float:
+    """The grace of a queue entry [id, due, grace]; an old two-item entry keeps the old 15-year window."""
+    return f[2] if len(f) > 2 else FOLLOWUP_LEGACY_GRACE
+
 
 # --- supernatural roles -------------------------------------------------------------------------
 # genes/items are applied only to the rendered Look (curing restores the pet); if sprites.py draws
@@ -199,10 +227,17 @@ def status_name(status: str, gender: str = "m") -> str:
     return (STATUS_NAMES_F if gender == "f" else STATUS_NAMES).get(status, status)
 
 
-def job_name(job: str, gender: str = "m") -> str:
-    """«🛒 Касир АТБ» / «🛒 Касирка АТБ»; the job's id when it is unknown."""
+def job_name(job: str, gender: str = "m", flags: dict | None = None) -> str:
+    """«🛒 Касир АТБ» / «🛒 Касирка АТБ»; the job's id when it is unknown. A job may grow a new title with a flag
+    (`titles={flag: (name, name_f)}`): the taxi's radio goes from «Ялинка FM» to «Класика FM»."""
     j = JOBS.get(job)
-    return (j.get("name_f", j["name"]) if gender == "f" else j["name"]) if j else job
+    if not j:
+        return job
+    name, name_f = j["name"], j.get("name_f", j["name"])
+    for flag, (new, new_f) in j.get("titles", {}).items():
+        if flags and flags.get(flag):
+            name, name_f = new, new_f
+    return name_f if gender == "f" else name
 
 
 def phase_name(phase: str, gender: str = "m") -> str:
@@ -243,13 +278,21 @@ ACH_F = {
     "Подвиг онука": "Подвиг онуки", "Президент чату": "Президентка чату", "Продав душу вигідно": "Продала душу вигідно",
     "Професор-аксолотль": "Професорка-аксолотль", "Підкорив Говерлу": "Підкорила Говерлу", "Пілот FPV": "Пілотка FPV",
     "Рецидивіст": "Рецидивістка", "Свідок року": "Свідкиня року", "Скандаліст": "Скандалістка",
-    "Скарбошукач": "Скарбошукачка", "Хрещений батько": "Хрещена мати", "Чемпіон крашанок": "Чемпіонка крашанок",
+    "Скарбошукач": "Скарбошукачка", "Водій нічного маршруту": "Водійка нічного маршруту", "Хрещений батько": "Хрещена мати", "Чемпіон крашанок": "Чемпіонка крашанок",
     "Чемпіон покеру": "Чемпіонка покеру", "Чемпіон породи": "Чемпіонка породи", "Чемпіон турніру": "Чемпіонка турніру",
     "Щасливчик": "Щасливиця", "Ясновельможний": "Ясновельможна", "Непереможний": "Непереможна",
-    "Олігарх": "Олігархиня",
+    "Олігарх": "Олігархиня", "Свій у під'їзді": "Своя в під'їзді", "Друг з гаражів": "Подруга з гаражів",
 }
 
 EVENTS: dict[str, Event] = {e.id: e for e in event_content.ALL}
+
+
+def is_grave_event(e: Event) -> bool:
+    """Too heavy for a joke from the pet's inner voice: death, hospital, jail, a big health hit, the army."""
+    if e.id.startswith(("army_", "fu_army")):
+        return True
+    fx = [x.fx for c in e.choices for x in c.outs + c.fail]
+    return any("die" in f or "hospital" in f or "jail" in f or f.get("health", 0) <= -25 for f in fx)
 
 
 def is_twist_event(e: Event) -> bool:
@@ -275,11 +318,35 @@ BUILTIN = [
                                     achievement="Весілля року", mood=30, other=dict(mood=30)), check=("cha", 30),
           fail=[o("{other} {other:сказав|сказала}, що ще не {other:готовий|готова}. Каблучку з'їв "
                   "офіціант.", rel=-10, mood=-30, money=-300)],
-          req=dict(status=["crush"], partner=False, other_partner=False), auto="love"),
+          req=dict(status=["crush"], partner=False, other_partner=False, stage=(3, 4), other_stage=(3, 4)), auto="love"),
        ch("Подумати про дітей 🥚", o("Через кілька днів у гнізді з'явилось яйце. Династія росте!", baby=True, love=3,
-                                    mood=20, other=dict(love=3, mood=20)), req=dict(status=["partner"]), auto="love"),
+                                    mood=20, other=dict(love=3, mood=20)), req=dict(status=["partner"], stage=(3, 3), other_stage=(3, 3)),
+          auto="love"),
        ch("Втекти через вікно туалету", o("Класика. {other} досі чекає з компотом.", rel=-12, toxic=1), auto="toxic"),
-       social=True, bg="love", req=dict(stage=(2, 4), other_stage=2)),
+       social=True, bg="love", req=dict(stage=(2, 4), other_stage=(2, 4))),
+    ev("_date2", "{name} і {other} гуляють Маріїнським парком. Лавка, морозиво, незручна пауза.",
+       ch("Взяти за руку", o("Долоні спітніли в обох, але це нікому не заважало. До фонтана дійшли, не відпускаючи рук.", rel=15,
+                             mood=15, love=1, other=dict(mood=15, love=1)), check=("cha", 30),
+          fail=[o("{name} {схопив|схопила} {other_acc} за рукав. Рукав залишився в руці. Незручно.", rel=-3, mood=-10)],
+          auto="love"),
+       ch("Розповісти жарт", o("{other} {other:сміявся|сміялася} так, що голуби розлетілись. Вечір вдався!", rel=12, cha=1,
+                               mood=10), check=("cha", 25),
+          fail=[o("Жарт про бабусю й маршрутку не зайшов. Пауза була довгою.", rel=-4, mood=-8)], auto="party"),
+       ch("Купити два морозива", o("Одне з'їли, друге розтануло. Романтика коштує ціле морозиво.", rel=10, money=-60,
+                                  glutton=1), auto="glutton"),
+       ch("Піти «в туалет»", o("Туалет у парку зачинений, тож {name} просто {пішов|пішла} додому. {other} {other:чекав|чекала} на лавці до темряви.", rel=-12, toxic=1), auto="toxic"),
+       social=True, bg="love", req=dict(stage=(2, 4), other_stage=(2, 4))),
+    ev("_date3", "{name} і {other} сидять у кав'ярні навпроти одне одного. На столі два капучино й один телефон на двох.",
+       ch("Поговорити по-справжньому", o("Дві години розмови, а кава охолола. Ніхто не помітив.", rel=18, love=1, mood=12,
+                                          other=dict(mood=12)), check=("cha", 28),
+          fail=[o("Розмова скотилась до погоди. Потім до погоди в Дніпрі. Потім до тиші.", rel=-3, mood=-8)],
+          auto="love"),
+       ch("Зробити спільне селфі", o("Фото вийшло смішне: {name} із заплющеними очима, {other} з піною на носі. "
+                                     "Обоє в захваті.", rel=15, mood=10, cha=1), auto="party"),
+       ch("Заплатити за каву", o("Дві кави, кешбек 1 %. Жест оцінено.", rel=12, money=-120), auto="love"),
+       ch("Дивитися в телефон", o("Новини, мемчики, ще мемчики. {other} {other:вдав|вдала}, що не "
+                                  "{other:образився|образилась}.", rel=-10, mood=-5), auto="dark"),
+       social=True, bg="love", req=dict(stage=(2, 4), other_stage=(2, 4))),
     ev("_fight", "{name} і {other} зустрілися за гаражами. Повітря пахне насінням і бійкою.",
        ch("Битися до кінця", o("{name} {переміг|перемогла}! {other} {other:втік|втекла}, ображено "
                                "сопучи.", rel=-10, xp=10, str=2, cha=1,
@@ -294,7 +361,9 @@ BUILTIN = [
        ch("Помиритися", o("Обнялися. Тепер найкращі вороги.", rel=18, love=1, other=dict(love=1)), check=("cha", 30),
           fail=[o("{Простягнув|Простягнула} лапу — {отримав|отримала} ляпаса.", rel=-5, mood=-10)], auto="love"),
        ch("Покликати маму", o("Мама прийшла і надавала обом. Справедливо.", rel=5, health=-5, mood=-10,
-                              other=dict(health=-5, mood=-10))),
+                              other=dict(health=-5, mood=-10)), req=dict(stage=(1, 2))),
+       ch("Покликати кума", o("Кум розборонив обох і покликав на шашлик. Конфлікт заморожено до весни.", rel=8, mood=5,
+                              other=dict(mood=5)), req=dict(stage=(3, 4))),
        social=True, bg="kyiv"),
     ev("_hangout", "{name} випадково {зустрів|зустріла} {other_acc} біля кіоску з шаурмою.",
        ch("Пригостити шаурмою", o("{other} {other:оцінив|оцінила}. Тепер вони кенти.", rel=10, money=-70, love=1,
@@ -310,10 +379,41 @@ BUILTIN = [
 ]
 for _e in BUILTIN:
     EVENTS[_e.id] = _e
-DATE_HINTS = ("date", "love", "crush", "kiss", "romance", "flirt", "wedding", "partner", "dating")
+DATE_HINTS = ("date", "love", "crush", "kiss", "romance", "flirt", "wedding", "partner", "dating")  # fallback for events not marked date=True
+DATE_FALLBACKS = ("_date", "_date2", "_date3")  # the built-in dates: only for a pair with nothing else to do (see pick_event)
+DATE_PAIR_KEEP = 60      # dates a pair remembers having had (per pet, per partner), oldest forgotten first
+DATE_PAIRS_KEEP = 40     # pairs a pet remembers dates with
+
+
+def for_infants(e: Event) -> bool:
+    """A pet under INFANT_YEARS only lives `baby*` events and events whose `years`/`age` explicitly start below that
+    age; a bare stage=1 or phase="kid" means "a kid", not "a newborn"."""
+    r = e.req
+    return e.id.startswith("baby") or "age" in r or ("years" in r and r["years"][0] < INFANT_YEARS)
+
+
+def same_bracket(a: "Pet", b: "Pet") -> bool:
+    """Romance is for two teens (stage 2) or two grown-ups (stage 3–4)."""
+    return a.stage >= 2 and b.stage >= 2 and (a.stage == 2) == (b.stage == 2)
+
+
+def is_date_event(e: Event) -> bool:
+    """A romantic scene of two pets: marked `date=True`, or (older events) named or tagged like one."""
+    return (e.social and not e.followup and not e.id.startswith("_")
+            and (e.date or any(h in e.id for h in DATE_HINTS) or "love" in e.aff))
 FIGHT_HINTS = ("fight", "duel", "beef", "rival", "enemy", "war", "brawl", "battle", "bully")
 
-# --- twist tails: (text, fx, weight) --------------------------------------------------------------
+
+def _romantic(e: Event) -> bool:
+    outs = [x for c in e.choices for x in c.outs + c.fail]
+    return is_date_event(e) or e.id in DATE_FALLBACKS or any(
+        x.fx.get("status") in ("crush", "partner") or x.fx.get("baby") for x in outs)
+
+
+# events that can start or deepen a romance (a date, a crush/partner status, a baby): checked by same_bracket
+ROMANCE = {e.id for e in EVENTS.values() if e.social and _romantic(e)}
+
+# --- twist tails: (text, fx, weight[, req]) — req is checked like an event's (an age, a job) --------------------------------------------------------------
 TAILS = [
     ("А потім виявилось, що це все був сон. Але гроші справжні.", dict(money=100), 1),
     ("Раптом подзвонила податкова. Вона все бачила.", dict(money_mult=0.85), 1),
@@ -322,7 +422,8 @@ TAILS = [
     ("Поруч ударила блискавка. {name} тепер трохи {інший|інша}…", dict(mutate=1, health=-10), 0.6),
     ("Бабця на лавці прокляла {name_acc} просто так, для профілактики.", dict(luck=-3, mystic=1), 1),
     ("Голуб влучив {name_dat} просто в маківку. Кажуть, на гроші.", dict(money=77, clean=-25), 1),
-    ("У кишені знайшовся забутий лотерейний квиток — і він виграшний!", dict(money=300, gambler=1), 0.8),
+    ("У кишені знайшовся забутий лотерейний квиток — і він виграшний!", dict(money=300, gambler=1), 0.8,
+     dict(years=(18, 999))),
     ("Над головою закружляла зграя ворон. Погана прикмета.", dict(dark=2, mood=-5), 1),
     ("Вночі {name_acc} вкусив дивний блідий кажан…", dict(role="vampire", twist=True), 0.12),
     ("У повню {name_acc} подряпав дуже волохатий «пес»…", dict(role="werewolf", twist=True), 0.12),
@@ -332,20 +433,20 @@ TAILS = [
     ("{name} {впав|впала} у радіоактивну калюжу за гаражами.", dict(mutate=2, health=-15), 0.4),
     ("Відключили світло. Усе в холодильнику зіпсувалось.", dict(hunger=-20, mood=-5), 1),
     ("На смітнику {name} {знайшов|знайшла} цілком нормальну річ!", dict(item_slot="head"), 0.7),
-    ("Подзвонила мама й спитала, коли вже онуки.", dict(love=2, mood=-8), 1),
+    ("Подзвонила мама й спитала, коли вже онуки.", dict(love=2, mood=-8), 1, dict(years=(20, 50))),
     ("Хтось з чату вночі лайкнув стару фотку {name_gen}. Підозріло.", dict(cha=1, mood=5), 1),
     ("Злива змила весь бруд. Безкоштовний душ!", dict(clean=100), 1),
-    ("У новинах сказали, що {food} дарує безсмертя. {name} {повірив|повірила}.", dict(lifespan=5, glutton=1), 0.6),
+    ("У новинах сказали, що безсмертя дарує щоденна порція {food_gen}. {name} {повірив|повірила}.", dict(lifespan=5, glutton=1), 0.6),
     ("Чорний кіт перейшов {name_dat} дорогу. Двічі. Туди й назад.", dict(luck=-2), 1),
     ("Ворожка на базарі прошепотіла: «Ти {обраний|обрана}». Тепер {name} у це вірить.", dict(mystic=3, cha=1), 1),
     ("Сусід віддав {name_dat} старий ноутбук «бо все одно гальмує».", dict(item="laptop"), 0.3),
     ("Невідомий доброчинець задонатив {name_dat} 500 ₴.", dict(money=500, love=1), 0.6),
     ("Блогер зняв {name_acc} у тікток. 2 мільйони переглядів!", dict(cha=3, money=200), 0.7),
     ("Таксист-філософ прочитав {name_dat} лекцію про сенс життя.", dict(int=2, mystic=1), 1),
-    ("{name} застряг у ліфті на 4 години. Без вайфаю.", dict(mood=-15, dark=1), 1),
+    ("{name} {застряг|застрягла} у ліфті на 4 години. Без вайфаю.", dict(mood=-15, dark=1), 1),
     ("На городі {name} {викопав|викопала} козацький скарб!", dict(money=1000, patriot=2, item="sabre"), 0.15),
-    ("Кум приніс самогон «на пробу».", dict(party=2, health=-6, mood=10), 1),
-    ("Сонце, кава і жодного повідомлення від начальника. Ідеальний день.", dict(mood=20), 1),
+    ("Кум приніс самогон «на пробу».", dict(party=2, health=-6, mood=10), 1, dict(years=(18, 999))),
+    ("Сонце, кава і жодного повідомлення від начальника. Ідеальний день.", dict(mood=20), 1, dict(job="any")),
     ("З'явився двійник {name_gen}. Хто з них справжній — тепер невідомо.", dict(reroll_persona=True, twist=True), 0.12),
     ("{name} {лизнув|лизнула} батарейку. Тепер розуміє фізику.", dict(int=3, health=-8), 0.8),
     ("{name} {прокинувся|прокинулася}… іншим видом. Лікарі розводять "
@@ -384,6 +485,14 @@ def item_name(item: str) -> str:
         return item.split("@")[0]
 
 
+def item_skill(item: str) -> dict:
+    """Skill bonus of one worn item: {skill: n} from ITEM_SKILL; a generated (`gen:`) item gives +1 to a skill
+    picked from its seed. Tints (`sabre@3`) do not matter. Unknown items give nothing."""
+    if item.startswith("gen:"):
+        return {random.Random(item).choice(list(SKILLS)): 1}
+    return dict(ITEM_SKILL.get(item.split("@")[0], {}))
+
+
 def bg_base(bg: str) -> str:
     return (bg or "").split("~")[0]
 
@@ -410,7 +519,8 @@ SEASON_OF_MONTH = {12: "winter", 1: "winter", 2: "winter", 3: "spring", 4: "spri
 # named windows for req season=...: (month, day) from..to inclusive, may wrap the new year
 HOLIDAYS = {"newyear": ((12, 20), (1, 14)), "christmas": ((12, 20), (1, 10)), "andriy": ((12, 8), (12, 16)),
             "easter": ((3, 25), (5, 10)), "kupala": ((6, 20), (7, 10)), "halloween": ((10, 25), (11, 2)),
-            "valentine": ((2, 10), (2, 16)), "independence": ((8, 20), (8, 27))}
+            "valentine": ((2, 10), (2, 16)), "independence": ((8, 20), (8, 27)),
+            "malanka": ((1, 12), (1, 14)), "vyshyvanka": ((5, 15), (5, 21)), "pokrova": ((10, 12), (10, 16))}
 
 
 def in_season(v) -> bool:
@@ -488,6 +598,18 @@ class Result:
     time: float = 0.0            # years the decision cost (hidden from players; hosts use it to pace the world)
     next: str = ""               # story: id of the step that is pending now (hosts show it right away)
     story: dict = field(default_factory=dict)  # story: {title, step} mid-way; {title, steps, notes} at the end
+    series: dict = field(default_factory=dict)  # series: {id, title, ep, finale, ending} of the episode just lived
+    check: dict = field(default_factory=dict)   # a skill check: {skill, value, item, diff, parts}; empty without one
+    helped: str = ""             # the check passed only thanks to a worn item: «🗡 Шабля — дуже до речі»
+    hint: str = ""               # sometimes: «🔒 З 🧠 40 тут був би ще один варіант» (the event had a locked choice)
+
+
+def _plain_sum(xs) -> float:
+    """Left-to-right sum (the builtin `sum` compensates floats, which would move the golden chances by 1e-16)."""
+    t = 0
+    for x in xs:
+        t += x
+    return t
 
 
 @dataclass
@@ -533,11 +655,13 @@ class Pet:
     children: int = 0
     pending: dict = field(default_factory=dict)
     tale: dict = field(default_factory=dict)      # the multi-step story being played: id, title, path, vars, fx
+    cast: dict = field(default_factory=dict)      # recurring characters met: id -> {"b": bond, "since": years, "st": state}
     next_ev: float = 0.0
     recent: list = field(default_factory=list)
     seen: dict = field(default_factory=dict)      # event id -> times lived (this life)
     story: list = field(default_factory=list)     # [ts, kind, text] highlights for the life summary
-    followups: list = field(default_factory=list)  # [event id, due at age in years]: consequences of earlier choices
+    followups: list = field(default_factory=list)  # [event id, due at age in years, grace in years]: consequences of earlier choices
+    series: dict = field(default_factory=dict)    # series id -> {ep, vars, recap, end}: serials lived across years
     persona: dict = field(default_factory=dict)
     achievements: list = field(default_factory=list)
     jail_until: float = 0.0
@@ -568,6 +692,7 @@ class Pet:
             p.gender = "m"
         if isinstance(p.partner, int):  # old drafts stored the owner id
             p.partner = ""
+        p.cast = {k: v for k, v in p.cast.items() if k in CAST and isinstance(v, dict)}  # a retired character is dropped
         if p.persona and "goal" not in p.persona:  # ≤ 0.5: dreams were flavour; now every pet has a goal
             goal = GOAL_BY_DREAM.get(p.persona.get("dream", "")) or \
                 random.Random(f"{p.chat_id}:{p.owner_id}:{p.gen}").choice(sorted(GOALS))
@@ -648,7 +773,7 @@ class Pet:
             best = self.counters.get(f"tier_{key}", 1 if key == "money" else 0)  # hosts set it at birth/migration
             if t > best:
                 self.counters[f"tier_{key}"] = t
-                self.note("tier", f"{self.tier_name(key)} — {self.name} {self.g('піднявся', 'піднялася')} на новий рівень!")
+                self.note("tier", f"{self.tier_name(key)} — {self.called()} {self.g('піднявся', 'піднялася')} на новий рівень!")
                 if t == 4:
                     self.ach(MONEY_TIERS[4][1][2:] if key == "money" else LIFE[key][2][4])
 
@@ -665,7 +790,7 @@ class Pet:
         if name in self.achievements:
             return None
         self.achievements.append(name)
-        self.note("ach", f"🏆 {self.name}: досягнення «{self.ach_name(name)}»")
+        self.note("ach", f"🏆 {self.called()}: досягнення «{self.ach_name(name)}»")
         return f"🏆 {self.ach_name(name)}"
 
     def ach_name(self, key: str) -> str:
@@ -675,21 +800,33 @@ class Pet:
     def top_traits(self, n: int = 3) -> list[str]:
         return [t for t in sorted(TRAITS, key=lambda t: -self.traits.get(t, 0)) if self.traits.get(t, 0) >= 3][:n]
 
-    def skill(self, s: str) -> float:
-        """Effective skill: base + role bonuses (+ night bonuses, alien chaos)."""
-        v = self.skills.get(s, 10) + self.perk().get(s, 0)
+    def item_bonus(self, s: str) -> int:
+        """Skill bonus from the items the pet wears right now (ITEM_SKILL), at most ITEM_SKILL_CAP per skill."""
+        return min(ITEM_SKILL_CAP, sum(item_skill(it).get(s, 0) for it in self.equipped.values()))
+
+    def _skill_terms(self, s: str, items: bool = True) -> list[tuple[str, float]]:
+        """What `skill` adds up: [(key, n)] with keys base / temper / role / health / mood / items."""
+        t: list[tuple[str, float]] = [("base", self.skills.get(s, 10)), ("temper", self.perk().get(s, 0))]
         r = ROLES.get(self.role)
         if r:
-            v += r.get("bonus", {}).get(s, 0)
+            v = r.get("bonus", {}).get(s, 0)
             if is_night():
                 v += r.get("night_bonus", {}).get(s, 0)
             if r.get("rand_bonus"):
                 v += random.Random(f"{self.pid}:{game_day()}:{s}").randint(-10, 20)
+            t.append(("role", v))
         if self.health < 30:
-            v -= 10
+            t.append(("health", -10))
         if self.mood > 80:
-            v += 5
-        return v
+            t.append(("mood", 5))
+        if items:
+            t.append(("items", self.item_bonus(s)))
+        return t
+
+    def skill(self, s: str, items: bool = True) -> float:
+        """Effective skill: base + temperament + role bonuses (+ night bonuses, alien chaos) + worn items
+        (ITEM_SKILL, capped), −10 when sick, +5 in a great mood. `items=False` leaves the worn items out."""
+        return _plain_sum(v for _, v in self._skill_terms(s, items))
 
     def phase(self) -> str:
         """kid / teen / young / middle / grand by age in years (PHASES)."""
@@ -701,6 +838,20 @@ class Pet:
 
     def in_character(self, c: Choice) -> bool:
         return bool(c.auto) and c.auto == self.persona.get("lean")
+
+    def inner_voice(self, e: Event, other: "Pet | None" = None) -> str:
+        """One line of the pet's temperament over an event (content/voices.py), or "". It shows over a share of
+        events (VOICE_CHANCE), never over a grave one (is_grave_event), and is the same every time the same event
+        is shown to the same pet in the same year. When a choice is «in character» (🎭) the voice often leans
+        towards it."""
+        lines = VOICES.get(self.persona.get("temper", ""))
+        if not lines or is_grave_event(e):
+            return ""
+        rng = random.Random(f"{self.pid}|{e.id}|{int(self.years)}")
+        if rng.random() >= VOICE_CHANCE:
+            return ""
+        push = lines.get("push") if any(self.in_character(c) for c in e.choices) else None
+        return self.fmt(rng.choice(push if push and rng.random() < VOICE_PUSH else lines["any"]), other)
 
     def mood_face(self) -> str:
         if self.state == "dead":
@@ -752,14 +903,17 @@ class Pet:
 
     def fmt(self, text: str, other: "Pet | None" = None) -> str:
         p = self.persona
+        food = p.get("food", "борщ")
         try:
             return pick(text, self.gender, other.gender if other else None).format_map(SafeDict(
-                name=self.name, owner=self.owner_name, food=p.get("food", "борщ"), dream=self.dream_text(),
+                name=self.called(other), owner=self.owner_name, food=food, dream=self.dream_text(),
                 fear=p.get("fear", ""), quirk=p.get("quirk", ""), temper=self.temper_name(),
-                other=other.name if other else "хтось", other_owner=other.owner_name if other else "хтось",
+                other=other.called(self) if other else "хтось", other_owner=other.owner_name if other else "хтось",
                 money=f"{int(self.money)}", role=self.role_name(),
-                **{f"name_{c}": self.name_in(c) for c in CASES[1:]},
-                **{f"other_{c}": other.name_in(c) if other else NOBODY[c] for c in CASES[1:]},
+                **{f"food_{c}": food_in(food, c) for c in FOOD_CASES},
+                **{f"name_{c}": self.called_in(c, other) for c in CASES[1:]},
+                **{f"other_{c}": other.called_in(c, self) if other else NOBODY[c] for c in CASES[1:]},
+                **{f"recap_{k}": self.recap_text(k) for k in SERIES},
             ))
         except (ValueError, IndexError, AttributeError):
             return text
@@ -768,12 +922,55 @@ class Pet:
         """The name in a grammatical case: "gen" «Мурки», "dat", "acc", "ins", "loc", "voc" (see grammar.py)."""
         return inflect(self.name, case, self.gender)
 
+    def called(self, other: "Pet | None" = None) -> str:
+        """How the text names this pet: «Мурчик», not «Мурчик Великий з Троєщини». The whole name comes back only
+        when it would be confusing: the other pet in the scene has the same short name, or a character this pet knows
+        (content/cast.py) does."""
+        return self.name if self._ambiguous(other) else short_name(self.name)
+
+    def called_in(self, case: str, other: "Pet | None" = None) -> str:
+        """`called()` in a grammatical case."""
+        return inflect(self.called(other), case, self.gender)
+
+    def _ambiguous(self, other: "Pet | None") -> bool:
+        short = short_name(self.name).casefold()
+        if other is not None and other is not self and short_name(other.name).casefold() == short:
+            return True
+        return any(short in CAST[c]["name"].casefold().split() for c in self.cast if c in CAST)
+
+    def meet(self, cid: str, delta: float = 0) -> str | None:
+        """Meet a recurring character (content/cast.py) or move the bond by `delta` (−6..6). Returns a short note."""
+        if cid not in CAST:
+            return None
+        who = CAST[cid]["name"]
+        rec = self.cast.get(cid)
+        if rec is None:
+            rec = self.cast[cid] = dict(b=0, since=round(self.years, 2), st="here")
+            self.note("cast", f"👋 {self.called()} знайомиться: {who}")
+            first = True
+        else:
+            first = False
+        old = rec["b"]
+        rec["b"] = int(max(BOND_MIN, min(BOND_MAX, old + round(delta))))
+        if first:
+            return f"👋 Знайомство: {who}" + (f" · {'🤝' if rec['b'] > 0 else '💢'} {rec['b']:+d}".replace("-", "−") if rec["b"] else "")
+        if rec["b"] != old:
+            return f"{'🤝' if rec['b'] > old else '💢'} {who} {rec['b'] - old:+d}".replace("-", "−")
+        return None
+
+    def cast_list(self) -> list[dict]:
+        """The characters this pet knows, closest first: id, name, who, icon, bond, word (how they are), state, years."""
+        rows = [dict(id=cid, name=CAST[cid]["name"], who=CAST[cid]["who"], icon=CAST[cid]["icon"], bond=r["b"],
+                     word=bond_word(r["b"]), state=r["st"], years=int(self.years - r["since"]))
+                for cid, r in self.cast.items() if cid in CAST]
+        return sorted(rows, key=lambda r: (r["state"] == "gone", -r["bond"]))
+
     def g(self, masculine: str, feminine: str) -> str:
         """A gendered word for engine notes: p.g("вилупився", "вилупилася")."""
         return feminine if self.gender == "f" else masculine
 
     def job_name(self, job: str | None = None) -> str:
-        return job_name(self.job if job is None else job, self.gender)
+        return job_name(self.job if job is None else job, self.gender, self.flags)
 
     def role_name(self, role: str | None = None) -> str:
         return role_name(self.role if role is None else role, self.gender)
@@ -782,9 +979,9 @@ class Pet:
         return role_desc(self.role if role is None else role, self.gender)
 
     # --- lifecycle ---------------------------------------------------------------------------
-    def hatch(self, t: float) -> None:
+    def hatch(self, t: float, rng: random.Random | None = None) -> None:
         self.state, self.stage, self.hatched, self.last_tick, self.gday = "alive", 1, t, t, game_day(t)
-        self.next_ev = t + random.uniform(1, 3) * hour()
+        self.next_ev = t + (rng or random).uniform(1, 3) * hour()
         self.note("hatched", f"🐣 {self.g('Вилупився', 'Вилупилася')} {self.name} ({species_name(self.species, self.gender)})!")
 
     def die(self, cause: str, rng: random.Random | None = None, natural: bool = False) -> bool:
@@ -796,14 +993,14 @@ class Pet:
             self.health, self.hunger = max(self.health, 45.0), max(self.hunger, 30.0)
             self.lifespan = max(self.lifespan, self.years + 8)
             self.counters["dodged"] = self.counters.get("dodged", 0) + 1
-            self.note("twist", f"⚛️ {self.name} {self.g('мав', 'мала')} загинути ({cause}), але в цьому всесвіті {self.g('вижив', 'вижила')}. В іншому — ні.")
+            self.note("twist", f"⚛️ {self.called()} {self.g('мав', 'мала')} загинути ({cause}), але в цьому всесвіті {self.g('вижив', 'вижила')}. В іншому — ні.")
             self.ach("Кіт Шредінгера")
             return False
         if not natural and self.role not in UNDEAD and rng.random() < RESURRECT:
             self.set_role("zombie")
             self.health, self.hunger, self.mood = 60.0, 50.0, 40.0
             self.lifespan = max(self.lifespan, self.years + 30)
-            self.note("twist", f"🧟 СЮЖЕТНИЙ ПОВОРОТ! {self.name} {cause}… а на третю ніч {self.g('виліз', 'вилізла')} з могили. Тепер це зомбі.")
+            self.note("twist", f"🧟 СЮЖЕТНИЙ ПОВОРОТ! {self.called()} {cause}… а на третю ніч {self.g('виліз', 'вилізла')} з могили. Тепер це зомбі.")
             return False
         self.state, self.cause, self.died = "dead", cause, now()
         if natural:
@@ -825,9 +1022,9 @@ class Pet:
             if role == "cyborg" and self.stage == 4:
                 self.stage = 3
             self.counters[f"role_{role}"] = 1
-            self.note("role", f"🌀 {self.name} тепер {self.role_name()}! ({self.role_desc()})")
+            self.note("role", f"🌀 {self.called()} тепер {self.role_name()}! ({self.role_desc()})")
             return f"🌀 {self.role_name()}"
-        self.note("role", f"✨ {self.name} {self.g('зцілився', 'зцілилася')}: більше не {self.role_name(old)}")
+        self.note("role", f"✨ {self.called()} {self.g('зцілився', 'зцілилася')}: більше не {self.role_name(old)}")
         return f"✨ вже не {self.role_name(old)}"
 
     def tick(self, t: float | None = None, rng: random.Random | None = None) -> None:
@@ -838,7 +1035,7 @@ class Pet:
             if (t - self.born) / hour() < EGG_HOURS:
                 self.last_tick = t
                 return
-            self.hatch(min(t, self.born + EGG_HOURS * hour()))
+            self.hatch(min(t, self.born + EGG_HOURS * hour()), rng)
         if not self.alive:
             self.last_tick = t
             return
@@ -885,17 +1082,17 @@ class Pet:
             return
         if self.jail_until and at >= self.jail_until:
             self.jail_until = 0.0
-            self.note("jail", f"🔓 {self.name} {self.g('вийшов', 'вийшла')} на волю")
+            self.note("jail", f"🔓 {self.called()} {self.g('вийшов', 'вийшла')} на волю")
         if self.hospital_until and at >= self.hospital_until:
             self.hospital_until = 0.0
         if broke and not self.flags.get("_warned"):
             self.flags["_warned"] = 1
-            self.note("hungry", f"🕳 {self.name} у боргах: економить на їжі й митті. Треба заробити!")
+            self.note("hungry", f"🕳 {self.called()} у боргах: економить на їжі й митті. Треба заробити!")
         elif not broke:
             self.flags.pop("_warned", None)
         if self.health < 30 and not self.flags.get("_dying"):
             self.flags["_dying"] = 1
-            self.note("hungry", f"❗ {self.name} при смерті (здоров'я {self.health:.0f}). Лікування — у ⋯ меню.")
+            self.note("hungry", f"❗ {self.called()} при смерті (здоров'я {self.health:.0f}). Лікування — у ⋯ меню.")
         elif self.health > 50:
             self.flags.pop("_dying", None)
         d = game_day(at)
@@ -917,23 +1114,58 @@ class Pet:
                 self.stage = st
                 for sk in rng.sample(list(SKILLS), 3):
                     self._add(sk, 4)
-                self.note("grew", f"{stage_name(st, self.gender)}: {self.name} {self.g('подорослішав', 'подорослішала')} (навички підросли)")
+                self.note("grew", f"{stage_name(st, self.gender)}: {self.called()} {self.g('подорослішав', 'подорослішала')} (навички підросли)")
                 if st == 4 and "cane" not in self.items:
                     self.items.append("cane")
         if self.pending and not self.age_fits(EVENTS.get(self.pending.get("id", ""))):
             self.pending, self.tale = {}, {}  # outgrown while nobody answered: a teen no longer teethes
         return True
 
+    def _wage(self, pay: int) -> int:
+        """What a job pays on a day for a rolled `pay`: +2% per day of tenure (up to +60%), «блат» up to +50%,
+        half in hospital."""
+        inc = int(pay * (1 + min(self.job_days, 30) * 0.02) * (1 + self.life.get("blat", 0) / 200))
+        return inc // 2 if self.in_hospital else inc
+
+    def _base_income(self, roll) -> tuple[int, str, str]:
+        """(₴, why, kind) of the day before extras. kind: job / pocket / pension / welfare, or "" for no income
+        (a jailed adult). `roll(lo, hi)` picks the job's pay in its range: rng.randint for a payout, `lambda lo, hi:
+        lo` / `hi` for the preview. Demons earn ×1.3."""
+        if self.job in JOBS and not self.jailed:
+            lo, hi = JOBS[self.job].get("pay_range", (JOBS[self.job]["pay"],) * 2)
+            inc, why, kind = self._wage(roll(lo, hi)), self.job_name(), "job"
+        elif self.stage <= 2:
+            inc, why, kind = POCKET, "кишенькові від бабусі", "pocket"
+        elif not self.job and not self.jailed:
+            inc, why, kind = (PENSION, "пенсія", "pension") if self.stage == 4 else (WELFARE, "соцдопомога", "welfare")
+        else:
+            inc, why, kind = 0, "", ""
+        if self.role == "demon" and inc > 0:
+            inc = int(inc * 1.3)
+        return inc, why, kind
+
+    def _extras(self) -> list[tuple[str, int]]:
+        """Daily extras of a reputation: advertising (fame), «дах» (authority), interest (financial literacy)."""
+        L, extra = self.life, []
+        if not self.jailed and self.tier("fame") >= 2:
+            extra.append(("реклама", int(L["fame"] * 4)))
+        if not self.jailed and self.tier("auth") >= 2:
+            extra.append(("«дах»", int(L["auth"] * 3)))
+        if self.money > 0 and L.get("fin", 0) >= 20:
+            extra.append(("відсотки", int(self.money * 0.004 * L["fin"] / 100)))
+        return extra
+
+    def _upkeep(self) -> tuple[int, int]:
+        """(cost of living, wealth tax) a day."""
+        cost = HOME_UPKEEP.get(self.home, int(BACKGROUND_PRICES.get(self.home, 500) * 0.01))
+        cost += UPKEEP[self.tier("money")] if self.stage >= 3 else 0
+        return cost, int(max(0, self.money - WEALTH_TAX[0]) * WEALTH_TAX[1])
+
     def _daily(self, rng: random.Random) -> None:
         """Once per game day: money in/out, role passives, achievements, twist roll."""
-        inc, why = 0, ""
-        if self.job in JOBS and not self.jailed:
+        inc, why, kind = self._base_income(rng.randint)
+        if kind == "job":
             j = JOBS[self.job]
-            lo, hi = j.get("pay_range", (j["pay"], j["pay"]))
-            inc = int(rng.randint(lo, hi) * (1 + min(self.job_days, 30) * 0.02) * (1 + self.life.get("blat", 0) / 200))
-            if self.in_hospital:
-                inc //= 2
-            why = self.job_name()
             self.job_days += 1
             self.xp += 3
             for k, v in j["drift"].items():
@@ -942,27 +1174,14 @@ class Pet:
             if risk and rng.random() < risk[1]:
                 self.jail_until = now() + 24 * hour()
                 self.flags["jailed_times"] = self.flags.get("jailed_times", 0) + 1
-                self.note("jail", f"⛓ {self.name} {self.g('спалився', 'спалилася')} на роботі ({self.job_name()}) і {self.g('сів', 'сіла')} на добу")
+                self.note("jail", f"⛓ {self.called()} {self.g('спалився', 'спалилася')} на роботі ({self.job_name()}) і {self.g('сів', 'сіла')} на добу")
             if self.job_days == 30:
                 self.ach("Ветеран праці")
-        elif self.stage <= 2:
-            inc, why = POCKET, "кишенькові від бабусі"
-        elif not self.job and not self.jailed:
-            inc, why = (PENSION, "пенсія") if self.stage == 4 else (WELFARE, "соцдопомога")
-        if self.role == "demon" and inc > 0:
-            inc = int(inc * 1.3)
-        L, extra = self.life, []
-        if not self.jailed and self.tier("fame") >= 2:
-            extra.append(("реклама", int(L["fame"] * 4)))
-        if not self.jailed and self.tier("auth") >= 2:
-            extra.append(("«дах»", int(L["auth"] * 3)))
-        if self.money > 0 and L.get("fin", 0) >= 20:
-            extra.append(("відсотки", int(self.money * 0.004 * L["fin"] / 100)))
+        extra = self._extras()
         inc += sum(v for _, v in extra)
-        cost = HOME_UPKEEP.get(self.home, int(BACKGROUND_PRICES.get(self.home, 500) * 0.01))
-        cost += UPKEEP[self.tier("money")] if self.stage >= 3 else 0
-        tax = int(max(0, self.money - WEALTH_TAX[0]) * WEALTH_TAX[1])
+        cost, tax = self._upkeep()
         self.money += inc - cost - tax
+        self.flags["_last_pay"] = [game_day(), inc, cost, tax]   # the hosts show it: «💰 Зарплата: +432 ₴ · побут −60 ₴»
         self.note("money", f"💰 {why or 'без доходу'}" + "".join(f" + {w}" for w, _ in extra)
                   + f": {inc:+d} ₴, побут −{cost} ₴" + (f", податок −{tax} ₴" if tax else ""))
         self._life_daily(rng)
@@ -981,18 +1200,18 @@ class Pet:
             kind = rng.randrange(4)
             if kind == 0:
                 self.apply({"mutate": 1}, None, rng)
-                self.note("twist", f"👽 {self.name} {self.g('прокинувся', 'прокинулася')} з новою частиною тіла. Звідки — не каже.")
+                self.note("twist", f"👽 {self.called()} {self.g('прокинувся', 'прокинулася')} з новою частиною тіла. Звідки — не каже.")
             elif kind == 1:
                 a, b = rng.sample(list(SKILLS), 2)
                 self.skills[a], self.skills[b] = self.skills.get(b, 10), self.skills.get(a, 10)
-                self.note("life", f"👽 У {self.name_in('gen')} помінялися місцями {SKILL_NAMES[a]} і {SKILL_NAMES[b]}.")
+                self.note("life", f"👽 У {self.called_in('gen')} помінялися місцями {SKILL_NAMES[a]} і {SKILL_NAMES[b]}.")
             elif kind == 2:
                 t = rng.choice(list(TRAITS))
                 self._add(t, 4)
-                self.note("life", f"👽 {self.name} всю ніч {self.g('передавав', 'передавала')} сигнали в космос. +{TRAITS[t]}")
+                self.note("life", f"👽 {self.called()} всю ніч {self.g('передавав', 'передавала')} сигнали в космос. +{TRAITS[t]}")
             else:
                 self.money += 250
-                self.note("life", f"👽 {self.name} {self.g('продав', 'продала')} вченим пробірку власного слизу. +250 ₴")
+                self.note("life", f"👽 {self.called()} {self.g('продав', 'продала')} вченим пробірку власного слизу. +250 ₴")
         if r and r.get("ach") and r["ach"][1] and (now() - self.role_since) * SPEED / DAY >= r["ach"][1]:
             self.ach(r["ach"][0])
         if self.years >= 85:
@@ -1002,31 +1221,37 @@ class Pet:
         if self.money < -3000 and not self.flags.get("_collectors"):
             self.flags["_collectors"] = 1
             self.apply({"lose_item": "random", "mood": -20}, None, rng)
-            self.note("twist", f"📞 До {self.name_in('gen')} прийшли колектори. Забрали річ і гідність.")
+            self.note("twist", f"📞 До {self.called_in('gen')} прийшли колектори. Забрали річ і гідність.")
         elif self.money > -1000:
             self.flags.pop("_collectors", None)
+        if self.money >= 0:
+            self.flags.pop("loan", None)
         if rng.random() < TWIST_DAILY:
             self.flags["_twist"] = 1
 
     def _life_daily(self, rng: random.Random) -> None:
         """Life stats fade a little, and high tiers bring their own trouble."""
         L = self.life
-        for k, fade, floor in (("fame", 0.4, 10), ("auth", 0.3, 5), ("attr", 0.3, 15)):
+        worn = len(self.equipped)
+        style = 15 + 2 * worn   # worn items count toward «стиль»: they lift its floor and slowly build it up to it
+        for k, fade, floor in (("fame", 0.4, 10), ("auth", 0.3, 5), ("attr", 0.3, style)):
             if L.get(k, 0) > floor:
                 L[k] = max(floor, L[k] - fade)
+        if worn and L.get("attr", 0) < style:
+            L["attr"] = min(style, L.get("attr", 0) + 0.1 * worn)
         a = L.get("auth", 0)
         if a >= 45 and not self.jailed and rng.random() < (a - 40) / 500:
             self.apply({"jail": 24, "money_mult": 0.85, "auth": 3}, None, rng)
-            self.note("jail", f"🚔 Облава! {self.name_in('acc')} взяли разом з усім «районом». Авторитет росте навіть за ґратами.")
+            self.note("jail", f"🚔 Облава! {self.called_in('acc')} взяли разом з усім «районом». Авторитет росте навіть за ґратами.")
         if L.get("blat", 0) >= 70 and rng.random() < 0.02:
             self.apply({"money_mult": 0.7, "blat": -15}, None, rng)
-            self.note("twist", f"🕵️ НАБУ зацікавилося, звідки в {self.name_in('gen')} стільки «кумів». Частину статків довелося віддати.")
+            self.note("twist", f"🕵️ НАБУ зацікавилося, звідки в {self.called_in('gen')} стільки «кумів». Частину статків довелося віддати.")
         if L.get("fame", 0) >= 70 and rng.random() < 0.04:
             self.apply({"mood": -15, "fame": -5}, None, rng)
-            self.note("life", f"📰 Скандал! Хтось злив старі пости {self.name_in('gen')}. Хейтери в коментарях, хайп у трендах.")
+            self.note("life", f"📰 Скандал! Хтось злив старі пости {self.called_in('gen')}. Хейтери в коментарях, хайп у трендах.")
         if self.tier("money") == 4 and rng.random() < 0.03:
             self.apply({"money_mult": 0.9}, None, rng)
-            self.note("life", f"🧾 До {self.name_in('gen')} прийшла податкова «просто поговорити». Розмова коштувала 10% статків.")
+            self.note("life", f"🧾 До {self.called_in('gen')} прийшла податкова «просто поговорити». Розмова коштувала 10% статків.")
         self._tiers()
 
     # --- effects -----------------------------------------------------------------------------
@@ -1077,6 +1302,30 @@ class Pet:
                 out.append(sprites.GENES[gene][self.genes[gene]][0])
         return out
 
+    SWAP_DAYS = 3
+
+    def _swap_marks(self, other: "Pet") -> None:
+        """Remember a body swap for SWAP_DAYS game days (`flags["_swap"] = [other_pid, until_day, other_gender]`),
+        which `swap_label` shows under the name. Swapping back while it is still on undoes it."""
+        back = self.swap_with() == other.pid and other.swap_with() == self.pid
+        for a, b in ((self, other), (other, self)):
+            if back:
+                a.flags.pop("_swap", None)
+            else:
+                a.flags["_swap"] = [b.pid, game_day() + self.SWAP_DAYS, b.gender]
+
+    def swap_with(self) -> str:
+        """pid of the pet whose body this one is in right now (a swap in the last SWAP_DAYS game days), or ''."""
+        m = self.flags.get("_swap")
+        return m[0] if m and m[1] > game_day() else ""
+
+    def swap_label(self, names: dict[str, str]) -> str:
+        """«🔄 У тілі Сосиски» while the swap is fresh (names: pid -> pet name); '' otherwise."""
+        pid = self.swap_with()
+        if not pid or pid not in names:
+            return ""
+        return f"🔄 У тілі {inflect(short_name(names[pid]), 'gen', self.flags['_swap'][2])}"
+
     def transform(self, species: str, rng: random.Random) -> bool:
         if species == "random":
             species = rng.choice([s for s in sprites.SPECIES if s != self.species])
@@ -1101,23 +1350,43 @@ class Pet:
                 notes.append(fx_note(k, v))
                 self._tally(k, v)
             elif k == "money":
+                v = round(v)
                 if v < 0 and self.life.get("fin", 0) > 0:  # financially literate pets lose less
                     v = round(v * (1 - self.life["fin"] / 300))
+                short = 0
+                if v < 0:  # a loss never digs deeper than DEBT_FLOOR: the rest is written off with consequences
+                    paid = round(max(v, min(self.money, DEBT_FLOOR) - self.money))
+                    short, v = paid - v, paid
                 self.money += v
-                notes.append(fx_note(k, v))
-                self._tally(k, v)
+                if v:
+                    notes.append(fx_note(k, v))
+                    self._tally(k, v)
+                if short >= 100:
+                    notes += self.apply({"mood": -min(20, round(short / 100))}, None, rng)
+                    if short >= 1000:
+                        notes.append("📞 Решту списали: брати нема чого")
+                        notes += self.apply({"lose_item": "random"}, None, rng)
+            elif k == "credit":  # the one sanctioned way into debt: a loan the pet takes on purpose
+                self.money += v
+                notes.append(fx_note("money", v))
+                self._tally("money", v)
+                if v < 0:
+                    self.flags["loan"] = 1
             elif k == "then":
                 fid, after = v
+                if not isinstance(fid, str):  # a list: the ending the scores (ss= before then=) pick; the last is the fallback
+                    fid = next((i for i in fid[:-1] if i in EVENTS and self.meets(EVENTS[i].req, None)), fid[-1])
                 n = self.counters.get(f"then_{fid}", 0)
                 if fid in EVENTS and n < FOLLOWUP_MAX and all(f[0] != fid for f in self.followups):
                     self.counters[f"then_{fid}"] = n + 1  # retries end: no event comes back forever
-                    self.followups = (self.followups + [[fid, self.years + parse_years(after)]])[-8:]
+                    delay = parse_years(after)
+                    self.followups = (self.followups + [[fid, self.years + delay, followup_grace(delay)]])[-8:]
             elif k == "time":
                 self.years += parse_years(v)  # hidden: the player sees only the age
             elif k == "money_mult":
                 if self.money > 0:
-                    lost = self.money * (1 - v)
-                    self.money *= v
+                    lost = self.money - round(self.money * v)
+                    self.money = round(self.money * v)
                     notes.append(f"💸 {'−' if lost > 0 else '+'}{abs(lost):.0f} ₴" if v != 0 else f"💸 {self.g('втратив', 'втратила')} усі гроші")
             elif k == "xp":
                 self.xp += v
@@ -1154,15 +1423,17 @@ class Pet:
                 if v and v in JOBS:
                     if self.job != v:
                         self.job, self.job_days = v, 0
+                        self.flags["_job_y"] = round(self.years, 3)  # req tenure=
                         for it in JOBS[v]["items"]:
                             self.give(it)
-                        notes.append(f"💼 {JOBS[v]['name']}")
-                        self.note("job", f"💼 {self.name} тепер {JOBS[v]['name']}")
+                        notes.append(f"💼 {self.job_name(v)}")
+                        self.note("job", f"💼 {self.called()} тепер {self.job_name(v)}")
                         self.ach("Перша робота")
                 elif not v and self.job:
                     notes.append(f"🔥 {self.g('звільнений', 'звільнена')}: {self.job_name()}")
-                    self.note("job", f"🔥 {self.name_in('acc')} звільнили з роботи")
+                    self.note("job", f"🔥 {self.called_in('acc')} звільнили з роботи")
                     self.job = ""
+                    self.flags.pop("_job_y", None)
             elif k == "edu":
                 if v not in self.edu:
                     self.edu.append(v)
@@ -1178,7 +1449,7 @@ class Pet:
                 self.years += v / 48  # a sentence eats years of life (48 h behind bars ≈ a year)
                 self.flags["jailed_times"] = self.flags.get("jailed_times", 0) + 1
                 notes.append(f"⛓ {v} год. за ґратами")
-                self.note("jail", f"⛓ {self.name} {self.g('сів', 'сіла')} на {v} год.")
+                self.note("jail", f"⛓ {self.called()} {self.g('сів', 'сіла')} на {v} год.")
                 if self.flags["jailed_times"] >= 3:
                     self.ach("Рецидивіст")
             elif k == "hospital":
@@ -1193,6 +1464,11 @@ class Pet:
                 n = self.ach(v)
                 if n:
                     notes.append(n)
+            elif k == "dream":  # the pet's dream comes true — if it is this one and it has not come true yet
+                if self.persona.get("goal") == v and not self.flags.get("dream_done"):
+                    notes += self.apply(dict(flag={f"dr_{v}": 3, "dream_done": 1}, achievement="Мрія збулася", mood=30, xp=40),
+                                        None, rng)
+                    notes.append(f"🌟 Мрія збулася: {self.dream_text()}")
             elif k == "die":
                 if self.die(pick(v, self.gender), rng):
                     notes.append(f"☠️ {self.g('помер', 'померла')}")
@@ -1212,7 +1488,7 @@ class Pet:
             elif k == "species":
                 if self.transform(v, rng):
                     notes.append(f"🧬 тепер {species_name(self.species, self.gender)}")
-                    self.note("twist", f"🧬 {self.name} {self.g('перетворився', 'перетворилася')} на {species_name(self.species, self.gender)}!")
+                    self.note("twist", f"🧬 {self.called()} {self.g('перетворився', 'перетворилася')} на {species_name(self.species, self.gender)}!")
             elif k == "role":
                 n = self.set_role(v)
                 if n:
@@ -1223,7 +1499,7 @@ class Pet:
                     goal = rng.choice(sorted(GOALS))
                     self.persona.update(temper=t, lean=lean, goal=goal, dream=GOALS[goal], fear=rng.choice(FEARS),
                                         quirk=rng.choice(QUIRKS))
-                    notes.append(f"🌀 новий характер: {t}")
+                    notes.append(f"🌀 новий характер: {self.temper_name()}")
             elif k == "twist":
                 pass  # marker, handled by resolve()
             elif k == "sv":
@@ -1232,6 +1508,28 @@ class Pet:
                         self.tale["vars"][var] = self.tale["vars"].get(var, 0) + d
             elif k == "step":
                 pass  # handled by resolve(): the next story step starts right away
+            elif k == "cast":
+                for cid, d in v.items():
+                    n = self.meet(cid, d)
+                    if n:
+                        notes.append(n)
+            elif k == "cast_state":
+                for cid, st in v.items():
+                    if cid in self.cast and st in CAST_STATES:
+                        self.cast[cid]["st"] = st
+            elif k == "ss":  # series scores, kept between episodes: "<series>.<score>"
+                for key, d in v.items():
+                    sid, var = key.split(".", 1)
+                    st = self.series_state(sid)
+                    st["vars"][var] = st["vars"].get(var, 0) + d
+            elif k == "recap":
+                st = self.series_state(v[0])
+                st["recap"] = (st["recap"] + [self.fmt(v[1], other)[:90]])[-RECAP_KEEP:]
+            elif k == "finale":
+                st = self.series_state(v[0])
+                st["end"] = v[1]
+                title = SERIES.get(v[0], {}).get("title", v[0])
+                self.note("series", f"📺 «{title}»: {self.fmt(SERIES.get(v[0], {}).get('ends', {}).get(v[1], v[1]), other)}")
             elif other is None:
                 continue  # social-only effects without a partner pet
             elif k == "rel":
@@ -1245,7 +1543,7 @@ class Pet:
             elif k == "other":
                 sub = other.apply(v, self, rng)
                 if sub:
-                    notes.append(f"{other.name}: " + " ".join(sub))
+                    notes.append(f"{other.called(self)}: " + " ".join(sub))
             elif k == "baby":
                 if v and min(self.stage, other.stage) >= ROMANCE_MIN_STAGE["partner"]:
                     try:
@@ -1254,16 +1552,19 @@ class Pet:
                         heir = dict(self.genes)
                     for p in (self, other):
                         p.heir, p.children = heir, p.children + 1
-                        p.note("heir", f"🥚 У {self.name_in('gen')} і {other.name_in('gen')} з'явилося яйце-спадкоємець!")
+                        p.note("heir", f"🥚 У {self.called_in('gen', other)} і {other.called_in('gen', self)} з'явилося яйце-спадкоємець!")
                     notes.append("🥚 яйце-спадкоємець")
                     if self.children >= 3:
                         self.ach("Багатодітний")
             elif k == "swap_genes":
                 if v:
+                    # The BODY moves (all genes, so species too: `species` is read from genes — looks, battle bonuses,
+                    # species events, emoji all follow); the SOUL stays (name, persona, skills, bonds, items).
                     self.genes, other.genes = other.genes, self.genes
-                    notes.append(f"🔄 {self.name} і {other.name} помінялися тілами")
+                    self._swap_marks(other)
+                    notes.append(f"🔄 {self.called(other)} і {other.called(self)} помінялися тілами")
                     for p in (self, other):
-                        p.note("twist", f"🔄 {self.name} і {other.name} прокинулися в тілах одне одного!")
+                        p.note("twist", f"🔄 {self.called(other)} і {other.called(self)} прокинулися в тілах одне одного!")
         echo: dict[str, float] = {}
         for k, v in fx.items():
             if k in LIFE_ECHO and isinstance(v, (int, float)) and v > 0:
@@ -1308,19 +1609,19 @@ class Pet:
             self.status[old] = "ex"
             self.rel[old] = min(self.rel.get(old, 0.0), -40.0)
             self.partner = ""
-            self.note("love", f"💔 {self.name} {self.g('кинув', 'кинула')} свою пару заради {b.name_in('gen')}. Скандал на весь район!")
+            self.note("love", f"💔 {self.called(b)} {self.g('кинув', 'кинула')} свою пару заради {b.called_in('gen', self)}. Скандал на весь район!")
             self.traits["toxic"] = self.traits.get("toxic", 0) + 3
         self.status[b.pid] = status
         if status == "partner":
             self.partner = b.pid
-            self.note("love", f"💍 {self.name} і {b.name} тепер пара!")
+            self.note("love", f"💍 {self.called(b)} і {b.called(self)} тепер пара!")
         elif status == "ex" and self.partner == b.pid:
             self.partner = ""
-            self.note("love", f"💔 {self.name} і {b.name} розійшлися")
+            self.note("love", f"💔 {self.called(b)} і {b.called(self)} розійшлися")
             if sum(1 for s in self.status.values() if s == "ex") >= 3:
                 self.ach("Казанова")
         elif status == "crush":
-            self.note("love", f"😳 {self.name} {self.g('закохався', 'закохалася')} в {b.name_in('acc')}")
+            self.note("love", f"😳 {self.called(b)} {self.g('закохався', 'закохалася')} в {b.called_in('acc', self)}")
 
     def set_status(self, other: "Pet", status: str) -> None:
         self.set_status_one(other, status)
@@ -1366,6 +1667,10 @@ class Pet:
                 if (v == "any" and not self.job) or (v == "none" and self.job) or \
                         (v not in ("any", "none") and self.job not in ([v] if isinstance(v, str) else v)):
                     return False
+            elif k == "tenure":
+                since = self.flags.get("_job_y")
+                if not self.job or since is None or not v[0] <= self.years - since <= v[1]:
+                    return False
             elif k == "edu" and v not in self.edu:
                 return False
             elif k == "noedu" and v in self.edu:
@@ -1373,6 +1678,8 @@ class Pet:
             elif k == "has" and not any(i == v or i.split("@")[0] == v for i in self.items):
                 return False
             elif k == "partner" and bool(self.partner) != bool(v):
+                return False
+            elif k == "kids" and self.children < v:
                 return False
             elif k == "night" and is_night() != bool(v):
                 return False
@@ -1385,7 +1692,30 @@ class Pet:
             elif k == "sv" and not all((lambda x, r: r[0] <= x <= r[1] if isinstance(r, (tuple, list)) else x >= r)(
                     self.tale.get("vars", {}).get(var, 0), want) for var, want in v.items()):
                 return False
+            elif k == "ss" and not all((lambda x, r: r[0] <= x <= r[1] if isinstance(r, (tuple, list)) else x >= r)(
+                    self.series.get(key.split(".", 1)[0], {}).get("vars", {}).get(key.split(".", 1)[-1], 0), want)
+                    for key, want in v.items()):
+                return False
+            elif k == "finale" and any(
+                    not (self.series.get(sid, {}).get("end") if tag == "any" else self.series.get(sid, {}).get("end") == tag)
+                    for sid, tag in v.items()):
+                return False
             elif k == "phase" and self.phase() not in ([v] if isinstance(v, str) else v):
+                return False
+            elif k == "cast":
+                states = req.get("cast_state", {})
+                for cid, want in v.items():
+                    rec = self.cast.get(cid)
+                    lo, hi = want if isinstance(want, (tuple, list)) else (want, BOND_MAX)
+                    if not rec or rec["st"] != states.get(cid, "here") or not lo <= rec["b"] <= hi:
+                        return False
+            elif k == "cast_state":
+                if any(cid not in self.cast or self.cast[cid]["st"] != st for cid, st in v.items()):
+                    return False
+            elif k == "cast_for":
+                if any(cid not in self.cast or self.years - self.cast[cid]["since"] < n for cid, n in v.items()):
+                    return False
+            elif k == "nocast" and any(cid in self.cast for cid in ([v] if isinstance(v, str) else v)):
                 return False
             elif k == "life" and any(self.life.get(s, 0) < n for s, n in v.items()):
                 return False
@@ -1408,6 +1738,8 @@ class Pet:
                 cur = self.status.get(other.pid, "") if other else None
                 if cur not in ([v] if isinstance(v, str) else v):
                     return False
+                if list(v) == [""] and other.pid in self.rel:
+                    return False  # status "" is also a cooled-down acquaintance: "strangers" means never met
             elif k == "nostatus" and other and self.status.get(other.pid, "") in ([v] if isinstance(v, str) else v):
                 return False
             elif k == "other_stage":
@@ -1445,12 +1777,75 @@ class Pet:
             return False
         if e.once and self.flags.get(f"seen_{e.id}"):
             return False
+        if self.years < INFANT_YEARS and not e.followup and not for_infants(e):
+            return False  # no school, pranks or АТБ queues for a baby: only events written for that age
+        if other and e.id in ROMANCE and not same_bracket(self, other):
+            return False  # romance: two teens or two grown-ups, never a kid and never across the line
         return self.meets(e.req, other) and bool(self.options(e, other))
+
+    def candidates(self, other: "Pet | None", kind: str = "", twist: bool = False) -> tuple[list[Event], list[float]]:
+        """Events this pet could live right now with their weights (before the "not seen recently" filter)."""
+        cands, ws = [], []
+        for e in EVENTS.values():
+            if e.followup or (twist and e.id not in TWIST_IDS):
+                continue
+            if kind == "date" and not is_date_event(e):
+                continue
+            if e.id in DATE_FALLBACKS[1:]:
+                continue    # the spare built-in dates are picked by pick_event, never drawn from the pool
+            if (kind != "date" and e.id in DATE_FALLBACKS and other
+                    and self.status.get(other.pid, "") in ("rival", "enemy", "ex")):
+                continue    # a date with a foe only when the owners arrange it (/pet_date), not out of the blue
+            if kind == "fight" and not (any(h in e.id for h in FIGHT_HINTS) or "toxic" in e.aff):
+                continue
+            if not self.eligible(e, other, fresh=False):
+                continue
+            w = e.w * (1 + sum(self.traits.get(t, 0) for t in e.aff) / 15) * REPEAT_DECAY ** self.seen.get(e.id, 0)
+            # personality: situations where the pet can act in character come up more often
+            w *= 1 + sum(self.traits.get(c.auto, 0) for c in e.choices if c.auto) / len(e.choices) / 40
+            if any(self.in_character(c) for c in e.choices):
+                w *= 1.3  # the temperament seeks out its own kind of trouble
+            if e.id.startswith("dr_") and self.flags.get("dream_seed"):
+                w *= 2.0    # a dream nursed since childhood comes calling sooner
+            if "flag" in e.req:
+                w *= 3.0    # storylines move forward
+            elif any(k in e.req for k in CAST_REQ):
+                w *= CAST_BOOST   # the people the pet knows come by (and strangers show up)
+            elif any(k in e.req for k in ("job", "jail", "role", "season")):
+                w *= 1.6    # situations the pet is in right now
+            if "phase" in e.req:
+                w *= 2.0    # the age the pet is living through right now: kid and teen stories beat generic ones
+            if e.id.startswith("_"):
+                w *= 0.4 if not kind else 1
+            cands.append(e)
+            ws.append(w)
+        return cands, ws
+
+    def dates_had(self, other: "Pet") -> list[str]:
+        """Date events this pair has lived, the longest ago first (kept on both pets, under flags `dt:<pid>`)."""
+        mine, theirs = self.flags.get(f"dt:{other.pid}", []), other.flags.get(f"dt:{self.pid}", [])
+        return [i for i in theirs if i not in mine] + list(mine)
+
+    def had_date(self, other: "Pet", eid: str) -> None:
+        """Remember that this pair has lived the date `eid` (it moves to the end: the freshest memory)."""
+        key = f"dt:{other.pid}"
+        self.flags[key] = [i for i in self.flags.pop(key, []) if i != eid][-(DATE_PAIR_KEEP - 1):] + [eid]
+        for old in [k for k in self.flags if k.startswith("dt:")][:-DATE_PAIRS_KEEP]:
+            del self.flags[old]
+
+    def unseen_dates(self, cands: list[Event], ws: list[float], other: "Pet") -> tuple[list[Event], list[float]]:
+        """Narrow the date pool: what the pair has not had yet; when it has had everything, the one longest ago."""
+        had = self.dates_had(other)
+        idx = [i for i, e in enumerate(cands) if e.id not in had]
+        if not idx:
+            oldest = min(had.index(e.id) for e in cands)
+            idx = [i for i, e in enumerate(cands) if had.index(e.id) == oldest]
+        return [cands[i] for i in idx], [ws[i] for i in idx]
 
     def pick_event(self, others: list["Pet"], rng: random.Random, kind: str = "") -> tuple[Event | None, "Pet | None"]:
         """kind: "" any, "solo", "social", "twist", "date", "fight". Others = other pets in the chat."""
         if kind in ("", "solo") and self.followups:  # an earlier choice comes back
-            self.followups = [f for f in self.followups if f[0] in EVENTS and self.years - f[1] < 15]
+            self.followups = [f for f in self.followups if f[0] in EVENTS and self.years - f[1] <= followup_window(f)]
             for f in sorted(self.followups, key=lambda f: f[1]):
                 e = EVENTS[f[0]]
                 if self.years >= f[1] and self.eligible(e, None, fresh=False):
@@ -1466,39 +1861,18 @@ class Pet:
             other = rng.choices(pool, weights)[0]
         if kind == "solo":
             other = None
-        cands, ws = [], []
-        for e in EVENTS.values():
-            if e.followup or (twist and e.id not in TWIST_IDS):
-                continue
-            if kind == "date" and not (any(h in e.id for h in DATE_HINTS) or "love" in e.aff):
-                continue
-            if kind == "fight" and not (any(h in e.id for h in FIGHT_HINTS) or "toxic" in e.aff):
-                continue
-            if not self.eligible(e, other, fresh=False):
-                continue
-            w = e.w * (1 + sum(self.traits.get(t, 0) for t in e.aff) / 15) * REPEAT_DECAY ** self.seen.get(e.id, 0)
-            # personality: situations where the pet can act in character come up more often
-            w *= 1 + sum(self.traits.get(c.auto, 0) for c in e.choices if c.auto) / len(e.choices) / 40
-            if any(self.in_character(c) for c in e.choices):
-                w *= 1.3  # the temperament seeks out its own kind of trouble
-            if e.id.startswith("dr_") and self.flags.get("dream_seed"):
-                w *= 2.0    # a dream nursed since childhood comes calling sooner
-            if "flag" in e.req:
-                w *= 3.0    # storylines move forward
-            elif any(k in e.req for k in ("job", "jail", "role", "season")):
-                w *= 1.6    # situations the pet is in right now
-            if "phase" in e.req:
-                w *= 2.0    # the age the pet is living through right now: kid and teen stories beat generic ones
-            if e.id.startswith("_"):
-                w *= 0.4 if not kind else 1
-            cands.append(e)
-            ws.append(w)
-        fresh = [i for i, e in enumerate(cands) if e.id not in self.recent and not (other and e.id in other.recent)]
+        cands, ws = self.candidates(other, kind, twist)
+        if kind == "date" and other and cands:  # dates this pair has not had yet come first; then the longest ago
+            cands, ws = self.unseen_dates(cands, ws, other)
+        fresh = [i for i, e in enumerate(cands) if e.id not in self.recent and not (other and e.id in other.recent)
+                 and not (e.social and kind in ("", "solo") and self.seen.get(e.id, 0) >= SOCIAL_LIFE_MAX)]
         if fresh:  # a recent event comes back only when nothing else fits
             cands, ws = [cands[i] for i in fresh], [ws[i] for i in fresh]
+        elif other and not kind and cands:  # the pool of social events is small: live a solo event instead of a repeat
+            return self.pick_event(others, rng, "solo")
         if not cands:
             if kind == "date":
-                e = EVENTS["_date"]
+                e = EVENTS[rng.choice(DATE_FALLBACKS)]
             elif kind == "fight":
                 e = EVENTS["_fight"]
             elif twist:
@@ -1514,21 +1888,139 @@ class Pet:
             self.flags.pop("_twist", None)
         return rng.choices(cands, ws)[0], other
 
+    def price(self, c: Choice) -> int:
+        """₴ a choice costs for certain: the biggest money loss among its outcomes when every one of them loses money
+        (after the literacy discount). Gambles, gains and free choices cost 0; `credit` is not a price."""
+        worst = 0
+        for x in c.outs:
+            m = x.fx.get("money", 0)
+            if not isinstance(m, (int, float)) or m >= 0:
+                return 0
+            worst = max(worst, -m)
+        return round(worst * (1 - self.life.get("fin", 0) / 300))
+
+    def can_pay(self, c: Choice) -> bool:
+        price = self.price(c)
+        return price == 0 or self.money >= price
+
     def options(self, e: Event, other: "Pet | None" = None) -> list[tuple[int, Choice]]:
+        """The choices to show as buttons: those whose requirements hold and that the pet can pay for."""
         out = [(i, c) for i, c in enumerate(e.choices) if self.meets(c.req, other) or (self.jailed and not c.req)]
         if not out and e.choices and self.jailed and e.req.get("jail"):
             out = [(i, c) for i, c in enumerate(e.choices) if self.meets(dict(c.req, jail=True), other)]
+        return [(i, c) for i, c in out if self.can_pay(c)]
+
+    def locked(self, e: Event, other: "Pet | None" = None) -> list[tuple[int, int]]:
+        """Choices the pet qualifies for but cannot pay yet: (index, ₴ missing). Hosts may show them as locked buttons."""
+        open_ = {i for i, _ in self.options(e, other)}
+        return [(i, self.price(c) - int(self.money)) for i, c in enumerate(e.choices)
+                if i not in open_ and self.meets(c.req, other) and not self.can_pay(c)]
+
+    def _lock_info(self, e: Event, other: "Pet | None" = None) -> list[tuple[int, str, str]]:
+        """Choices that only a skill, an item or money separate this pet from: [(index, reason, short)], in event order.
+        `reason` is what a locked button says («потрібно 🧠 40 (зараз 31)»), `short` is what the hint needs («🧠 40»).
+        A choice whose other requirements (role, cast, flag, age…) fail is not listed: it stays hidden, as before."""
+        if self.jailed:
+            return []
+        open_ = {i for i, _ in self.options(e, other)}
+        out = []
+        for i, c in enumerate(e.choices):
+            if i in open_ or not self.meets({k: v for k, v in c.req.items() if k not in LOCK_REQ}, other):
+                continue
+            why, short = [], []
+            for s, n in c.req.get("skill", {}).items():
+                if self.skill(s) < n:
+                    why.append(f"потрібно {SKILLS[s]} {n} (зараз {math.floor(self.skill(s))})")
+                    short.append(f"{SKILLS[s]} {n}")
+            item = c.req.get("has")
+            if item and not any(i2 == item or i2.split("@")[0] == item for i2 in self.items):
+                why.append(f"потрібна річ: {item_name(item)}")
+                short.append(f"річчю «{item_name(item)}»")
+            need = c.req.get("money", 0)
+            if need and need > self.money:
+                why.append(f"потрібно {need} ₴ (є {math.floor(self.money)})")
+                short.append(f"{need} ₴ у гаманці")
+            elif not self.can_pay(c):
+                why.append(f"бракує {self.price(c) - int(self.money)} ₴")
+                short.append(f"{self.price(c)} ₴ у гаманці")
+            if why:
+                out.append((i, "; ".join(why), " і ".join(short)))
         return out
 
-    def chance(self, c: Choice) -> float | None:
+    def locked_why(self, e: Event, other: "Pet | None" = None) -> list[tuple[int, str]]:
+        """Locked buttons for an event: [(choice index, reason)], at most LOCK_MAX. A choice shows up here when its
+        only failing requirements are `skill`, `has` or `money` (or its price is out of reach); the reason reads
+        «потрібно 🧠 40 (зараз 31)», «потрібна річ: 🗡 Шабля» or «бракує 300 ₴». Everything else (role, cast, flag…)
+        stays hidden so that no story is spoilt. `locked` is the older, money-only form of this list."""
+        return [(i, why) for i, why, _ in self._lock_info(e, other)][:LOCK_MAX]
+
+    def _lock_hint(self, e: Event, other: "Pet | None", rng_key: str) -> str:
+        """The soft hint under a result, or "": 1 time in 3 after an event that showed a locked choice, at most once per
+        game day (`flags["_lock_hint"]`). It draws from a hash, not from the game's rng, so nothing else shifts."""
+        info = self._lock_info(e, other)[:LOCK_MAX]
+        if not info or self.flags.get("_lock_hint") == game_day() or random.Random(rng_key).random() >= LOCK_HINT:
+            return ""
+        self.flags["_lock_hint"] = game_day()
+        return f"🔒 З {info[0][2]} тут був би ще один варіант"
+
+    def _chance_terms(self, c: Choice, items: bool = True) -> list[tuple[str, float]]:
+        """The pieces of a check, in order: the skill's own pieces, luck, level, difficulty, «у своїй стихії».
+        Their sum is the pre-clamp value of `chance` (v); every consumer reads the number from here."""
+        skill, diff = c.check
+        scale = {0: 0.6, 1: 0.6, 2: 0.8}.get(self.stage, 1.0)   # content difficulty is written for adults
+        t = self._skill_terms(skill, items)
+        if skill != "luck":
+            t.append(("luck", self.skill("luck", items) * 0.15))
+        t += [("level", (self.level - 1) * 1.5), ("diff", -diff * scale)]
+        if self.in_character(c):
+            t.append(("lean", LEAN_BONUS))
+        return t
+
+    def chance(self, c: Choice, items: bool = True) -> float | None:
+        """Success chance of a choice with a check (None without one): 0.5 + v/50 clamped to 0.2…0.95, where v is
+        the sum of `_chance_terms`. `items=False` is what it would be without the worn items."""
         if not c.check:
             return None
-        skill, diff = c.check
-        luck = self.skill("luck") if skill != "luck" else 0
-        scale = {0: 0.6, 1: 0.6, 2: 0.8}.get(self.stage, 1.0)   # content difficulty is written for adults
-        v = self.skill(skill) + luck * 0.15 + (self.level - 1) * 1.5 - diff * scale
-        v += LEAN_BONUS if self.in_character(c) else 0
+        v = _plain_sum(x for _, x in self._chance_terms(c, items))
         return max(0.2, min(0.95, 0.5 + v / 50))
+
+    def chance_parts(self, c: Choice) -> list[tuple[str, int]]:
+        """What `chance` added up, as [(label, n)] for a tooltip: base skill, items, temperament, role, health/mood,
+        luck, level, «🎭 у своїй стихії», difficulty (negative). The ints are rounded so that they sum to
+        round(v) exactly; zero pieces are left out. Empty for a choice without a check."""
+        if not c.check:
+            return []
+        skill = c.check[0]
+        names = {"base": f"{SKILLS[skill]} {SKILL_NAMES[skill]}", "temper": "🎭 темперамент", "role": "🌟 роль",
+                 "health": "🤒 здоров'я", "mood": "😊 настрій", "items": "🎒 речі", "luck": f"{SKILLS['luck']} удача",
+                 "level": "⭐ рівень", "lean": "🎭 у своїй стихії", "diff": "🎯 складність"}
+        out, cum, prev = [], 0.0, 0
+        for k, x in self._chance_terms(c):
+            cum += x
+            r = round(cum)
+            if r != prev:
+                out.append((names[k], r - prev))
+            prev = r
+        return out
+
+    def _check_info(self, c: Choice) -> dict:
+        """The numbers behind a check for the result line: «💪 сила 42 (річ +3) проти складності 30»."""
+        skill, diff = c.check
+        scale = {0: 0.6, 1: 0.6, 2: 0.8}.get(self.stage, 1.0)
+        return dict(skill=skill, value=round(self.skill(skill)), item=self.item_bonus(skill), diff=round(diff * scale),
+                    parts=self.chance_parts(c))
+
+    def _helper_item(self, skill: str) -> str:
+        """«🗡 Шабля — дуже до речі»: the worn item that gives the most to `skill` (or to luck), or ""."""
+        best, n = "", 0
+        for sk in (skill, "luck"):
+            for it in self.equipped.values():
+                v = item_skill(it).get(sk, 0)
+                if v > n:
+                    best, n = it, v
+            if best:
+                break
+        return f"{item_name(best)} — дуже до речі" if best else ""
 
     def start(self, e: Event, other: "Pet | None", mode: str = "auto") -> None:
         """mode: auto (scheduler post), manual (🎲 button), invite (date/fight)."""
@@ -1565,6 +2057,7 @@ class Pet:
         """Apply a choice: skill check with natural 1/20, weighted outcomes, crits, twist tail, journal."""
         c = e.choices[idx]
         res = Result("", [], label=self.fmt(c.label, other))
+        res.hint = self._lock_hint(e, other, f"{self.pid}|{e.id}|{self.events_done}|lock")   # before the choice changes the pet
         title = self.fmt(e.story) if e.story else ""  # «{Холостяк|Холостячка}»: the title is gendered like any text
         if e.story and (not e.followup or self.tale.get("title") != title):
             self.tale = dict(id=e.id, title=title, path=[], vars={}, fx={})  # a story begins
@@ -1574,12 +2067,17 @@ class Pet:
         if c.check:
             res.chance = self.chance(c)
             res.roll = rng.randint(1, 20)
+            drawn = 1.0
             if res.roll == 20:
                 res.ok, res.crit = True, "win"
             elif res.roll == 1:
                 res.ok, res.crit = False, "fail"
             else:
-                res.ok = rng.random() < res.chance
+                drawn = rng.random()
+                res.ok = drawn < res.chance
+            res.check = self._check_info(c)
+            if res.ok and not res.crit and drawn >= self.chance(c, items=False):
+                res.helped = self._helper_item(c.check[0])   # it would have failed without the worn item
             if not res.ok:
                 outs = c.fail or [o("Не вийшло. {name} лише {змарнував|змарнувала} час і нерви.", mood=-6)]
         lean = self.persona.get("lean", "")
@@ -1596,6 +2094,8 @@ class Pet:
             fx["health"] = fx.get("health", 0) - 10
             fx["mood"] = fx.get("mood", 0) - 10
         res.text = self.fmt(out.text, other)
+        if e.series:  # one more episode of a serial
+            self.series_state(e.series)["ep"] += 1
         y0 = self.years
         res.time = self.choice_time(e, c)
         self.years += res.time
@@ -1605,6 +2105,8 @@ class Pet:
             self.tale["path"].append(res.label)
         if self.in_character(c):
             res.notes.insert(0, f"🎭 {self.temper_name()}: у своїй стихії")
+        if res.helped:
+            res.notes.insert(0, res.helped)
         if self.alive and self.health <= 0:
             if -fx.get("health", 0) >= LETHAL_HIT:  # only a really risky choice kills
                 self.die(f"{self.g('не пережив', 'не пережила')} пригоду «{res.label}»", rng)
@@ -1621,6 +2123,11 @@ class Pet:
         if e.once:
             self.flags[f"seen_{e.id}"] = 1
         self.next_ev = now() + rng.uniform(*BUDGET.every) * hour()
+        if e.series:
+            st = self.series_state(e.series)
+            tag = fx["finale"][1] if "finale" in fx else ""
+            res.series = dict(id=e.series, title=SERIES.get(e.series, {}).get("title", e.series), ep=st["ep"], finale=tag,
+                              ending=self.fmt(SERIES.get(e.series, {}).get("ends", {}).get(tag, "")) if tag else "")
         if self.tale:
             nxt = self.next_step(fx.get("step")) if self.alive and not self.jailed and not self.in_hospital else None
             if nxt:  # the story goes on right away: same place (chat or DM), new message
@@ -1633,7 +2140,8 @@ class Pet:
                                  notes=[fx_note(k, v) for k, v in self.tale["fx"].items() if round(v, 1)])
                 self.tale = {}
         if self.alive and not res.next and rng.random() < TWIST_TAIL:
-            tt, tfx, _ = rng.choices(TAILS, [x[2] for x in TAILS])[0]
+            tails = [t for t in TAILS if len(t) < 4 or self.meets(t[3])]
+            tt, tfx = rng.choices(tails, [x[2] for x in tails])[0][:2]
             res.tail = self.fmt(tt)
             res.tail_notes = self.apply(tfx, None, rng)
             if self.alive and self.health <= 0:
@@ -1648,9 +2156,12 @@ class Pet:
         kind = "twist" if res.twist else "social" if other else "event"
         line = f"«{res.label}» → {res.text}"
         if other:
-            line = f"з {other.name_in('ins')}: " + line
-            other.note("social", f"{self.name} і {other.name}: {res.text}")
+            line = f"з {other.called_in('ins', self)}: " + line
+            other.note("social", f"{self.called(other)} і {other.called(self)}: {res.text}")
             other.lived(e.id)
+            if is_date_event(e):
+                self.had_date(other, e.id)
+                other.had_date(self, e.id)
         if res.tail:
             line += f" 🌀 {res.tail}"
         self.note(kind, line)
@@ -1661,6 +2172,15 @@ class Pet:
         ids = [v] if isinstance(v, str) else list(v or [])
         steps = [EVENTS[i] for i in ids if i in EVENTS]
         return next((e for e in steps if self.meets(e.req, None)), steps[-1] if steps else None)
+
+    def series_state(self, sid: str) -> dict:
+        """The state of a series this pet lives: {ep: episodes lived, vars: scores, recap: lines, end: ending tag}."""
+        return self.series.setdefault(sid, dict(ep=0, vars={}, recap=[], end=""))
+
+    def recap_text(self, sid: str) -> str:
+        """«Раніше в серіалі…» for the start of an episode (empty before the first episode)."""
+        lines = self.series.get(sid, {}).get("recap", [])[-RECAP_SHOWN:]
+        return "📺 Раніше: " + "; ".join(lines) + ".\n\n" if lines else ""
 
     def _tally(self, k: str, v: float) -> None:
         if self.tale:  # what the whole story changed, shown at its end
@@ -1704,6 +2224,7 @@ class Pet:
 
 
 FIELDS = tuple(Pet.__dataclass_fields__)
+CAST_REQ = ("cast", "cast_state", "cast_for", "nocast")
 
 
 # --- creation ----------------------------------------------------------------------------------
@@ -1743,15 +2264,25 @@ def seed_life(p: Pet) -> dict:
                 attr=c(15 + sk.get("cha", 10) * 0.3 + tr.get("love", 0) * 0.2 + len(p.equipped) * 2))
 
 
+TAIL_CHANCE = 0.3   # share of pets born with a tail («Великий», «з Троєщини»): a nickname, not a surname for everyone
+
+
 def make_name(species: str, taken: set[str], rng: random.Random, gender: str = "m") -> str:
-    """A name of the pet's gender: a base name from the species pool plus, often, a tail («Велика», «з Троєщини»)."""
+    """A name of the pet's gender from the species pool; some pets also get a tail («Велика», «з Троєщини»).
+    A name whose short form is not taken yet comes first: the text calls pets by the short form."""
     pool = (NAMES.get(species) or {}).get(gender) or FALLBACK_NAMES[gender]
     col = 1 if gender == "f" else 0
+    tails = [t for t in NAME_SUFFIX if t[0]]
+    shorts = {short_name(t).casefold() for t in taken}
+    first_choice = None
     for _ in range(50):
-        n = rng.choice(pool) + rng.choice(NAME_SUFFIX)[col]
-        if n not in taken:
+        n = rng.choice(pool) + (rng.choice(tails)[col] if rng.random() < TAIL_CHANCE else "")
+        if n in taken:
+            continue
+        if short_name(n).casefold() not in shorts:
             return n
-    return rng.choice(pool) + f" №{rng.randint(2, 999)}"
+        first_choice = first_choice or n
+    return first_choice or rng.choice(pool) + f" №{rng.randint(2, 999)}"
 
 
 def new_pet(chat_id: int, owner_id: int, owner_name: str, species: str, others: list[Pet],
@@ -1789,6 +2320,7 @@ def new_pet(chat_id: int, owner_id: int, owner_name: str, species: str, others: 
     if predecessor:
         p.gen = predecessor.gen + 1
         p.dynasty = predecessor.dynasty or f"Рід {predecessor.name_in('gen')}"
+        p.flags.update({f"seen_{i}": 1 for i, e in EVENTS.items() if e.once == "dynasty" and predecessor.flags.get(f"seen_{i}")})
         p.ancestors = (predecessor.ancestors + [f"{predecessor.name} ({predecessor.cause or 'зник'})"])[-12:]
         p.money = 100 + max(0, predecessor.money) * 0.3
         relic = [i for i in predecessor.items if i != "cane"]
@@ -1816,7 +2348,7 @@ def fix_partners(pets: list[Pet]) -> None:
         if q is None:  # partner's owner left / used /forget / the pet was replaced by an heir
             p.status[p.partner] = "ex"
             p.partner = ""
-            p.note("love", f"💔 {p.name} {p.g('лишився', 'лишилася')} без пари: друга половинка зникла без сліду.")
+            p.note("love", f"💔 {p.called()} {p.g('лишився', 'лишилася')} без пари: друга половинка зникла без сліду.")
             continue
         if q.state == "dead" or q.partner == p.pid:
             continue  # dead partners are handled by mourn()
@@ -1826,7 +2358,7 @@ def fix_partners(pets: list[Pet]) -> None:
         p.mood = max(0.0, p.mood - 30)
         p.traits["dark"] = p.traits.get("dark", 0) + 2
         rival = by_pid.get(q.partner)
-        p.note("love", f"💔 {p.name} {p.g('дізнався', 'дізналася')}, що {q.name} {q.g('пішов', 'пішла')} до {rival.name_in('gen') if rival else 'когось іншого'}. "
+        p.note("love", f"💔 {p.called(q)} {p.g('дізнався', 'дізналася')}, що {q.called(p)} {q.g('пішов', 'пішла')} до {rival.called_in('gen', p) if rival else 'когось іншого'}. "
                        f"Б'є посуд і слухає Скрябіна.")
         if rival and rival.alive:
             p.rel[rival.pid] = min(p.rel.get(rival.pid, 0.0), -60.0)
@@ -1847,13 +2379,13 @@ def mourn(pets: list[Pet]) -> None:
                 p.partner = ""
                 p.status[d.pid] = "ex"
                 p.mood = max(0.0, p.mood - 35)
-                p.note("love", f"🖤 {p.name} {p.g('овдовів', 'овдовіла')}: {d.name} {d.g('пішов', 'пішла')} на веселку")
+                p.note("love", f"🖤 {p.called(d)} {p.g('овдовів', 'овдовіла')}: {d.called(p)} {d.g('пішов', 'пішла')} на веселку")
             elif p.status.get(d.pid) in ("friend", "bestie"):
                 p.mood = max(0.0, p.mood - 10)
-                p.note("social", f"😢 {p.name} сумує за другом {d.name_in('ins')}")
+                p.note("social", f"😢 {p.called(d)} сумує за другом {d.called_in('ins', p)}")
             elif p.status.get(d.pid) == "enemy":
                 p.mood = min(100.0, p.mood + 10)
-                p.note("social", f"😈 {p.name} {p.g('станцював', 'станцювала')} на могилі {d.g('ворога', 'ворогині')} {d.name_in('gen')}")
+                p.note("social", f"😈 {p.called(d)} {p.g('станцював', 'станцювала')} на могилі {d.g('ворога', 'ворогині')} {d.called_in('gen', p)}")
 
 
 def chat_daily(pets: list[Pet], rng: random.Random) -> list[str]:
@@ -1867,7 +2399,7 @@ def chat_daily(pets: list[Pet], rng: random.Random) -> list[str]:
             for f in healed[:5]:
                 f._add("health", 15)
                 f._add("mood", 5)
-                f.note("social", f"😇 Ангел {p.name} {p.g('підлікував', 'підлікувала')} {f.name_in('acc')}")
+                f.note("social", f"😇 Ангел {p.called(f)} {p.g('підлікував', 'підлікувала')} {f.called_in('acc', p)}")
             if healed:
                 p.counters["healed"] = p.counters.get("healed", 0) + len(healed)
                 if p.counters["healed"] >= 5:
@@ -1882,10 +2414,10 @@ def chat_daily(pets: list[Pet], rng: random.Random) -> list[str]:
             if p.role == "vampire":
                 p._add("hunger", 40)
             what = p.g("вкусив", "вкусила") if p.role == "vampire" else p.g("погриз", "погризла")
-            v.note("social", f"🩸 {p.name} вночі {what} {v.name_in('acc')}")
+            v.note("social", f"🩸 {p.called(v)} вночі {what} {v.called_in('acc', p)}")
             if rng.random() < 0.15:
                 v.set_role(p.role)
-                line = f"🌀 {p.name} {what} {v.name_in('acc')}, і тепер {v.name} теж {v.role_name()}!"
+                line = f"🌀 {p.called(v)} {what} {v.called_in('acc', p)}, і тепер {v.called(p)} теж {v.role_name()}!"
                 v.note("twist", line)
                 out.append(line)
     return out
@@ -1925,8 +2457,10 @@ def care(p: Pet, action: str, rng: random.Random, actor: Pet | None = None, by_o
     fx = dict(fx)
     if action == "heal" and by_owner:
         if p.stage >= 3 and p.money < HEAL_PRICE:
-            return f"На лікаря треба {HEAL_PRICE} ₴. Спершу заробити.", []
-        if p.stage >= 3:
+            if p.health >= 25 or p.money < DEBT_FLOOR - 1000:
+                return f"На лікаря треба {HEAL_PRICE} ₴. Спершу заробити.", []
+            fx["credit"] = -HEAL_PRICE  # a dying pet is treated on credit: the doctor does not turn it away
+        elif p.stage >= 3:
             fx["money"] = -HEAL_PRICE
         p.spend("1w", rng)
     if action == "wash" and p.species == "cat":
@@ -1937,7 +2471,7 @@ def care(p: Pet, action: str, rng: random.Random, actor: Pet | None = None, by_o
     extra: list[str] = []
     if action == "kick" and p.role == "werewolf" and is_night() and actor:
         actor._add("health", -20)
-        text += f" …і {p.g('перевертень', 'перевертниця')} {p.g('вкусив', 'вкусила')} {actor.name_in('acc')} у відповідь! 🐺"
+        text += f" …і {p.g('перевертень', 'перевертниця')} {p.g('вкусив', 'вкусила')} {actor.called_in('acc', p)} у відповідь! 🐺"
     if action == "kick" and p.role == "angel" and actor:
         actor._add("luck", -2)
         text += " Небеса це бачили. 🍀−2 кривдникові."
@@ -1951,7 +2485,7 @@ def care(p: Pet, action: str, rng: random.Random, actor: Pet | None = None, by_o
             p.set_rel(actor, -10 if action == "kick" else 3)
             if action == "kick":
                 actor._add("toxic", 1)
-            extra.append(f"{'💢' if action == 'kick' else '💞'} {p.name} ↔ {actor.name}")
+            extra.append(f"{'💢' if action == 'kick' else '💞'} {p.called(actor)} ↔ {actor.called(p)}")
         p.note("care", f"{CARE[action][0]} від {who}: {text}")
         if action == "kick":
             p.counters["kicked"] = p.counters.get("kicked", 0) + 1
@@ -1970,10 +2504,10 @@ def feed(p: Pet, food: str, rng: random.Random, payer: Pet | None = None) -> tup
     fx = dict(fx)
     need = ROLE_FOOD.get(food)
     ate = p.g("з'їв", "з'їла")
-    text = f"{p.name} {ate}: {name}."
+    text = f"{p.called()} {ate}: {name}."
     if need and p.role != need:
         fx = dict(mood=-15, health=-5, hunger=5)
-        text = (f"{p.name} {p.g('понюхав', 'понюхала')} {name} і {p.g('знепритомнів', 'знепритомніла')} від огиди. "
+        text = (f"{p.called()} {p.g('понюхав', 'понюхала')} {name} і {p.g('знепритомнів', 'знепритомніла')} від огиди. "
                 f"Це не для {p.g('нього', 'неї')}.")
     elif not need and p.role in ("vampire", "zombie"):
         fx["hunger"] = fx.get("hunger", 0) * 0.5
@@ -1989,8 +2523,8 @@ def feed(p: Pet, food: str, rng: random.Random, payer: Pet | None = None) -> tup
         text += " Улюблена їжа! 😍"
     if payer is not p:
         p.set_rel(payer, 4)
-        notes.append(f"💞 {p.name} ↔ {payer.name}")
-        p.note("care", f"🍖 {payer.name} {payer.g('пригостив', 'пригостила')} {p.name_in('acc')}: {name}")
+        notes.append(f"💞 {p.called(payer)} ↔ {payer.called(p)}")
+        p.note("care", f"🍖 {payer.called(p)} {payer.g('пригостив', 'пригостила')} {p.called_in('acc', payer)}: {name}")
     p.xp += 1
     return text, notes
 
@@ -2019,12 +2553,12 @@ def apply_job(p: Pet, jid: str, rng: random.Random) -> tuple[bool, str, list[str
     roll = rng.random()
     if roll < c:
         notes = p.apply({"job": jid}, None, rng)
-        return True, rng.choice([f"Співбесіду пройдено! {p.name} тепер {job_name(jid, p.gender)}.",
-                                 f"HR сказала «ви нам підходите». {p.name} — {job_name(jid, p.gender)}!"]), notes
+        return True, rng.choice([f"Співбесіду пройдено! {p.called()} тепер {job_name(jid, p.gender)}.",
+                                 f"HR сказала «ви нам підходите». {p.called()} — {job_name(jid, p.gender)}!"]), notes
     p.mood = max(0.0, p.mood - 8)
     return False, rng.choice([f"«Ми вам передзвонимо». Не передзвонять. (шанс був {c:.0%})",
                               f"Відмовили: «у вас замало досвіду в 3 роки». (шанс був {c:.0%})",
-                              f"{p.name} {p.g('запізнився', 'запізнилася')} на співбесіду на годину. (шанс був {c:.0%})"]), ["😊−8"]
+                              f"{p.called()} {p.g('запізнився', 'запізнилася')} на співбесіду на годину. (шанс був {c:.0%})"]), ["😊−8"]
 
 
 # --- shop --------------------------------------------------------------------------------------
@@ -2060,7 +2594,7 @@ def buy(p: Pet, entry: dict, rng: random.Random) -> tuple[bool, str]:
     kind = entry["kind"]
     if kind == "home" and entry["id"] in p.homes:
         p.home = entry["id"]
-        return True, f"🏠 {p.name} вже має цей дім — переїхали назад."
+        return True, f"🏠 {p.called()} вже має цей дім — переїхали назад."
     if kind == "item" and entry["id"] in p.items:
         return False, "Це вже є в гардеробі."
     if p.money < price:
@@ -2068,14 +2602,14 @@ def buy(p: Pet, entry: dict, rng: random.Random) -> tuple[bool, str]:
     p.money -= price
     if kind == "item":
         n = p.give(entry["id"])
-        p.note("life", f"🛒 {p.name} {p.g('купив', 'купила')} {n}")
+        p.note("life", f"🛒 {p.called()} {p.g('купив', 'купила')} {n}")
         return True, f"🛍 Куплено й одягнено: {n}"
     if kind == "home":
         p.apply({"home": entry["id"]}, None, rng)
-        p.note("life", f"🏠 {p.name} {p.g('переїхав', 'переїхала')}: {bg_name(entry['id'])}")
+        p.note("life", f"🏠 {p.called()} {p.g('переїхав', 'переїхала')}: {bg_name(entry['id'])}")
         if entry["id"] == "palace":
             p.ach("Межигір'я — моє")
-        return True, f"🔑 Новосілля! {p.name} тепер живе тут: {bg_name(entry['id'])}"
+        return True, f"🔑 Новосілля! {p.called()} тепер живе тут: {bg_name(entry['id'])}"
     if kind == "box":
         r = rng.random()
         if r < 0.15:
@@ -2091,7 +2625,7 @@ def buy(p: Pet, entry: dict, rng: random.Random) -> tuple[bool, str]:
         if r < 0.55:
             role = rng.choice(sorted(ROLES))
             n = p.set_role(role) or ""
-            return True, f"🧪 Буль-буль… {p.name} {p.g('випив', 'випила')} зілля. {n or 'Нічого не змінилось'}!"
+            return True, f"🧪 Буль-буль… {p.called()} {p.g('випив', 'випила')} зілля. {n or 'Нічого не змінилось'}!"
         if r < 0.85:
             got = p.mutate(2, rng)
             return True, "🧪 Зілля подіяло дивно. Мутація: " + ", ".join(got)
@@ -2273,8 +2807,8 @@ def world_claim(p: Pet, key: str, rng: random.Random) -> tuple[str, list[str], b
     text, fx, _ = rng.choices(w["claim"], [c[2] for c in w["claim"]])[0]
     text = pick(text, p.gender)
     notes = p.apply(fx, None, rng)
-    p.note("twist" if fx.get("twist") else "world", f"{w['title']} {p.name} {text}")
-    return f"{p.name} {text}", notes, bool(fx.get("twist"))
+    p.note("twist" if fx.get("twist") else "world", f"{w['title']} {p.called()} {text}")
+    return f"{p.called()} {text}", notes, bool(fx.get("twist"))
 
 
 # --- auto-posting budget / planner -------------------------------------------------------------
@@ -2457,14 +2991,22 @@ def life_summary(p: Pet, names: dict[str, str] | None = None) -> dict:
         facts.append("Досяг: " + " · ".join(peaks))
     if p.achievements:
         facts.append(f"🏆 {len(p.achievements)}: " + ", ".join(p.ach_name(a) for a in p.achievements[-4:]))
+    close = [r["name"] for r in p.cast_list() if r["bond"] >= 3]
+    if close:
+        facts.append("🫂 Рідні люди: " + ", ".join(close[:4]))
     st = list(p.status.values())
     family = [f"💍 {names[p.partner]}" if p.partner in names else "",
               f"🥚 дітей: {p.children}" if p.children else "",
               f"🤝 друзів: {sum(s in ('friend', 'bestie') for s in st)}" if any(s in ("friend", "bestie") for s in st) else "",
               f"⚔️ ворогів: {sum(s in ('rival', 'enemy') for s in st)}" if any(s in ("rival", "enemy") for s in st) else "",
               f"💔 колишніх: {st.count('ex')}" if "ex" in st else ""]
+    story, seen = [], set()
+    for _, _, x in p.story:  # a repeating line («мав загинути, але вижив» ×3) is told once
+        if x[:24] not in seen:
+            seen.add(x[:24])
+            story.append(x)
     return dict(name=p.name, title=title, cause=p.cause, epitaph=p.epitaph, facts=facts,
-                family=" · ".join(x for x in family if x), story=[x for _, _, x in p.story])
+                family=" · ".join(x for x in family if x), story=story)
 
 
 def obituary(p: Pet, names: dict[str, str] | None = None, limit: int = 1000, footer: str = "") -> str:
@@ -2507,6 +3049,42 @@ def goal_text(p: Pet) -> str:
     return f"🎯 Мрія: {dream} {'▰' * n}{'▱' * (3 - n)}"
 
 
+def income_preview(p: Pet) -> dict:
+    """What a game day brings the pet, without changing anything (`Pet._daily` uses the same pieces):
+    {"job": (lo, hi) | None, "kind": "job" | "pocket" | "pension" | "welfare" | "", "why": str,
+     "extra": [(label, n)], "upkeep": n, "tax": n, "net": (lo, hi)}.
+    "job" is the base income range (a job's pay range, the allowance, the pension or the pocket money) with tenure,
+    «блат», hospital and demon bonuses applied, None when there is none (jailed); "extra" is advertising, «дах» and
+    interest; "net" is everything minus the cost of living and the wealth tax. Exact when the job pays a fixed amount
+    (lo == hi), otherwise the two ends of the range; a job's own drift can move the extras by a little."""
+    lo, why, kind = p._base_income(lambda a, b: a)
+    hi = p._base_income(lambda a, b: b)[0]
+    extra, (cost, tax) = p._extras(), p._upkeep()
+    ex = sum(v for _, v in extra)
+    return dict(job=(lo, hi) if kind else None, kind=kind, why=why, extra=extra, upkeep=cost, tax=tax,
+                net=(lo + ex - cost - tax, hi + ex - cost - tax))
+
+
+INCOME_KIND = {"pocket": "кишенькові", "pension": "пенсія", "welfare": "соцдопомога"}
+
+
+def income_line(p: Pet) -> str:
+    """«💼 Касир АТБ · ≈ +420 ₴/день, побут −60 ₴» (or «💶 соцдопомога +65 ₴/день, …») for the card and the UIs."""
+    pv = income_preview(p)
+    kind = pv["kind"]
+    ex = sum(v for _, v in pv["extra"])
+    if not kind and not ex:
+        return "⛓ без доходу" if p.jailed else ""
+    lo, hi = (pv["job"] or (0, 0))
+    lo, hi = lo + ex, hi + ex
+    amount = (f"{lo:+d}" if lo == hi else f"{lo:+d}…{hi:+d}").replace("-", "−")
+    tail = f", побут −{pv['upkeep']} ₴" + (f", податок −{pv['tax']} ₴" if pv["tax"] else "")
+    if kind == "job":
+        head, _, rest = p.job_name().partition(" ")   # «💼 Касир АТБ», not «💼 🛒 Касир АТБ»
+        return f"💼 {rest if rest and not any(x.isalpha() for x in head) else p.job_name()} · ≈ {amount} ₴/день{tail}"
+    return f"💶 {INCOME_KIND.get(kind, 'доходи')} {amount} ₴/день{tail}"
+
+
 def card(p: Pet, names: dict[str, str]) -> str:
     """Status caption (<1024 chars). names: pid -> pet name for relations."""
     _, tier = p.rarity
@@ -2519,7 +3097,8 @@ def card(p: Pet, names: dict[str, str]) -> str:
     if p.state == "dead":
         return obituary(p, names, 1020, f"\n🥚 «Нове яйце» — покоління {p.gen + 1}" + (" (є спадкоємець від пари!)" if p.heir else ""))
     lines = [
-        f"{emoji} <b>{_esc(p.name)}</b> · {phase_name(p.phase(), p.gender)} · {int(p.years)} р. · ур. {p.level}",
+        f"{emoji} <b>{_esc(p.name)}</b> · {phase_name(p.phase(), p.gender)} · {int(p.years)} р. · рів. {p.level}",
+        *([_esc(sw)] if (sw := p.swap_label(names)) else []),
         f"👤 {_esc(p.owner_name)} · {tier}" + (f" · 👑 {_esc(p.dynasty)} ({p.gen})" if p.gen > 1 else ""),
     ]
     if p.role:
@@ -2532,8 +3111,9 @@ def card(p: Pet, names: dict[str, str]) -> str:
         " ".join(f"{SKILLS[s]}{SKILL_NAMES[s]} {int(p.skill(s))}" for s in SKILLS)
         + (" · " + " ".join(f"{TRAITS[t]} {int(p.traits[t])}" for t in p.top_traits()) if p.top_traits() else ""),
     ]
-    work = [p.job_name() if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else "",
-            bg_name(p.home)]
+    if income_line(p):
+        lines.append(income_line(p))
+    work = [EDUCATION.get(p.edu[-1], "") if p.edu else "", bg_name(p.home)]
     lines.append(" · ".join(x for x in work if x))
     pr = p.persona
     lines.append(f"🎭 {_esc(p.temper_name())} ({perk_text(p)}), боїться {_esc(pr.get('fear'))}")

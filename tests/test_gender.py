@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from kit_the_cat import battle as B
 from kit_the_cat import engine as E
 from kit_the_cat.content.events import ALL
 from kit_the_cat.content.persona import EPITAPHS, NAME_SUFFIX, NAMES
@@ -79,8 +80,8 @@ def test_make_name_uses_the_pool_and_the_tail_of_the_gender():
         for g in ("m", "f"):
             names = {E.make_name(species, set(), random.Random(i), g) for i in range(120)}
             assert all(any(n.startswith(b) for b in by_gender[g]) for n in names), (species, g)
-    girls = {E.make_name("cat", set(), random.Random(i), "f") for i in range(300)}
-    boys = {E.make_name("cat", set(), random.Random(i), "m") for i in range(300)}
+    girls = {E.make_name("cat", set(), random.Random(i), "f") for i in range(6000)}
+    boys = {E.make_name("cat", set(), random.Random(i), "m") for i in range(6000)}
     assert "Мурка Велика" in girls and "Мурчик Великий" in boys
     assert not any(n.endswith(("ий", "ій")) for n in girls) and not any(n.endswith(("а", "я")) for n in boys if " " in n and " з " not in n and " Із " not in n)
 
@@ -215,6 +216,7 @@ def _achievement_keys() -> set[str]:
             for m in re.finditer(rx, text):
                 keys.update(g for g in m.groups() if g)
     keys.update(t[2][4] for t in E.LIFE.values())
+    keys.update(B.ACH_WINS.values())   # the arena's wins ladder
     keys.add(E.MONEY_TIERS[4][1][2:])
     return keys
 

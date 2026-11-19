@@ -105,7 +105,7 @@ STORIES_MORE = [
                                          sv={"work": 2}, step="st_job_2"), auto="dark"),
        ch("Принести всім печиво", o("Печиво з'їли до обіду. Ірина вперше усміхнулася.", glutton=1,
                                     sv={"team": 1}, step="st_job_2"), auto="glutton"),
-       req=dict(stage=(3, 4), job="any"), once=True, w=1.5, bg="office", story=T_JOB, time="1w"),
+       req=dict(stage=(3, 4), job="any", tenure=(0, 1.5)), once=True, w=4, bg="office", story=T_JOB, time="1w"),
     ev("st_job_2", "Середа. Начальник дає перше завдання «на вчора», а колеги кличуть на обід у нову "
        "шаурмичну.",
        ch("Залишитися й зробити завдання", o("Завдання здано о сьомій вечора. Начальник кивнув.", int=1,
@@ -183,7 +183,7 @@ STORIES_MORE = [
                                                     love=2, int=1), req=dict(money=200), auto="love"),
        ch("Пообіцяти собі читати прогноз", o("Урок засвоєно. Коліно нагадуватиме ще тиждень.", int=2),
           auto="dark"),
-       followup=True, req=dict(sv={"risk": 3}), bg="mountains", story=T_HOVERLA),
+       followup=True, req=dict(sv={"risk": 2}), bg="mountains", story=T_HOVERLA),
     ev("st_hov_end", "Вершину ви не взяли, зате ввечері в колибі банош, гуцульська музика й сухі шкарпетки.",
        ch("Повернутися наступного літа", o("Говерла нікуди не дінеться. Ти теж.", mood=10), auto="patriot"),
        ch("Залишитися ще на день", o("Наступного ранку — сонце й Петрос замість Говерли.", str=1, mood=12),
@@ -214,7 +214,7 @@ STORIES_MORE = [
        ch("Як у журналі", o("Мармур! Ванна як у готелі, гаманець — як у студента.", money=-400, attr=2,
                             sv={"care": 1}, step=REP_END), req=dict(money=400), auto="party"),
        ch("Як у сусідки", o("Плитка з квіточками. Класика.", money=-150, step=REP_END), auto="love"),
-       ch("Залишки зі складу", o("Плитка трьох кольорів. Назвемо це «дизайнерським рішенням».", money=-50,
+       ch("Залишки зі складу", o("Плитка трьох кольорів, майже задарма. Назвемо це «дизайнерським рішенням».",
                                  sv={"diy": 1}, step=REP_END), auto="gambler"),
        followup=True, bg="khrushchovka", story=T_REPAIR, time="2w"),
     ev("st_rep_end_flood", "Тиждень після ремонту. Дзвінок у двері: сусід знизу, мокрий і злий. Ізолента "
@@ -244,7 +244,7 @@ STORIES_MORE = [
                                           sv={"heart": 1, "help": 1}, step="st_jubilee_2"), auto="glutton"),
        ch("Прийти просто до столу", o("{Сів|Сіла} за стіл першим. Тітки переглянулися.", sv={"lazy": 1},
                                       step="st_jubilee_2"), auto="party"),
-       req=ANY, once=True, w=1.5, bg="kitchen", story=T_JUBILEE, time="1d"),
+       req=ANY, once="dynasty", w=1.5, bg="kitchen", story=T_JUBILEE, time="1d"),
     ev("st_jubilee_2", "За столом тітка Люда і дядько Петро знову сперечаються, хто краще садить картоплю. "
        "Бабуся втомлено зітхає.",
        ch("Перевести розмову на бабусю", o("«А розкажіть, як бабуся з дідом познайомились!» Усі затихли й "
@@ -310,7 +310,7 @@ STORIES_MORE = [
           auto="love"),
        ch("Виманити ковбасою", o("Ковбаса перемогла страх.", glutton=1, sv={"search": 2}, step=DOG_END),
           auto="glutton"),
-       ch("Схопити, поки не {втік|втекла}", o("Барон вирвався й побіг… прямо додому.", str=1, sv={"search": 1},
+       ch("Схопити, поки не втік", o("Барон вирвався й побіг… прямо додому.", str=1, sv={"search": 1},
                                      step=DOG_END), auto="party"),
        followup=True, bg="khrushchovka", story=T_DOG, time="1d"),
     ev("st_dog_end_found", "Сусідка обіймає Барона й тебе по черзі. Увечері під дверима — пиріг і записка: «Від "
@@ -440,7 +440,7 @@ STORIES_MORE = [
                            step="st_coffee_3"), req=dict(money=800), auto="party"),
        ch("Вживану з OLX", o("Працює! Іноді свистить, як чайник.", money=-300, sv={"risk": 1},
                              step="st_coffee_3"), req=dict(money=300), auto="gambler"),
-       ch("Френч-прес і турка", o("Ретро-концепт: «кава, як у бабусі».", money=-50, sv={"small": 2},
+       ch("Френч-прес і турка", o("Ретро-концепт: «кава, як у бабусі». Турку бабуся віддала задарма.", sv={"small": 2},
                                   step="st_coffee_3"), auto="mystic"),
        followup=True, bg="kyiv", story=T_COFFEE, time="2w"),
     ev("st_coffee_3", "Перший тиждень. Ранкова черга з метро, у всіх десять секунд, а сусідній кіоск "
@@ -461,7 +461,7 @@ STORIES_MORE = [
                                fame=2, achievement="Своя кав'ярня"), auto="gambler"),
        ch("Залишитися {самому|самій} за стійкою", o("Втомлено, але все своє. І гроші теж.", money=800, mood=10,
                                            achievement="Своя кав'ярня"), auto="dark"),
-       followup=True, req=dict(sv={"proper": 5}), bg="kyiv", story=T_COFFEE),
+       followup=True, req=dict(sv={"proper": 4}), bg="kyiv", story=T_COFFEE),
     ev("st_coffee_end_flop", "Знайомий раптом «продав» кіоск іншому, а кавомашина засвистіла востаннє. Бізнес "
        "закрився, не встигнувши розкрутитися.",
        ch("Продати обладнання", o("{Повернув|Повернула} частину грошей і досвід на все життя.", money=200, fin=2),

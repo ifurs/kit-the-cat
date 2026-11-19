@@ -1,7 +1,7 @@
 """Two-pet events (social=True). Placeholders: {other}, {other_owner}. The owner of {name} decides.
 
 Relations: rel ≥30 friend, ≥70 bestie, ≤-30 rival, ≤-70 enemy (computed from rel); crush/partner/ex are set
-explicitly with status=… and survive rel changes. status=[""] means «barely know each other».
+explicitly with status=… and survive rel changes. status=[""] means «never met»: the engine skips a pet this one already knows (Pet.rel).
 """
 from .dsl import ch, ev, o
 
@@ -15,21 +15,21 @@ NOT_FOES = ["", "friend", "bestie", "crush", "partner"]
 MEET = [
     ev("soc_meet_bench", "{name} сидить на лавці. Поруч сідає {other} і мовчки простягає жменю насіння.",
        ch("Взяти насіння", o("Лузали мовчки годину. Найкраща розмова в житті.", rel=30, mood=10), auto="love"),
-       ch("«Ти хто такий?»", o("{other} {other:образився|образилася} і {other:пересів|пересіла} на іншу "
+       ch("«Ти хто {other:такий|така}?»", o("{other} {other:образився|образилася} і {other:пересів|пересіла} на іншу "
                                "лавку.", rel=-20, toxic=2),
           o("{other} {other:розповів|розповіла} біографію з 1998 року. Тепер ви знайомі ближче, ніж "
             "хотілося.", rel=15, mood=-5),
           auto="toxic"),
-       ch("Запропонувати по пиву", o("Пиво зблизило. До ранку співали «Червону руту».", rel=35, party=2, health=-5),
+       ch("Запропонувати по компоту", o("Компот зблизив. До вечора співали «Червону руту».", rel=35, party=1),
           auto="party"),
        ch("Продати {other:йому|їй} насіння назад", o("{other} {other:купив|купила}. Бізнес-зв'язок налагоджено.", rel=10, money=20,
                                           other={"money": -20}), auto="gambler"),
        social=True, req=dict(status=STRANGERS), bg="khrushchovka"),
-    ev("soc_meet_atb", "В АТБ лишилась остання пачка {food}. {name} і {other} схопили її одночасно.",
+    ev("soc_meet_atb", "В АТБ лишилась остання порція {food_gen}. {name} і {other} схопили її одночасно.",
        ch("Поступитися", o("{other} {other:зворушений|зворушена}. {other:Записав|Записала} {name_acc} у "
                            "«хороші».", rel=25, love=2, hunger=-10), auto="love"),
-       ch("Тягнути на себе", o("Перемога! Пачка твоя, а {other} — твій ворог.", rel=-30, str=1, hunger=20),
-          check=("str", 20), fail=[o("Пачка порвалась. Обидва в {food}. Касирка дивиться з осудом.", rel=-15, clean=-30,
+       ch("Тягнути на себе", o("Перемога! Порція твоя, а {other} — твій ворог.", rel=-30, str=1, hunger=20),
+          check=("str", 20), fail=[o("Контейнер репнув. Обоє по вуха заляпані {food_ins}. Касирка дивиться з осудом.", rel=-15, clean=-30,
                                      other={"clean": -30})], auto="toxic"),
        ch("Поділити навпіл", o("Поділили. Тепер ви «ті двоє з АТБ». Майже дружба.", rel=30), auto="patriot"),
        ch("Камінь-ножиці-папір!", o("{Виграв|Виграла}! І {здобув|здобула} повагу суперника.", rel=10, luck=1,
@@ -45,7 +45,7 @@ MEET = [
        ch("Заговорити про погоду", o("Проїхали кінцеву, розмовляючи. Тепер ви друзі.", rel=30, cha=1),
           o("{other} {other:надів|наділа} навушники. Холодно.", rel=-5, mood=-5), auto="love"),
        ch("Прочитати {other:йому|їй} гороскоп", o("Зійшлося все! {other} {other:вражений|вражена}.", rel=25, mystic=2),
-          o("«Вам сьогодні не щастить» — сказав {name}. Маршрутка зламалась.", rel=-10, mystic=3), auto="mystic"),
+          o("«Вам сьогодні не щастить» — {сказав|сказала} {name}. Маршрутка зламалась.", rel=-10, mystic=3), auto="mystic"),
        social=True, req=dict(status=STRANGERS), bg="kyiv"),
     ev("soc_meet_blackout", "Відключення. У ліфті застрягли {name} і {other}. Зв'язку нема, павербанк один.",
        ch("Віддати павербанк", o("{other} {other:подзвонив|подзвонила} мамі. Ви тепер майже "
@@ -66,7 +66,7 @@ FRIENDSHIP = [
                                      "{other:оцінив|оцінила}.", rel=25, love=2),
           auto="love"),
        ch("Спитати прямо", o("«Ні, я з митниці». Стало тільки цікавіше.", rel=10, int=1),
-          o("{other} зблід і зник на три дні. Хм.", rel=-5, mystic=2, w=0.5)),
+          o("{other} {other:зблід|зблідла} і {other:зник|зникла} на три дні. Хм.", rel=-5, mystic=2, w=0.5)),
        ch("Підкупити бабусь пиріжками", o("Бабусі тепер працюють на {name_acc}. Розвідка району — твоя.", cha=3,
                                           money=-50, gambler=1), auto="gambler"),
        social=True, req=dict(status=NOT_FOES)),
@@ -86,19 +86,19 @@ FRIENDSHIP = [
        ch("Піти", o("Полагодили «Жигулі», яких ні в кого нема. Душевно.", rel=30, party=3, health=-5),
           o("{Прокинувся|Прокинулася} в чужому гаражі з чужим "
             "акордеоном.", rel=20, party=4, item="notes"), auto="party"),
-       ch("Взяти з собою {food}", o("Закусь врятувала вечір. {other} кличе тебе {братом|сестрою}.", rel=40, glutton=1,
+       ch("Взяти з собою {food}", o("Закуска врятувала вечір. {other} кличе тебе {братом|сестрою}.", rel=40, glutton=1,
                                     hunger=10), auto="glutton"),
-       ch("Відмовитись: завтра на роботу", o("{other} сумно {other:зітхнув|зітхнула}. Відповідальність — це "
+       ch("Відмовитись: завтра рано вставати", o("{other} сумно {other:зітхнув|зітхнула}. Відповідальність — це "
                                              "самотньо.", rel=-5, int=1)),
        ch("Влаштувати філософську дискусію", o("До ранку з'ясовували, чи існує Житомир. Не з'ясували.", rel=25,
                                                mystic=2, int=1), auto="mystic"),
-       social=True, req=dict(status=FRIENDLY, stage=ANY_UP, other_stage=2), bg="kyiv"),
+       social=True, req=dict(status=FRIENDLY, stage=(3, 4), other_stage=(3, 4)), bg="kyiv"),
     ev("soc_birthday", "У {other_gen} день народження. {name} {забув|забула}, і до вечірки — 20 хвилин.",
        ch("Купити квіти біля метро", o("Квіти з метро — класика. {other} "
                                        "{other:розчулився|розчулилася}.", rel=20, money=-150,
                                        other={"item": "flowers"}), auto="love"),
        ch("Подарувати шкарпетки", o("Шкарпетки з тризубом! {other} {other:одягнув|одягнула} "
-                                    "одразу.", rel=15, patriot=1)),
+                                    "одразу.", rel=15, patriot=1), auto="patriot"),
        ch("Передарувати чужий подарунок", o("Ніхто не помітив. Майстер.", rel=10, gambler=2),
           o("{other} {other:впізнав|впізнала} свій же подарунок з минулого року.", rel=-30, cha=-2), auto="gambler"),
        ch("Заспівати пісню на весь під'їзд", o("Сусіди плакали. Хтось — від захвату.", rel=25, cha=2, party=2),
@@ -138,7 +138,7 @@ FRIENDSHIP = [
        ch("Навчи ворожити", o("{other:Дід розклав|Бабуся розклала} карти: «Тебе чекає далека дорога і казенний дім». Ого.", mystic=3,
                               rel=20), auto="mystic"),
        ch("Втекти гратися", o("{other:Дід зітхнув|Бабуся зітхнула}. Молодь.", rel=-10, party=1), auto="party"),
-       social=True, req=dict(stage=(1, 2), other_stage=4), bg="khrushchovka"),
+       social=True, req=dict(stage=(1, 2), years=(4, 18), other_stage=4), bg="khrushchovka"),
     ev("soc_mentor_phone", "{Літній|Літня} {name} просить {other_acc} навчити {його|її} користуватися смартфоном.",
        ch("Терпляче вчитися", o("Тепер {name} надсилає листівки «Доброго ранку» з котиками всьому чату.", int=2,
                                 rel=25, item="phone"), auto="love"),
@@ -180,19 +180,19 @@ FRIENDSHIP = [
           o("{other} {other:вклав|вклала} гроші в крипту й {other:повернув|повернула} "
             "утричі!", w=0.15, money=1000, rel=40, twist=True),
           req=dict(money=500), auto="love"),
-       ch("«Нема, сам на мівіні»", o("{other} не {other:повірив|повірила}, але {other:зрозумів|зрозуміла}.", rel=-5)),
+       ch("«Нема, {сам|сама} на мівіні»", o("{other} не {other:повірив|повірила}, але {other:зрозумів|зрозуміла}.", rel=-5)),
        ch("Позичити під 20% на тиждень", o("{other} {other:повернув|повернула} з відсотками. Ти тепер "
                                            "банк.", money=100, gambler=2,
                                            rel=-10, other={"money": -100}),
           o("{other} не {other:повернув|повернула}. Колекторів ти ще не "
             "маєш.", money=-500, rel=-20), req=dict(money=500),
           auto="gambler"),
-       ch("Запропонувати роботу замість грошей", o("{other} {other:пофарбував|пофарбувала} тобі паркан. Обидва "
+       ch("Запропонувати роботу замість грошей", o("{other} {other:пофарбував|пофарбувала} тобі паркан. Обоє "
                                                    "задоволені.", rel=15,
                                                    patriot=1)),
        social=True, req=dict(status=["", "friend", "bestie", "crush", "partner"], stage=ANY_UP)),
     ev("soc_heist", "{other} шепоче: «Є тема. Інкасаторська машина стоїть без нагляду, водій пішов по чебурек».",
-       ch("Робимо справу", o("Винесли мішок! Обидва багаті й параноїдальні.", money=3000, item="moneybag", rel=30,
+       ch("Робимо справу", o("Винесли мішок! Обоє багаті й параноїдальні.", money=3000, item="moneybag", rel=30,
                              other={"money": 3000}, achievement="Банда двох"),
           check=("luck", 35), fail=[o("Водій повернувся з чебуреком і кийком. Обох забрали.", jail=24,
                                       other={"jail": 24}, rel=-10)], auto="toxic"),
@@ -255,10 +255,10 @@ FRIENDSHIP = [
 
 PRANKS = [
     ev("soc_prank_paint", "{other} спить на сонечку. Поруч стоїть відро пастельної фарби. Доля?",
-       ch("Облити фарбою", o("{other} {other:прокинувся|прокинулася} ніжно-пастельним. Як "
+       ch("Облити фарбою", o("{other} {other:прокинувся ніжно-пастельним|прокинулася ніжно-пастельною}. Як "
                              "зефірка.", rel=-20, toxic=2, party=1,
                              other={"gene": {"color": "pastel"}, "mood": -10}),
-          o("{other} {other:прокинувся|прокинулася} раніше. Тепер пастельний — "
+          o("{other} {other:прокинувся|прокинулася} раніше. Тепер {пастельний|пастельна} — "
             "ти.", gene={"color": "pastel"}, rel=-5, w=0.4),
           auto="toxic"),
        ch("Намалювати вуса", o("{other} {other:ходив|ходила} з вусами три дні й нічого не {other:знав|знала}. "
@@ -294,12 +294,12 @@ PRANKS = [
     ev("soc_prank_body_swap", "{name} і {other} одночасно чхнули біля ворожки. Вона щось пробурмотіла…",
        ch("Вибачитися перед ворожкою", o("Пізно. Ви прокинулися в тілах одне одного!", swap_genes=True, twist=True,
                                          rel=10, mystic=3),
-          o("Ворожка пробачила. Дала цукерку.", hunger=5, love=1)),
+          o("Ворожка пробачила. Дала цукерку.", hunger=5, love=1), auto="mystic"),
        ch("Чхнути ще раз", o("Подвійне чхання — подвійне прокляття. Ви помінялися тілами!", swap_genes=True,
                              twist=True, rel=-10, mystic=2), auto="party"),
        ch("Купити оберіг", o("Оберіг спрацював на тебе, не на {other_acc}. У {other_gen} тепер третє око.", money=-100,
                              mystic=2, other={"gene": {"eyes": "three"}}, twist=True), auto="mystic"),
-       ch("Нагрубити ворожці", o("Ворожка помінялася тілами з тобою. Ви з {other_ins} у шоці обидва.", swap_genes=True,
+       ch("Нагрубіянити ворожці", o("Ворожка помінялася тілами з тобою. Ви з {other_ins} у шоці обоє.", swap_genes=True,
                                  twist=True, toxic=2, luck=-3), auto="toxic"),
        social=True, req=dict(stage=ANY_UP), w=0.4, bg="mystic"),
 ]
@@ -319,10 +319,10 @@ RIVALRY = [
           fail=[o("{Забув|Забула} текст і {зачитав|зачитала} рецепт борщу. Програш, але "
                   "смачний.", mood=-15, glutton=1)],
           auto="party"),
-       ch("Двобій на поглядах", o("Дивились одне на одного 6 годин. Обидва заснули. Нічия.", dark=2, rel=10),
+       ch("Двобій на поглядах", o("Дивились одне на одного 6 годин. Обоє заснули. Нічия.", dark=2, rel=10),
           auto="dark"),
        ch("Помиритися", o("Потиснули руки. Стало навіть ніяково від тепла.", rel=40, love=3), auto="love"),
-       ch("Найняти бабусю-кілера", o("Бабуся засудила {other_acc} так, що той {переїхав|переїхала}.", rel=-20, gambler=2,
+       ch("Найняти бабусю-кілера", o("Бабуся засудила {other_acc} так, що {other:той переїхав|та переїхала}.", rel=-20, gambler=2,
                                      money=-200, other={"mood": -30}), auto="gambler"),
        social=True, req=dict(status=FOES, stage=ANY_UP, other_stage=2), bg="ruins"),
     ev("soc_rival_sabotage", "{other} {other:хвалився|хвалилася} новою роботою на весь чат. {name} має план.",
@@ -354,10 +354,10 @@ RIVALRY = [
     ev("soc_reconcile", "Бабуся власника {other_gen} вирішила помирити {name_acc} і {other_acc}. Принесла пиріжки й тиск.",
        ch("Обійнятися", o("Бабуся плаче, ви теж. Ворожнечі кінець.", rel=60, love=3, hunger=20), auto="love"),
        ch("З'їсти пиріжки й піти", o("Пиріжки — так. Мир — ні.", hunger=30, glutton=2, rel=-5), auto="glutton"),
-       ch("Висловити все в обличчя", o("{Висловив|Висловила}. {other} теж. Обидва полегшено "
+       ch("Висловити все в обличчя", o("{Висловив|Висловила}. {other} теж. Обоє полегшено "
                                        "видихнули.", rel=30, toxic=1),
           o("{Висловив|Висловила}. Бабуся тепер теж ворог.", rel=-20, toxic=3), auto="toxic"),
-       ch("Запропонувати дружнє пиво", o("Пиво з ворогом — найкраще пиво.", rel=45, party=2), auto="party"),
+       ch("Запропонувати чай із чабрецем", o("Чай з ворогом — найкращий чай. Говорили до ночі.", rel=45, party=1), auto="party"),
        social=True, req=dict(status=FOES), bg="khrushchovka"),
 ]
 
@@ -366,7 +366,7 @@ ROMANCE = [
        ch("Зізнатися", o("{other} {other:почервонів|почервоніла}: «Я теж…». "
                          "Почалось!", status="crush", rel=20, love=3, mood=20,
                          item="hearts"), check=("cha", 25),
-          fail=[o("«Ти мені як брат». Френдзона, рівень — бетон.", mood=-25, dark=2, rel=-5)], auto="love"),
+          fail=[o("«Ти мені як {брат|сестра}». Френдзона, рівень — бетон.", mood=-25, dark=2, rel=-5)], auto="love"),
        ch("Написати вірш", o("Вірш з римою «кохаю — вареник на краю». Спрацювало!", status="crush", rel=15, cha=2),
           o("{other} {other:виправив|виправила} у вірші помилки. Без коментарів.", mood=-10, int=1), auto="mystic"),
        ch("Надіслати голосове на 7 хвилин", o("{other} {other:прослухав|прослухала} на 2x і "
@@ -381,14 +381,15 @@ ROMANCE = [
           auto="glutton"),
        social=True, req=dict(status=FRIENDLY, stage=ANY_UP, other_stage=2, partner=False, other_partner=False),
        bg="love"),
-    ev("soc_date", "Перше побачення {name_gen} і {other_gen}. Куди йдете?",
-       ch("Андріївський узвіз", o("Купили одна одному магнітики й поцілувались біля Замку Річарда.", rel=20,
+    ev("soc_date", "Побачення {name_gen} і {other_gen}. Куди йдете?",
+       ch("Андріївський узвіз", o("Купили одне одному магнітики й поцілувались біля Замку Річарда.", rel=20,
                                   love=3, mood=20, item="flower"), auto="love"),
        ch("Шаурмична на вокзалі", o("Романтика по-київськи. Обоє вижили. Це зближує.", rel=15, glutton=2,
                                     hunger=40), o("Шаурма була сумнівна. Друге побачення — в лікарні.", rel=10,
                                                   hospital=6, w=0.4), auto="glutton"),
        ch("Нічний клуб", o("Танцювали до ранку. {other} в захваті.", rel=20, party=3),
-          o("{other} {other:пішов|пішла} з барменом. Ти — з похміллям.", status="ex", mood=-30, w=0.3), auto="party"),
+          o("{other} {other:пішов|пішла} з барменом. Ти — з похміллям.", status="ex", mood=-30, w=0.3), auto="party",
+          req=dict(stage=(3, 4))),
        ch("Кладовище при місяці", o("Готичніше не буває. {other} {other:вражений|вражена} і трохи "
                                     "{other:наляканий|налякана}.", rel=15, dark=3),
           auto="dark"),
@@ -420,11 +421,11 @@ ROMANCE = [
                                   achievement="Одружений", cha=3), auto="party"),
        ch("Ще не час", o("Каблучка лежить у шухляді. Чекає.", dark=1), auto="dark"),
        social=True, req=dict(status=["crush"], stage=(3, 4), other_stage=3, partner=False, other_partner=False),
-       bg="love"),
+       bg="love", date=True),
     ev("soc_wedding", "Весілля {name_gen} і {other_gen}! Тамада, конкурси, дядько Толік вже знімає піджак.",
        ch("Традиційне весілля", o("Рушник, коровай і бійка дядьків. Ідеально.", item=["vinok", "korali"], rel=20,
                                   patriot=3, money=3000, other={"money": 3000}), auto="patriot"),
-       ch("Весілля-вечірка до ранку", o("Діджей грав «Ой, на горі два дубки» в техно-ремікса. Легенда.", party=4,
+       ch("Весілля-вечірка до ранку", o("Діджей грав «Ой, на горі два дубки» у техно-реміксі. Легенда.", party=4,
                                         rel=15, money=1500, item="partyhat"), auto="party"),
        ch("Розписатися в ЦНАПі й поїсти шаурми", o("Скромно, швидко, смачно. Талон №47.", rel=10, glutton=2,
                                                    hunger=40), auto="glutton"),
@@ -438,11 +439,11 @@ ROMANCE = [
        ch("Почекати до квартири без іпотеки", o("Тобто ніколи. Логічно.", int=2, dark=1), auto="dark"),
        ch("Піти по капусту — раптом там", o("Знайшли в капусті яйце. Ніхто не питає, звідки.", baby=True,
                                             twist=True, mystic=3, rel=15), auto="mystic"),
-       social=True, req=dict(status=["partner"], stage=3, other_stage=3), bg="love"),
+       social=True, req=dict(status=["partner"], stage=(3, 3), other_stage=(3, 3)), bg="love"),
     ev("soc_ikea", "{name} і {other} збирають шафу з IKEA. Інструкція — тільки картинки. Залишилось 14 зайвих гвинтиків.",
        ch("Збирати разом мовчки", o("Шафа стоїть! Стосунки — теж.", rel=15, int=2), check=("int", 25),
           fail=[o("Шафа впала. Ви досі не розмовляєте.", rel=-20, mood=-15)]),
-       ch("Звинувачувати одне одного", o("Шафу зібрали, але з неї тепер доносяться крики.", rel=-25, toxic=3),
+       ch("Звинувачувати одне одного", o("Шафу зібрали, але з неї тепер долинають крики.", rel=-25, toxic=3),
           auto="toxic"),
        ch("Покликати сусіда", o("Сусід зібрав за 10 хвилин і залишився на вечерю. Назавжди.", rel=5, party=2),
           auto="party"),
@@ -453,15 +454,15 @@ ROMANCE = [
        ch("Влаштувати скандал", o("Скандал на весь під'їзд. Помирились лише під ранок.", rel=-20, toxic=3,
                                   other={"mood": -20}),
           o("Скандал закінчився розставанням.", status="ex", rel=-30, mood=-30, w=0.35), auto="toxic"),
-       ch("Лайкнути у відповідь когось", o("Холодна війна лайків. Обидва програли.", rel=-15, gambler=2),
+       ch("Лайкнути у відповідь когось", o("Холодна війна лайків. Обоє програли.", rel=-15, gambler=2),
           auto="gambler"),
-       ch("Погадати на кавовій гущі", o("Гуща показала: все добре. {name} {заспокоївся|заспокоїлася}.", mystic=2, rel=5),
+       ch("Поворожити на кавовій гущі", o("Гуща показала: все добре. {name} {заспокоївся|заспокоїлася}.", mystic=2, rel=5),
           auto="mystic"),
        social=True, req=dict(status=["partner", "crush"]), bg="mystic"),
     ev("soc_breakup", "Після сварки через немиту чашку {other} каже: «Нам треба поговорити».",
        ch("Розійтися", o("Розійшлися. Ділили кота через суд.", status="ex", rel=-30, mood=-30, item="storm",
                          achievement="Розбите серце"), auto="dark"),
-       ch("Помити чашку", o("Чашку помито. Шлюб врятовано. Іноді все просто.", rel=20, clean=10), auto="love"),
+       ch("Помити чашку", o("Чашку помито. Стосунки врятовано. Іноді все просто.", rel=20, clean=10), auto="love"),
        ch("Розділити майно ЦНАПом", o("Через ЦНАП — 3 місяці черги. Поки стояли, помирилися.", rel=25, int=1),
           o("Розлучились. ЦНАП видав довідку і забрав половину грошей.", status="ex", money_mult=0.5, rel=-20),
           auto="patriot"),
@@ -481,7 +482,7 @@ ROMANCE = [
                                     item="vyshyvanka", rel=-10), auto="toxic"),
        social=True, req=dict(status=["ex"])),
     ev("soc_temptation", "У {name_gen} вже є пара. Але {other} підморгує і кличе на «просто каву».",
-       ch("Відмовитися: я {вірний|вірна}", o("Вірність +100. Пара навіть не дізналась, яка ти молодчина.", love=3, cha=1),
+       ch("Відмовитися: я {вірний|вірна}", o("Вірність +100. Пара навіть не дізналась, {який|яка} ти молодчина.", love=3, cha=1),
           auto="love"),
        ch("Просто кава…", o("Справді просто кава. Але совість п'є з тобою.", rel=15, dark=2),
           o("Кава перейшла у вечерю. Тепер у тебе таємниця й тривожність.", rel=25, toxic=2, mood=-10,
@@ -494,7 +495,7 @@ ROMANCE = [
 
 ROLES_SOCIAL = [
     ev("soc_vampire_bite", "Опівночі. Шия {other_gen} пахне, як вареники з вишнями. Вампірська натура {name_gen} кличе.",
-       ch("Вкусити", o("Ніжний укус — і {other} тепер теж вампір! Вічність удвох.", twist=True, rel=20, dark=3,
+       ch("Вкусити", o("Ніжний укус — і {other} тепер теж {other:вампір|вампірка}! Вічність удвох.", twist=True, rel=20, dark=3,
                        other={"role": "vampire", "gene": {"extra": "fangs"}}),
           o("{other} {other:виявився|виявилася} з часником замість крові. Тепер у тебе "
             "печія.", health=-15, rel=-20, w=0.4),
@@ -518,7 +519,7 @@ ROLES_SOCIAL = [
        social=True, req=dict(other_role="vampire", norole=True), bg="cemetery"),
     ev("soc_zombie", "Зомбі-{name} відчуває, що мозок {other_gen} пахне особливо розумно сьогодні.",
        ch("Зголодніти по-зомбячому", o("Укус! {other} тепер теж {other:зелений|зелена} і "
-                                       "повільний.", twist=True, rel=-20,
+                                       "{other:повільний|повільна}.", twist=True, rel=-20,
                                        other={"role": "zombie", "gene": {"color": "zombie"}}, hunger=30),
           auto="glutton"),
        ch("Задовольнитися холодцем", o("Холодець майже як мізки. Зате дружба ціла.", hunger=20, rel=10,
@@ -528,7 +529,7 @@ ROLES_SOCIAL = [
                                          int=2, rel=15), auto="mystic"),
        social=True, req=dict(role="zombie")),
     ev("soc_angel_heal", "Ангел {name} бачить, що {other} виглядає кепсько. Німб вібрує.",
-       ch("Зцілити", o("Світло, хор і запах ладану. {other} як новенький!", love=3, rel=30,
+       ch("Зцілити", o("Світло, хор і запах ладану. {other} як {other:новенький|новенька}!", love=3, rel=30,
                        other={"health": 50, "mood": 20}), auto="love"),
        ch("Вигнати біса", o("Біса вигнано! {other} знову {other:звичайний|звичайна} і трохи "
                             "{other:розгублений|розгублена}.", rel=20, twist=True,

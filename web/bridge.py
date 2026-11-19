@@ -6,6 +6,7 @@ saves to the viewer's browser. Images are returned as raw RGB frames; the page d
 import json
 from collections import OrderedDict
 
+from kit_the_cat import card
 from kit_the_cat import engine as E
 from kit_the_cat import sprites
 from kit_the_cat.sandbox import api
@@ -46,6 +47,36 @@ def dump() -> str:
     return DB.dump()
 
 
+MAX_SAVE = 5 * 1024 * 1024
+
+
+async def restore(text: str) -> bool:
+    """Replace the game with a save file (untrusted: parsed as JSON, never run). The file is checked on a scratch
+    store first: the format, the shapes and that every pet loads. On any failure the current game is left as it is."""
+    global SB
+    if not isinstance(text, str) or len(text) > MAX_SAVE:
+        return False
+    probe = MemoryStore()
+    if not probe.load(text):
+        return False
+    shapes = ((probe.pets, dict), (probe.logs, list), (probe.graves, list), (probe.chats, dict), (probe.next_id, int))
+    if not all(isinstance(v, t) for v, t in shapes) or not all(isinstance(d, dict) for d in probe.pets.values()):
+        return False
+    try:
+        for d in probe.pets.values():
+            E.Pet.from_dict(d)
+        sb = Sandbox(probe)
+        await sb.init()
+        await sb.view(1)
+    except Exception:
+        return False
+    DB.load(text)
+    SB = Sandbox(DB)
+    await SB.init()
+    _cache.clear()
+    return True
+
+
 # --- pixels ------------------------------------------------------------------------------------
 
 def _rgb(cv) -> bytes:
@@ -81,23 +112,29 @@ async def pet_frames(owner: int):
     return _cached("p" + repr(look), lambda: _pack(sprites.frame_canvases(look, 4)))
 
 
-async def event_frames(owner: int):
+async def card_png(owner: int):
+    """The life card as PNG bytes (the page turns them into a picture to look at and save)."""
     pets = await SB.pets(tick=False)
-    p = next((x for x in pets if x.owner_id == owner), None)
-    e = E.EVENTS.get(p.pending.get("id", "")) if p and p.pending else None
-    if not e:
+    p = next((x for x in pets if x.owner_id == owner and x.state != "egg"), None)
+    if not p:
         return None
-    bg = e.bg if E.bg_ok(e.bg) else ""
-    other = next((x for x in pets if x.pid == p.pending.get("other")), None)
-    if not other:
-        look = p.look(bg)
-        return _cached("e" + repr(look), lambda: _pack(sprites.frame_canvases(look, 4)))
-    bgx = E.scene(bg or p.home, p.flags)
-    st = p.status.get(other.pid, "")
-    between = ("heart" if st in ("crush", "partner") else "fight" if st in ("rival", "enemy")
-               else "broken" if st == "ex" else "chat")
-    looks = [p.look(bgx), other.look(bgx)]
-    return _group(looks, bgx if E.bg_ok(bgx) else "meadow", 2, between)
+    return card.render_life_card(p.look(), E.life_summary(p, {x.pid: x.name for x in pets}))
+
+
+async def event_frames(owner: int, mood: str = ""):
+    got = await SB.scene(owner, mood)
+    if not got:
+        return None
+    looks, bg, between = got
+    if between is None:
+        return _cached("e" + repr(looks[0]), lambda: _pack(sprites.frame_canvases(looks[0], 4)))
+    return _group(looks, bg, 2, between)
+
+
+async def tryon_frames(owner: int, item: str = "", bg: str = ""):
+    """One still picture: the pet in an item, or in a place (the wardrobe, the bazaar, homes)."""
+    look = await SB.tryon(owner, item, bg)
+    return _cached("t" + repr(look), lambda: _pack(sprites.frame_canvases(look, 1))) if look else None
 
 
 async def fight_frames(a: int, b: int):

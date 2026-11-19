@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src" / "kit_the_cat"
 ALLOW = ROOT / "scripts" / "ua_allow.txt"
 CASE_FORMS = {f"{who}_{c}" for who in ("name", "other") for c in ("gen", "dat", "acc", "ins", "loc", "voc")}
+CASE_FORMS |= {f"food_{c}" for c in ("nom", "gen", "dat", "ins", "loc")}
 PLACEHOLDERS = {"name", "owner", "food", "dream", "fear", "quirk", "temper", "money", "role", "other", "other_owner",
                 "w", "l"} | CASE_FORMS  # w/l: battle winner/loser
 CYR = re.compile(r"[А-Яа-яЇїІіЄєҐґ]")
@@ -41,6 +42,7 @@ RUSSISMS = {
     "сдача": "решта", "ковьор": "килим", "відноситься до": "стосується", "приймати міри": "вживати заходів",
     "на рахунок": "щодо", "самий кращий": "найкращий", "самий гарний": "найгарніший", "більш кращ*": "кращ…",
     "чим раніше": "що раніше", "згідно закону": "згідно із законом", "по крайній мірі": "принаймні",
+    "прибор*": "прилад / прибір / місце за столом", "цибулинн*": "цибулин… / лушпиння", "усі одно": "все одно",
     "убєжище": "укриття", "щас": "зараз", "всьо": "все", "канєшно": "звісно", "тіпа": "типу",
 }
 NEEDS_APOSTROPHE = {  # common words written without the apostrophe (stems)
@@ -94,7 +96,7 @@ def check(text: str, fragment: bool = False) -> tuple[list[str], list[str]]:
         if CYR.search(w) and re.search(r"[’ʼ`´]", w):
             errors.append(f"typographic apostrophe in «{w}» → «{re.sub('[’ʼ`´]', chr(39), w)}»")
     for ph in re.findall(r"\{([a-z_]+)\}", text):
-        if ph not in PLACEHOLDERS:
+        if ph not in PLACEHOLDERS and not ph.startswith("recap_"):  # recap_<series>: validate.py knows the series
             errors.append(f"unknown placeholder {{{ph}}}")
     if not fragment and text.count("«") != text.count("»"):
         errors.append("unbalanced «»")

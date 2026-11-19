@@ -8,6 +8,445 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 ### Added
 - 8 пригод: арки про поличку «Візьми книжку — залиш книжку» в під'їзді та двірську толоку з садінням дерев
 
+## [0.23.1] — 2026-11-13
+
+### Fixed
+- Browser build: after an update the installed app could hang on launch and «Перезапустити» did nothing. The worker
+  of 0.21–0.22 stored the 2 MB page before handing it over, and a request stuck there kept the new worker waiting
+  for ever. The page of the GitHub Pages build is now small (the game code is a file of its own, `py-<hash>.json`,
+  cached for offline play), a waiting version is switched on at launch before the game starts, and when the old
+  worker does not answer in 4 seconds the page drops it and loads without one. A deploy no longer downloads the
+  game code twice.
+
+## [0.23.0] — 2026-11-13
+
+### Added
+- **Redrawable art.** `src/kit_the_cat/assets/` holds 295 PNG files: scenes, wearable items, the shapes of shop items, ears,
+  tails, faces, marks, extras, the markers between two pets and the life card's icons. Draw over a file and the bot and
+  the browser build use it; an untouched file changes nothing, the code keeps drawing it. How to: `assets/README.md`.
+  `scripts/art.py` exports the originals and reports what is redrawn or broken; `tests/test_art.py` keeps them in step
+  with the code. Head and body shapes, fur patterns, eyes, role overlays and eggs are still code.
+- Browser and sandbox: pictures in the wardrobe, the bazaar and homes (your pet wearing the thing, or standing in the
+  place); the diary starts with this life's quests, achievements and ancestors.
+- The result of an adventure keeps its picture, and the pet looks happy or sad depending on how it went.
+- Between adventures the pet does something that fits its age, not one line for a whole life.
+- **17 пригод** (`content/arcs_week_20261112.py`): по одній новій для професій, що мали дві (кухар, діджей, лікар, фермер,
+  кур'єр, волонтер, блогер, нічний сторож, екзорцист, покерист), три листопадові (перший сніг, темрява о пів на п'яту,
+  зимова гума) і чотири наслідки через роки (шаурмична з генератором, пан Василь, сусід Степан, аукціон на тепловізор).
+
+### Changed
+- **The arena is a duel in rounds.** A spar is now up to 7 rounds; every round you pick ⚔️ Удар, 🛡 Захист or 🎭 Хитрість
+  (strike beats trick, trick beats guard, guard beats strike), or a named move of the pet's character, or the
+  ultimate of its role. What a move does comes from skills, level and worn things: every button shows the damage to
+  expect, armour blunts strikes but not tricks, and the screen lists the things that count. Before each round the
+  opponent gives itself away with a look that is honest more often for a smart pet (45–80%). The opponent answers
+  a repeated move. New in `battle`: `duel`, `duel_round`, `duel_moves`, `duel_tell`, `auto_move`, `Duel`, `MOVES`,
+  `DUEL`; `fight` / `resume` are unchanged. In a tournament your own pet's match is a duel too («▶ Бій»); the
+  other matches, and everything under «⏭ До фіналу», play by themselves as before. A duel that was left is fought
+  out by the pets: there is no second try. Sandbox API: `spar` returns a duel, `spar_move` plays a round, `t_next`
+  takes `duel: true`; `spar_tactic` is gone.
+- **Scenes step back, the pet stands out.** Outlines in the scenes take the colour of what they outline instead of
+  the pet's dark line, and scene colours are a little calmer.
+- **One frame per screen in adventures.** The story is plain text in the card, a result is marked by a line on the
+  left, choices have no border of their own: no more frame in a frame in a frame.
+- **Phones.** The pet card is a strip (portrait, name, health and mood) until «Докладніше про пета» or the «Пет»
+  button opens it; the tabs stay at the top while scrolling; after a decision the story is on screen without
+  scrolling; larger buttons for choices and tabs.
+- **New look of the pets: chibi.** A big head on a small body, flat bold colours with a thin shade line instead of a
+  gradient, round eyes with a glint, the face low on the head, a wider blush, whiskers for cat faces. Ears scale with
+  the head, the tail moved to the left so that a held thing is visible on the right. Genes, ages, moods, roles and items
+  work as before; backgrounds are unchanged. The anchors moved (`sprites.GEOM`, `FACE_DY`), so a picture redrawn for
+  the old body has to be redrawn. The old look is the git tag `style-classic`.
+- **All 31 scenes are redrawn** in the same flat sticker look as the pets: big simple shapes, a floor band across the
+  bottom, the middle left free for the pet. They are pictures in `assets/backgrounds/` (one 48×48 frame each, so scenes
+  no longer animate by themselves); night, seasons and weather are still added on top. Delete a file and run
+  `scripts/art.py export` to get the code-drawn scene back.
+- A pet alone in an adventure now gets the season and the night on outdoor scenes, like two-pet scenes always did.
+- `sprites.describe` names the genes in Ukrainian («вуха: звислі», it was «ears: звислі»).
+
+### Fixed
+- **The browser game hung on an endless load for a returning player after every new deploy**: the service worker waited
+  for the page to reach its cache before giving it to the browser, which stalls Chrome on a page this big.
+- «Кексик потрібна довідка» → «Кексикові потрібна», also in the surgery event.
+- `scripts/case_scan.py` catches a nominative name before «потрібна / треба / можна…».
+- A language review of the oldest content (chains, daily, jobs, life, twists, species, social, status, health), about 150
+  fixes: gender pairs that inflected somebody else («Суддя… {випустив|випустила}», «{вилетів|вилетіла} джин»), words that
+  fit only a boy pet («Розумник!», «Козак росте!», job names in the job hunt), russisms («білет», «завіщання»,
+  «сокамерник», «поварешка», «заглох», «включити»), typos and stories that contradicted themselves (a barista who changed
+  sex, a router switched off where «вайфаю немає», «рік життя» for two years).
+- Age and state: collectors and «Продати нирку» only for grown-ups, the naked Kupala swim and the garage night only for
+  adults, the dating app only without a partner, the blogger's living grandmother closes at 40 like the others.
+- «Хай вирішить сам» said to a girl → «Хай вирішить пет». The «Є оновлення гри» banner stays on one line on a phone.
+
+## [0.22.1] — 2026-11-07
+
+### Added
+- **Three new recurring characters, each with a quest** (`content/quests.py`, 27 events): пані Ірина, бібліотекарка
+  («Бібліотека на Райдужній»: readers, a flood, the district council, money for the roof), дід Петро, голуб'ятник
+  («Голуби з даху»: find the champion Сизий, train him, save the dovecote from the ОСББ, the race) and Ярослав
+  Іванович, краєзнавець («Карта 1912 року»: a map, a dig permit, a time capsule of 1912, the letter's descendants).
+  A quest is a series: episodes months apart, «📺 Раніше», three endings by the hidden scores and a coda years later.
+  It starts only for a pet who met the character and did not fall out with them; баба Галя, Мирон, лікар Остап and
+  Соломія Андріївна open extra choices on the way, a drone opens a 🔒 choice. In 100 playtest lives about a quarter
+  meet each of the pigeon and the map quests and one in ten the library one.
+
+### Changed
+- `scripts/playtest_checks.py`: no lifespan>105 lead — long lives are by design.
+
+## [0.22.0] — 2026-11-05
+
+### Fixed (an automated playtest: 140 whole lives, journals read by Haiku, findings verified by Sonnet and by scripts)
+- **Grown-up things for kids.** Beer on the bench for 3-year-olds (`soc_meet_bench` → компот), «дружнє пиво» with a
+  foe (→ чай), champagne at the prom, cigarettes behind the school, a beer heist (`crime_shoplift` → energy drinks),
+  самогон for the pig's uncle and the grandmother's liqueur for appendicitis (now grown-ups only), the night club on a
+  15-year-old's date, a positive «try the vape». The kum's самогон tail and the lottery tail need `years=(18, …)`.
+- **Romance stays within an age bracket.** `engine.same_bracket`: every event that can start or deepen a romance
+  (`engine.ROMANCE`: dates, crush/partner statuses, a baby) is for two teens or two grown-ups; the built-in `_date`
+  keeps the proposal and «think about kids» for grown-ups. `soc_baby` is for two adults of working age, not 80-year-olds.
+- **Newborns live newborn events.** The baby guard (`engine.for_infants`): under INFANT_YEARS only `baby*` events and
+  events whose `years`/`age` start below that age; `family.py`'s age caps no longer open an event to newborns. The
+  teacher Соломія Андріївна meets the pet at 6–17, not at 0.
+- **«🔒 потрібно 0 ₴ (є −731)»** in debt → «бракує 1031 ₴».
+- **«First meetings» only with strangers.** `status=[""]` (the eight `soc_meet_*`) now means never met: a cooled-down
+  acquaintance is not a stranger.
+- **Tails** may have a req (`(text, fx, weight, req)`): the boss tail needs a job, «коли вже онуки» is for 20–50, and
+  «{застряг|застрягла} у ліфті» has a feminine form. «Покликати маму» in a fight is for kids and teens; grown-ups call
+  the кум. A random `_date` no longer happens with a rival, an enemy or an ex (the owners can still arrange one).
+- Work words for a pet without a job (the alarm story, «завтра на роботу», «продати сало колегам»); a dream event after
+  the dream came true; the parents' chat for a pet with no kids; a teen's microcredit shawarma business (grown-ups).
+- Text: «Синку»/«синочку» to a girl, «Тихо зник», Барон «{втік|втекла}», «{name} записано», «той {налив|налила}»,
+  «грате», «найкращою деревом», «одна одному» for two boys, «ніжно-пастельним» for a girl, the job and the new
+  temperament in notes in the pet's gender; money in notes is always whole hryvnias.
+
+### Added
+- `scripts/integrity_audit.py --static`: alcohol, tobacco, vape, microcredit and mortgage words a pet under 18 could
+  be offered (the youngest age comes from the event's gate, the baby guard, follow-up parents, story openings and
+  dream chains), the same for tails; a wider WORK regex (роботу, нарада, «— робота»). Reviewed exceptions:
+  `OTHERS["grown_up"]`.
+- `scripts/playtest_lives.py` (whole lives through the sandbox → one readable journal per life, 100 lives in ~2 min)
+  and `scripts/playtest_checks.py --strict` (deterministic checks over the journals); how to run them and how to brief
+  an LLM read: `docs/PLAYTEST.md`.
+
+## [0.21.0] — 2026-11-04
+
+### Added
+- **Install as an app, play offline (GitHub Pages build).** `web/manifest.webmanifest`, pixel-cat icons drawn by
+  `scripts/make_icons.py` with the game's sprites (`web/icons/`), and a service worker `web/sw.js`: the page is
+  network-first with a 3 s timeout, `pyodide/*`, the icons and the manifest are cache-first. `build_web.stamp_sw()` names
+  the cache after a hash of the build, so a new deploy drops the old cache; a waiting update is never swapped under a
+  running game: a banner «Є оновлення гри» asks first. «📲 Встановити гру» shows up when the browser offers it, iPhones
+  get a one-time «Поділитися → На екран „Додому“» hint, and `navigator.storage.persist()` asks Safari not to evict the
+  save. All of this runs only on a normal https/localhost origin, never on the Artifact host; the manifest links live in
+  `build_web.standalone(page, pwa=True)`, used by `deploy_pages.py`, which also checks that every precached file exists.
+- **Save file backup (both hosts).** «💾 Зберегти сейв у файл» downloads `kit-the-cat-YYYY-MM-DD.json`; «📂 Відновити з
+  файлу» asks before replacing the game and calls the new `bridge.restore(text)`: the file is untrusted, capped at 5 MB,
+  parsed as JSON and checked on a scratch store (format, shapes, every pet loads) before it replaces anything; a broken
+  file leaves the current game untouched.
+
+## [0.20.0] — 2026-11-04
+
+### Added
+- **Income you can see.** `engine.income_preview(pet)` and `engine.income_line(pet)`; the daily step stores the last payout
+  in `pet.flags["_last_pay"]`. `_daily` and the preview share one set of functions (`_base_income`, `_extras`, `_upkeep`),
+  the numbers are unchanged. The card and both browser UIs show «💼 Касир АТБ · ≈ +420 ₴/день, побут −60 ₴» (or the
+  allowance, pension, pocket money), a toast «💰 Зарплата: +432 ₴ · побут −60 ₴ → 💰 1 872 ₴» once per game day, and the
+  job centre says «+2% за кожен день стажу (до +60%)».
+- **Items with visible stats and a small effect in adventures.** `content.economy.ITEM_SKILL` (30 items, +2…+5; a generated
+  item gives +1), counted by `Pet.skill` while the item is worn, at most +8 per skill (`ITEM_SKILL_CAP`). The wardrobe, the
+  shop and the skill chips show «🗡️+6 · 💪+3» (`battle.item_label`). Worn items lift the floor of «стиль» by 2 each.
+- **Skills you can read on every check.** Choice buttons show «💪 65%» with a tooltip from `Pet.chance_parts`;
+  `chance()` is built from the same pieces (the number is unchanged). The result line reads «🎲 14 · шанс 65% → вдалося ·
+  💪 сила 42 (річ +3) проти складності 30», and when a worn item decided a check the result says «🗡 Шабля — дуже до речі»
+  (`Result.check`, `Result.helped`).
+
+- **A readable arena fight.** The log now plays at 1.1 s a line (1.6 s for a crit, a special or an ultimate, 0.7 s for a
+  miss), the key lines are bold, the HP bars glide, a ticker under them shows «Раунд 4 · 🐷 63 ❤️ · 🐱 41 ❤️», and
+  «⏸ Пауза», «⏩ ×2» (remembered) and «⏭ До фіналу» (only the highlights) sit under the log. `BattleResult.highlights`
+  (≤ 8 log entries: the opening, the last lead change, crits, specials, ultimates, the finishing blow, the verdict);
+  log entries have a kind `k` (`crit`, `miss`, `special`, `ult`, `dot`, `skip`, `tactic`, `surrender`) and an index `i`.
+- **One decision mid-fight.** `battle.fight(a, b, rng, stop_at=0.5)` returns a `FightState` when a fighter first
+  drops below half health and `battle.resume(state, tactic_a, tactic_b, rng)` plays the rest: «🔥 Ва-банк» (attack +30%,
+  defence −30%), «🛡 В оборону» (defence +40%, attack −20%), «🏳 Здатися» (lose now, keep the health). The old one-call
+  `fight()` is unchanged; `auto_tactic(fighter)` is what NPCs pick. The sandbox pauses a spar for 20 s (`spar_tactic`;
+  the fight id is single-use and belongs to the player who started the spar).
+- **A reason to fight.** The result screen lists everything the fight gave (Elo with the new total, XP, strength, mood,
+  fame; health for the loser) and the record with the next achievement. `battle.rank(p)` (Новачок / Боєць / Гроза
+  району / Легенда арени by Elo), `battle.record(p)`, `battle.next_goal(p)`; the rank is on the pet card. A win gives
+  fame +1 (from tier 2 fame pays «реклама» every day), five wins set the flag `arena_vet`, a tournament title
+  (`battle.crown`) gives fame +5 and the flag `arena_champ`.
+- **6 arena events** (`content/arena.py`): a sports-drink ad, a kid from the yard, a rival at the market, a local
+  paper interview, a fan club of two grandmothers, an old coach (for `arena_vet` / `arena_champ`).
+
+- **30 new dates** (`content/dates.py`, ids `dt_*`) and 3 short follow-ups a year later (`fu_dt_*`): strangers and friends
+  (5 teen: a school disco, an АТБ queue, a joint project, a rink, the last row of a cinema; 5 grown-up: a blind date,
+  a 2017 photo, salsa, a shelter, the night train), a crush (4 teen, 7 grown-up: the Carpathians in the rain, a dinner
+  by candles during a blackout, dumplings, IKEA, a dance for the 60+, meteors, a cat café), partners (6: a renovation,
+  a ficus, the parents, a day without phones, the place they met, the dacha) and exes (3). Romance stays teen+, couples
+  grown-up; a teen date is innocent (nothing above `party=1`, no alcohol, a teen's date is a teen).
+- New event attribute `ev(..., date=True)`: marks a romantic scene as a member of the date pool (`engine.is_date_event`).
+  `soc_proposal`, `soc_valentine` and `soc_ex_things` are marked; `DATE_HINTS` stays as a fallback for old ids.
+- The pair remembers its dates (`Pet.had_date`, flags `dt:<pid>`, 60 per pair): `pick_event(kind="date")` offers a date the
+  pair has not had yet before it repeats one, and once they have had all of them, the one longest ago.
+- **Skills and items open choices in adventures.** 83 new choices on existing events (`content/gated.py`, appended after the
+  old choices): 50 behind a skill (13 🧠, 13 😎, 12 💪, 12 🍀; kids 19–22, teens 21–30, adults 28–52 — set from where real
+  pets' skills are) and 33 behind an item the shop sells (guitar, sabre, helmet, book, sunglasses, mic, laptop, monocle…).
+  They skip the dice, give a slightly better reward and name the skill or the item in the text.
+- **Locked buttons for them.** `Pet.locked_why(e, other) -> [(idx, reason)]` (at most `LOCK_MAX` = 2) lists the choices that
+  only a skill, an item or money separate the pet from («потрібно 🧠 40 (зараз 31)», «потрібна річ: 🗡 Шабля», «бракує 300 ₴»);
+  role, cast, flag and every other requirement stay hidden. Both browser UIs draw «🔒 label» with the reason under it
+  (`pending.locked` is `{i, label, why}` now, was `{i, label, need}`). `Pet.locked` keeps its money-only form.
+- **A hint that skills matter.** `Result.hint`: after an event that had a locked choice, 1 time in 3 and at most once per game
+  day, «🔒 З 🧠 40 тут був би ще один варіант».
+
+### Changed
+- `/pet_date` and the date pool: the built-in `_date` no longer competes with real dates (it was drawn at full weight and
+  was the repeat players saw). It is a fallback only for a pair with nothing to do, and now has three variants
+  (`_date`, `_date2`, `_date3`) picked at random.
+- **Body swap is now visible.** `swap_genes` exchanges the bodies (genes, so the species too — emoji, battle bonuses and
+  species events follow the body) and leaves the souls (name, skills, bonds, items). For 3 game days both pets carry
+  `flags["_swap"] = [other_pid, until_day, other_gender]`, and the card shows «🔄 У тілі <імені>» (`Pet.swap_label`,
+  `Pet.swap_with`). Swapping back while it is on clears the mark. In the sandbox and the browser build the outcome
+  gets a highlighted banner («Обмін тілами!») and the avatar flashes and reloads at once; a swap started by a neighbour
+  or by the autopilot reaches the other player through `view()["pet"]["news"]` (shown once) instead of going unnoticed.
+- «ур.» (a russism) became «рів.» in the card and both UIs.
+
+### Fixed
+- A pet of 65 got «a lesson at school». Two causes. (1) A follow-up (`then=("id", "8y")`) came any time in the 15 years
+  after it was due, so «the last bell» of a first-grader could ring at 30. Now it has a grace window,
+  `max(1 year, half of its delay)` («in 8y» → until +4y); the queue entry is `[id, due, grace]`, and an old two-item entry
+  of a saved pet keeps the 15 years. `kid_first_class_fu` also has `years=(13, 19)`. (2) A scalar `stage=2` means
+  «12 years and older», not «a teenager»: `teen_vyshyvanka_day`, `soc_teen_cheat/chat/earphone/skip` and
+  `hol_valentine_card` (a note in the school bag) now say `stage=(2, 2)`; `teen_uni`, `teen_hair`, `teen_tattoo`
+  got `years=` (up to 24). `hol_valentine_single` (the Valentine's event for grown-ups) is twice as likely, since the card is
+  for teens now.
+- `integrity_audit.py`: a school scene (lesson, homework, test, «до школи», class chat…) in an event that a pet older than
+  25 can get is a static problem (a follow-up is also bounded by its parent's age + delay + grace); events that are
+  memories, a kid NPC or a classmate met later are listed in `OTHERS["school"]` with the reason. Also: a `kid_`/`teen_`
+  event open to a pet older than 25, the oldest pet that lived a school scene, and follow-ups that came more than 3 years
+  after they were due (the dynamic part).
+
+## [0.19.1] — 2026-11-04
+
+### Fixed
+- The grandmother's 80th birthday came again in every new life of the same player (a pet dies, the heir hatches and
+  meets «Бабусі вісімдесят!» once more). `once="dynasty"` marks a family one-off that the heirs remember: the jubilee, the
+  cousin's wedding, the two-clubs wedding, the grandmother's recipe, the embroidered shirt in the chest, the
+  grandmother's smartphone. `integrity_audit.py` counts the family one-offs a dynasty lived twice (155 of 200 before the fix, 0 now).
+
+## [0.19.0] — 2026-11-04
+
+### Added
+- **23 modern events** (`content/modern.py`): the story «Акція в «Аврорі»» (a pot for twelve litres, a cat-shaped kettle,
+  three endings and a kettle that comes back for a return), the story «Борщ без сметани» in Threads (a flame war, a poll
+  of 41 thousand votes, three endings), the pigeon conspiracy of ЖЕК, a reply guy, a night of scrolling and its
+  follow-up, an AI chatbot (a shawarma business plan; a teen's homework), subscriptions, a QR menu, a delivery robot and
+  a four-minute voice message.
+- New effect `dream="sea"`: the pet's dream comes true if its goal is this one and it is not fulfilled yet. A pet that
+  dreams of the sea in Odesa now gets the dream on the Odesa vacation (and on an army leave, a vampire's holiday,
+  the Odesa story, the last wish); the same for Mars, the mayor, the drone and the bestseller.
+- Jobs can grow a new title with a flag (`titles={flag: (name, name_f)}`): the taxi's radio goes from «Ялинка FM» to
+  «Класика FM» after the choice «Вмикати класику, а не шансон».
+
+### Changed
+- The taxi driver is «Ялинка FM», not «Шансон FM»; classical music in the car changes it to «Класика FM».
+- The family does not live forever (`content/family.py`): events about the pet's mother, father or parents close at
+  50 years, those about a living grandmother or grandfather at 40 (a mother no longer calls an 86-year-old to dig potatoes).
+- `__version__` of the package matches the release.
+
+## [0.18.0] — 2026-11-03
+
+### Added
+- **Life card** («картка життя»): `card.render_life_card(look, summary)` draws a whole life as one PNG — the pet on its
+  scene (a ghost at the cemetery for the dead), name, title, cause of death, facts with pixel icons, up to six
+  highlights, family and the epitaph. Pure stdlib: a baked bitmap font (`cardfont.py`, Spleen 6×12, BSD-2; regenerate
+  with `scripts/bake_font.py`), pixel icons and a zlib PNG encoder, so it needs no Pillow and works in the browser build.
+  Both game UIs have a «🖼 Картка життя» button on the screen of a dead pet (sandbox route `/img/card/<owner>.png`,
+  browser bridge `card_png`); `tests/test_card.py` checks the PNG and that no letter the game writes is missing from
+  the font.
+
+- **Integrity of stories** (`scripts/integrity_audit.py`, `tests/test_integrity.py`): lives of simulated pets are read
+  for events that disagree with the state of the pet or come back too often.
+- New requirement `tenure=(min, max)`: years in the current job. «Перший тиждень на новій роботі» and «Перша зарплата»
+  came 30 years into a job (a hire stamps `flags["_job_y"]`; a pet hired before this version simply never meets them).
+- Five jail events (`jail_library`, `jail_lawyer`, `jail_kitchen`, `jail_letter`, `jail_yard`): there were three, so
+  every second event behind bars was a repeat.
+
+- **39 social events** (`content/social_more.py`; there were 52, a third of them repeats): sandbox, swing, desk and stickers
+  for kids; cheating, prom, class chat and skipping for teens; a queue at Нова пошта, an air-raid shelter, rain, a charger
+  and a courtyard for strangers; moving a piano, barbecue, karaoke, secret Santa, pysanky for friends; a drill on Sunday,
+  snow, a review for foes; anniversary, dinner, a trip, Valentine's day, an ex's wedding and a box of things for couples.
+- New requirement `kids=N` (the pet has had at least N children): grandchildren belong only to a pet that has some.
+  «Онуки приїхали на літо» now needs it; `old_yard_kids` is the same story with the yard's children for the childless.
+- `integrity_audit.py` also reads the text against the state: a boss, an office or colleagues need a job, grandchildren
+  need `kids=`; the simulation lists the events that speak of a job or grandchildren the pet does not have.
+
+### Changed
+- Baby events (`baby_*`) have an age window: «перше слово» no longer comes at ten years old, after the first class.
+- A pet younger than 3 (`INFANT_YEARS`) lives only events written for its age (an explicit stage, years or phase):
+  no pranks, gossip or queues at АТБ for a baby.
+- A social event is offered at most twice per life (`SOCIAL_LIFE_MAX`); when the pool of fresh ones is empty the pet lives
+  a solo event instead of the same prank again (a third of all social events were repeats).
+- «Кинув офіс» (a pet that never had one), a boss who «списує на ремонт офісу», «колеги» in the blood-donation event and the
+  quantum boss no longer come to a pet without a job (`job=` or neutral wording); «смартфон від онуків» is from the neighbours.
+- «Шлюб врятовано» → «Стосунки врятовано» (a pair is not always married).
+- `life_summary` tells a repeating highlight once («мав загинути, але вижив» no longer fills the list three times).
+
+## [0.17.0] — 2026-11-03
+
+### Added
+- **Recurring characters** («постійні персонажі», `content/cast.py`): seven people who live next to every pet and
+  remember how they were treated — баба Галя (neighbour), лікар Остап (vet), двірняга Гаврик, Оксана з АТБ, пан Богдан
+  (colleague), сусід Мирон (garage), Соломія Андріївна (teacher). A pet meets each of them in its own way; every
+  decision moves a bond (−6..6), and they age, move away, write letters and come back. 40 events in
+  `cast_home.py` / `cast_town.py` (11 follow-ups), e.g. a stairwell neighbour who moves to Poznań and returns, a vet who
+  comes at night when the pet's health is low, a dog from the garages who leads the yard, a cashier who opens a bakery.
+- New DSL keys: effects `cast={"galya": +1}` (meet or change the bond) and `cast_state={"galya": "away"}`; requirements
+  `cast` (bond at least / within a range, the character is around), `cast_state`, `cast_for` (known for N years) and
+  `nocast` (not met yet). Contract in `content/dsl.py`, regenerated `docs/DSL.md`, validation of character ids in
+  `content/validate.py`.
+- `Pet.cast` (new field, old documents load with `{}`), `Pet.meet()`, `Pet.cast_list()`; the sandbox state has `cast`
+  and both game UIs show the people in «Навички й статус»; the life summary lists the closest ones. Events about the cast
+  come `CAST_BOOST` (×2.5) more often.
+- Achievements «Свій у під'їзді» and «Друг з гаражів».
+- Tools: `event_coverage.py` and `content_stats.py` understand characters; `tests/test_cast.py`.
+- **Series** — serials of 5–8 episodes that come years apart, with a recap («📺 Раніше: …») at the start of each
+  episode, hidden scores kept for the whole life and several endings, then a coda («second season») years later.
+  Four of them in `content/series.py` (33 events): «Шалаш за гаражами» (childhood, 3 endings + coda), «Лист у
+  пляшці» (teen → young, 3 endings incl. a rare one + coda), «Кав'ярня на розі» (adult, 4 endings + coda), «Нічний
+  маршрут» (mystic, 3 endings, a rare one gives a coda).
+- DSL: effects `ss={"hut.team": 1}` (series scores), `recap=("hut", "line")`, `finale=("hut", "legend")`; requirements
+  `ss={"hut.team": 4}` and `finale={"hut": "any"}`; `then=` takes a list of ids and picks the first whose req holds
+  (write `ss=` before it) — the ending depends on the scores. `ev(..., series="hut")`, placeholder `{recap_hut}`.
+- `Pet.series` (id → ep, vars, recap, end; a new field with a default: old documents load as is), `Result.series`
+  (`id`, `title`, `ep`, `finale`, `ending`), the sandbox shows «📺 серія N» on an episode and the ending of a season.
+- `validate.py` checks series (ids, endings, recap length, every outcome of an episode goes on or ends).
+
+### Changed
+- **Economy: money is a choice, not an accident.** A choice whose every outcome loses money now has a *price*
+  (`Pet.price(choice)`): a pet that cannot pay does not get it among `Pet.options()`. `Pet.locked(event, other)` lists
+  those choices with the ₴ missing, and the sandbox shows them as locked buttons («🔒 … бракує N ₴»). An autopilot pet
+  never picks a choice it cannot pay for. Hosts that draw buttons from `options()` need no change; showing locked ones is
+  optional.
+- Losses stop at `DEBT_FLOOR` (−500 ₴): what could not be taken becomes consequences (mood, sometimes an item). Debt
+  deeper than that exists only as a deliberate loan: the new effect `credit=-1500` (iPhone on credit, mortgage, a new
+  loan to close the old one, the café opened on credit, a failed crypto bet), which sets the flag `loan` until the pet is
+  back above zero. A dying pet is treated on credit (the doctor does not turn it away).
+- `WELFARE` 40 → 65 ₴/day: an unemployed adult can pay the cost of living and slowly climb out of a small debt.
+- Every event keeps a choice that costs nothing (`validate.py` checks it; 6 events got one). `arc_wallet_camera`: denying
+  everything now costs 70% of the savings and a day in custody instead of a fixed bill of 20 000 ₴.
+- `scripts/balance.py` targets: debt share ≤ 10%, median wallet ≥ 500 ₴.
+- **Names in the text.** Events and the journal call a pet by its short name («Мурчик»); the tail («Великий»,
+  «з Троєщини») stays on the card. The whole name returns only when it would be confusing: the other pet in the scene
+  has the same short name, or the pet shares a name with a character it knows. New: `persona.short_name`,
+  `Pet.called()`, `Pet.called_in(case)`. New pets get a tail in 30% of cases (was ~80%) and, when possible, a name whose
+  short form is not taken by a neighbour.
+
+## [0.16.0] — 2026-11-03
+
+### Added
+- Mystic arcs in `arcs_soul.py` (8 events): a mirror in the stairwell and its advice, a magpie that predicts guests,
+  Tarot on a night train, a staircase dream and a blue candle during a blackout.
+
+### Changed
+- Stories: the rare special endings are now reachable (about 30% of random playthroughs instead of 6–13%): the fox raid
+  («greed»), the dog show («Золотий нашийник»), the pickup fundraiser («reach»).
+- 54 choices that already granted the **mystic** or **patriot** trait now carry the matching `auto=`, so pets of that
+  temperament act in character more often; the personality gaps of `content_stats.py` are closed.
+
+## [0.15.2] — 2026-11-03
+
+### Changed
+- Browser game: the gender picker has just ♂ Хлопчик / ♀ Дівчинка (the «🎲 Будь-яка» button is gone); one of them is
+  preselected by a coin flip.
+- Browser game, UX leftovers of the review: on phones the empty adventure view no longer repeats the «▶ Пригода» button
+  the dock already has; the «Грати за» selector has a visible label (wide screens) and a tooltip; the «Казино» button is
+  disabled with an explanation while the casino is closed to the pet; lists (bazaar, wardrobe…) no longer scroll inside
+  the page; a toast stays up longer when the message is long.
+
+## [0.15.1] — 2026-11-03
+
+### Changed
+- Browser game: **«Як це працює»** — a short intro and a legend of the symbols (🎭, the % on a button, ❤️/😊, perks like 🧠+9,
+  level, rarity, dream steps, the result chips, the tabs). It opens once on the first visit without a pet, then from the
+  «?» button in the header; one column on phones, closes with a tap on the backdrop or Esc. Both pages.
+- Browser game, small UX fixes (both pages): the arena hint no longer points at a «⚙️» that does not exist («вкладка «Сусіди» →
+  «Заселити 3 сусідів»»); an egg's card shows only «Яйце», not money/level/rarity; «Лікар» is disabled for a healthy pet
+  (a mis-tap used to cost mood); the bazaar dims what you cannot afford and says «не вистачає»; the sub-tabs of «Ще…» are
+  32 px high.
+
+### Fixed
+- Story endings: in a random-picks player, 88% of «Весілля», 72% of «Говерла» and «Кав'ярня» ended in the fallback and the
+  special endings were almost out of reach. Thresholds lowered (`st_wedding_end_duty/star` 5→4, `st_coffee_end_hit` 5→4,
+  `st_hov_end_rescue` 3→2): wedding 45/39/16%, Говерла 64/23/13%, кав'ярня 49/25/26%. A test now plays every story with
+  random picks for both genders and requires every ending to be reachable (≥ 2%) and nobody to die on the way.
+
+## [0.15.0] — 2026-11-03
+
+### Added
+- **Event reachability** (`scripts/event_coverage.py`): walks the content like a player who tries every choice and
+  outcome, forges a pet for every event's `req`, and says which events can never happen (contradictory `req`, a
+  follow-up nobody schedules, story state nothing gives, a follow-up its own root makes ineligible or that comes due at
+  the wrong age). `content_stats.py --strict` (and so `content_gate.py`) fails on them. `--sim [--union N]` splits the
+  balance run's «never fired» list into categories. Report: `docs/reports/event-coverage.md`.
+- `Pet.candidates(other, kind, twist)`: the weighted pool `pick_event` draws from (same weights, now inspectable).
+- **Holidays** (`content/holidays.py`, 31 events: 25 + 6 follow-ups): the Ukrainian calendar through `season=`.
+  Christmas (вертеп + районний фестиваль, Святвечір з кутею, ярмарок), Щедрий вечір, the New Year tree (+ the yard
+  that copied it), Андрія (вишнева гілочка), Valentine's Day (teen+: анонімна валентинка + підпис через рік, вечір «без
+  сердець»), Easter (кошик, писанки + писанка на виставці, паска, Подоляночка, реванш крашанками after
+  `daily_easter`), День вишиванки, Купала (вінок, цвіт папороті — rare `sparkles@9` —, стрибок через вогонь for two pets),
+  День Незалежності (парад вишиванок + фото в музеї, ярмарок «Усе для ЗСУ» + лист подяки), День захисників (волонтерський
+  центр + відповідь з війська) and Halloween (костюм з рідкісною роллю вампіра, цукерка чи капость, гарбуз, страшилки).
+  Gaps: `patriot` and `mystic` choices.
+- Holiday windows `malanka` (12–14 Jan), `vyshyvanka` (15–21 May: the third Thursday), `pokrova` (12–16 Oct) for `req=dict(season=…)`;
+  `dsl.SEASONS` lists every valid value and `content.validate` rejects an unknown one (a typo used to make an event
+  silently dead).
+- `tests/test_holidays.py`: every window holds its dates; every holiday event is eligible in its days and not in September.
+- **Видові пригоди й арки** (`content/species_more.py`, 32 події, по 4–5 на кожен вид): лис — історія «Набіг на курник»
+  (жадібність, пес Бровко, наслідок через роки); кіт — історія «Котяче пограбування» (Зломщик / Відволікач / Технар) і подкаст
+  дільничного; свиня — «Рити» (трюфель, клумба біля мерії, монета з наслідками) і дегустація соусу; пес — історія
+  «Виставка «Золотий нашийник»» (догляд проти «Найщиріший погляд»); кінь — гурток верхової їзди (+ вершниця через
+  8 років), весілля, електропастух, Купала; аксолотль — заплив «Дніпрова хвиля» (+ реванш), біологи, світний ставок;
+  птах — годівничка взимку (+ весняний садочок), птахи на дротах, кільцювання (+ лист з маршрутом).
+
+### Fixed
+- Language and logic review of the 0.13.0 «побут» events (`arcs_week_20261102.py`; ids unchanged): «Борщ» → «Бограч» in the
+  bograch story, «той, хто приносить капусту» / «не одеський» / «шерсть» / «для кота» (wrong for a girl or another species),
+  «в кухні», «першою чи після кави», «змагання у танцях», «чаєм з малиною», «Дві посилки… обидві чужі», the heating chat no
+  longer calls the pet its founder when the pet only went to the housing office, a failed Lviv password no longer throws
+  the pet out before the café scene, and the like. Seasonal sense: the Odesa story is summer/early-autumn, the bograch
+  festival May–October; `clean=-5` removed from the exploding jar.
+- **The favourite food is declined.** `{food}` was always the accusative, so 22 texts said «Головне — шаурму»,
+  «Вам би поменше шаурму», «банок з-під шаурму», «ящик борщ». New placeholders `{food_nom}`, `{food_gen}`,
+  `{food_dat}`, `{food_ins}`, `{food_loc}` from a hand-written table (`persona.FOOD_FORMS`, `persona.food_in`); `{food}`
+  stays the accusative. Old pet documents keep their stored `persona.food`; a food missing from the table is used as
+  it is. Texts with an agreeing adjective or verb («домашній {food}», «{food} дарує») were rephrased, since a food can
+  be plural. `scripts/food_scan.py` is a new gate in `content_gate.py`. The food «кулешик» (a russism) is now «куліш»;
+  pets that already have the old word keep it in every case.
+- Sandbox: a neighbour's story stopped after its second step (the auto-resolve of a pending step cleared the next step
+  it had just started); stories now finish for NPCs.
+- `balance.py` is reproducible: the sandbox clock was real time (season, holidays, hour of the day and the seconds the
+  run took leaked into the result — `check_success` jumped between 62% and 72%), `Pet.hatch` used the global random.
+  `Sandbox(..., epoch=)` gives a purely virtual clock; `balance.py --start YYYY-MM-DD` picks the simulated date.
+
+## [0.14.0] — 2026-11-02
+
+### Added
+- **Inner voice of the temperament**: over about 40% of events the pet's character says one line —
+  «🎭 хуліганка: «Правила — це рекомендації для тих, хто боїться.»». 36 temperaments × 6 lines
+  (`content/voices.py`); when a choice is in character (🎭) the voice often leans towards it. Never over grave events
+  (death, hospital, jail, a big health hit, the army: `engine.is_grave_event`). `Pet.inner_voice(e, other)`; the
+  sandbox state has `pet.pending.voice`; both pages show it. Hosts: show `p.inner_voice(e, other)` under the event text (a no-op on older games:
+  guard with `getattr`).
+
+## [0.13.0] — 2026-11-02
+
+### Added
+- **Побут і календар** (`arcs_week_20261102.py`): «Опалювальний сезон» (+ чат стояка), «Борщ із квасолею чи без» (+ дворовий
+  фестиваль), «Закрутки» (+ вибухова банка), Святий Миколай, Масляна, Водохреща, ожеледиця.
+- **Цифрова дрібниця**: «Дія» без потрібної довідки (+ довідка на ім'я кума), зум із бабусею (+ сімейний зум), поштомат із чужою посилкою.
+- **Чотири короткі історії про регіони** (3 кроки, 3 кінцівки кожна): «Одеський привіз», «Бограч на фестивалі»
+  (Закарпаття), «Кав'ярня з паролем» (Львів), «Два клуби на весіллі». Без війни, переселенців і шахраїв.
+
 ## [0.12.1] — 2026-10-30
 
 ### Fixed
@@ -342,7 +781,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.23.1...HEAD
+[0.23.1]: https://github.com/ifurs/kit-the-cat/compare/v0.23.0...v0.23.1
+[0.23.0]: https://github.com/ifurs/kit-the-cat/compare/v0.22.1...v0.23.0
+[0.22.1]: https://github.com/ifurs/kit-the-cat/compare/v0.22.0...v0.22.1
+[0.22.0]: https://github.com/ifurs/kit-the-cat/compare/v0.21.0...v0.22.0
+[0.21.0]: https://github.com/ifurs/kit-the-cat/compare/v0.20.0...v0.21.0
+[0.20.0]: https://github.com/ifurs/kit-the-cat/compare/v0.19.1...v0.20.0
+[0.19.1]: https://github.com/ifurs/kit-the-cat/compare/v0.19.0...v0.19.1
+[0.19.0]: https://github.com/ifurs/kit-the-cat/compare/v0.18.0...v0.19.0
+[0.18.0]: https://github.com/ifurs/kit-the-cat/compare/v0.17.0...v0.18.0
+[0.17.0]: https://github.com/ifurs/kit-the-cat/compare/v0.16.0...v0.17.0
+[0.16.0]: https://github.com/ifurs/kit-the-cat/compare/v0.15.2...v0.16.0
+[0.15.2]: https://github.com/ifurs/kit-the-cat/compare/v0.15.1...v0.15.2
+[0.15.1]: https://github.com/ifurs/kit-the-cat/compare/v0.15.0...v0.15.1
+[0.15.0]: https://github.com/ifurs/kit-the-cat/compare/v0.14.0...v0.15.0
+[0.14.0]: https://github.com/ifurs/kit-the-cat/compare/v0.13.0...v0.14.0
+[0.13.0]: https://github.com/ifurs/kit-the-cat/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/ifurs/kit-the-cat/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/ifurs/kit-the-cat/compare/v0.11.3...v0.12.0
 [0.11.3]: https://github.com/ifurs/kit-the-cat/compare/v0.11.2...v0.11.3
