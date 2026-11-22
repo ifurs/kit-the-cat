@@ -145,7 +145,7 @@ main > * { min-width: 0; }
 .who-head { display: flex; justify-content: space-between; gap: 8px; }
 .who-actions { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 6px; }
 .zoo { width: 100%; image-rendering: pixelated; border-radius: 12px; margin-top: 10px; }
-.thumb { width: 56px; height: 56px; flex: none; image-rendering: pixelated; border: 2px solid var(--line); background: var(--bg); display: block; }
+.thumb { width: 72px; height: 72px; flex: none; image-rendering: pixelated; border: 2px solid var(--line); background: var(--bg); display: block; }
 .row:has(> .thumb) { flex-wrap: nowrap; justify-content: flex-start; } .row:has(> .thumb) > span { flex: 1 1 auto; } .row:has(> .thumb) > button { flex: none; }
 .legacy { border-bottom: 2px solid var(--line); padding-bottom: 8px; margin-bottom: 8px; }
 .legacy h3 { font-size: 13px; margin: 10px 0 4px; color: var(--cyan); text-transform: uppercase; letter-spacing: .05em; }
@@ -166,7 +166,7 @@ canvas.sprite, canvas.event-img, canvas.zoo { max-width: 100%; height: auto; }
 #toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); max-width: min(520px, calc(100% - 32px));
   background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 12px; white-space: pre-wrap; opacity: 0;
   transition: opacity .2s; pointer-events: none; z-index: 30; }
-#toast.show { opacity: .96; }
+#toast.show { opacity: .96; pointer-events: auto; cursor: pointer; }
 .obit { text-align: left; margin: 8px 0; overflow-wrap: anywhere; }
 .obit-title { font-weight: 700; font-style: italic; text-align: center; margin-bottom: 4px; }
 .obit-story { margin: 4px 0; padding-left: 18px; font-size: 13px; }
@@ -307,7 +307,7 @@ a { color: var(--cyan); }
   .dock .primary { flex: 1; }
   body.has-dock { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
   html:has(body.has-dock) { scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
-  body.has-dock #toast { bottom: calc(84px + env(safe-area-inset-bottom)); }
+  body.has-dock #toast { top: calc(8px + env(safe-area-inset-top)); bottom: auto; width: max-content; }  /* above the game, never over a button */
 }
 </style>
 
@@ -347,7 +347,7 @@ a { color: var(--cyan); }
     <ol>
       <li><b>Заведи пета.</b> Обери стать і вид: з яйця вилупиться пет із власним характером і мрією.</li>
       <li><b>Тисни «▶ Пригода».</b> З'явиться ситуація й 2–4 варіанти. Вирішуй або натисни «Хай вирішить пет»: пет вчинить за характером.</li>
-      <li><b>Кожне рішення забирає частину життя</b> (скільки саме, гра не каже). Світ іде далі: зарплати, свята, сусіди. Одне життя — десь 140 пригод.</li>
+      <li><b>Кожне рішення забирає частину життя</b> (скільки саме, гра не каже). Світ іде далі: зарплати, свята, сусіди. Одне життя — 150–200 пригод.</li>
       <li><b>Пет колись помирає</b>, але спадкоємець продовжує рід. Якщо здоров'я падає до нуля, це може статися раніше.</li>
     </ol>
     <h3>Що означають значки</h3>
@@ -391,7 +391,7 @@ a { color: var(--cyan); }
   <p>📂 Поточна гра буде замінена грою з файлу. Продовжити?</p>
   <form method="dialog"><button value="no">Скасувати</button><button value="yes" class="primary">Замінити</button></form>
 </dialog>
-<script type="application/json" id="py-sources">{"@src": "py-6a1993781571.json"}</script>
+<script type="application/json" id="py-sources">{"@src": "py-bb1da0b6a85d.json"}</script>
 <script src="pyodide/pyodide.js"></script>
 <script>
 const $ = s => document.querySelector(s);
@@ -406,7 +406,7 @@ const num = n => Math.round(n).toLocaleString("uk-UA"), sgn = n => (n < 0 ? "−
 const partsTip = parts => (parts || []).map(([l, v]) => `${l} ${sgn(v)}`).join("\n");  // what the chance adds up from
 const strat = () => store.get("ks-strat") || "careful";
 
-function toast(t) { if (!t) return; const el = $("#toast"); el.textContent = t; el.classList.add("show");
+function toast(t) { if (!t) return; const el = $("#toast"); el.onclick = () => el.classList.remove("show"); el.textContent = t; el.classList.add("show");
   clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("show"), Math.min(8000, 3000 + t.length * 45)); }
 /* ---------- Python (Pyodide) bridge ---------- */
 let py = null, bridge = null, queue = Promise.resolve();
@@ -565,7 +565,7 @@ function renderPet() {
     else more = more && more !== "casino" ? "" : "wardrobe";
     renderMore();
   });
-  const h = $("#heir"); if (h) h.onclick = () => act("heir");
+  const h = $("#heir"); if (h) h.onclick = () => { lastResult = null; act("heir"); };
   const cb = $("#cardBtn");
   if (cb) cb.onclick = async () => {
     cb.disabled = true;
@@ -643,7 +643,7 @@ function resultHtml(r) {
   const notes = (r.notes || []).concat(r.tail_notes || []), ck = r.check && r.check.skill ? r.check : null;
   const how = r.ok === null ? "" : ` <small class="muted" title="${esc(ck ? partsTip(ck.parts) : "")}">(🎲 ${r.roll} · шанс ${Math.round(r.chance * 100)}% → ${r.ok ? "вдалося" : "не вийшло"}${ck ? ` · ${SK[ck.skill]} ${SKN[ck.skill]} ${ck.value}${ck.item ? ` (річ +${ck.item})` : ""} проти складності ${ck.diff}` : ""})</small>`;
   return `<div class="result">${r.twist ? "🌀 <b>Сюжетний поворот!</b>\n" : ""}<b>${esc(r.label)}</b>${verdict ? ` — ${verdict}${how}` : ""}
-${esc(r.text)}${r.tail ? `\n🌀 ${esc(r.tail)}` : ""}${r.died ? `\n⚰️ <b>${esc(r.name)} помер.</b> ${esc(r.cause)}` : ""}${notes.length ? `<div class="notes">${esc(notes.join(" · "))}</div>` : ""}${r.hint ? `<div class="notes hint">${esc(r.hint)}</div>` : ""}${recapHtml(r.story)}${seriesHtml(r.series)}</div>`;
+${esc(r.text)}${r.tail ? `\n🌀 ${esc(r.tail)}` : ""}${r.died ? `\n⚰️ <b>${esc(r.name)}</b> — ${esc(r.cause)}` : ""}${notes.length ? `<div class="notes">${esc(notes.join(" · "))}</div>` : ""}${r.hint ? `<div class="notes hint">${esc(r.hint)}</div>` : ""}${recapHtml(r.story)}${seriesHtml(r.series)}</div>`;
 }
 const resultMood = r => r.died ? "" : r.ok === true ? "happy" : r.ok === false ? "sad" : "";  // the pet reacts to how it went
 function swapBanner() {  // a body swap is loud: the avatar changed, and the player must see why
@@ -695,10 +695,10 @@ function renderArena() {
   if (battle) return renderBattle();
   const t = T.tour, live = t && t.status === "running", c = live && t.current;
   const tactic = `<select id="strat" aria-label="Тактика">${T.strategies.map(([k, n]) => `<option value="${k}" ${(T.my_strategy || strat()) === k ? "selected" : ""}>${n}</option>`).join("")}</select>`;
-  const foes = S.players.filter(x => x.owner !== S.owner && x.state === "alive");
+  const foes = S.players.filter(x => x.owner !== S.owner && x.state === "alive" && x.fit !== false);
   let h = `<p class="muted">Перемоги піднімають рейтинг, славу (а слава — це реклама й гроші щодня) і відкривають нові пригоди.</p>`;
   if (T.me) h += `<p class="meta">🏅 Рейтинг ${T.me.elo} · ${esc(T.me.rank)}<br>${esc(T.me.line)}</p>`;
-  if (t && t.status === "done" && t.champion) h += `<div class="champ">👑 Чемпіон: ${t.champion.emoji} <b>${esc(t.champion.name)}</b></div>`;
+  if (t && t.status === "done" && t.champion) h += `<div class="champ">👑 ${esc(t.champion.title || "Чемпіон")}: ${t.champion.emoji} <b>${esc(t.champion.name)}</b></div>`;
   if (c) {
     const mine = c.a.mine || c.b.mine;
     const myBet = t.rounds.flat().find(m => m.key === c.key)?.my_bet;
@@ -713,7 +713,7 @@ function renderArena() {
     h += `<div class="empty"><button class="primary" id="fight">▶️ Далі</button><p class="muted">Турнір триває</p></div>`;
   } else {
     h += `<div class="empty"><button class="primary" id="newTour" ${T.eligible < 3 ? "disabled" : ""}>Почати турнір</button>
-      <p class="muted">${T.eligible < 3 ? "Потрібно щонайменше 3 пети-підлітки (вкладка «Сусіди» → «Заселити 3 сусідів»; вони дорослішають, поки ти граєш)" : `бійців готово: ${T.eligible} · приз 300 ₴ за кожного`}</p></div>`;
+      <p class="muted">${T.eligible < 3 ? "Потрібно щонайменше 3 пети-підлітки («Меню» → «Заселити 3 сусідів»; вони дорослішають, поки ти граєш)" : `бійців готово: ${T.eligible} · приз 300 ₴ за кожного`}</p></div>`;
     if (S.pet && S.pet.state === "alive" && foes.length)
       h += `<div class="row"><span class="seg">⚔️ Спаринг з <select id="foe">${foes.map(f => `<option value="${f.owner}">${f.emoji} ${esc(f.name)}</option>`).join("")}</select></span>
         <span class="seg"><button id="spar" class="primary">⚔️ Бій у раундах</button></span></div>`;
@@ -780,12 +780,13 @@ async function play(r) {
   for (let n = 0; n < r.log.length; n++) {
     if (!log.isConnected) return;
     const e = r.log[n];
+    if (!r.paused && n === r.log.length - 1 && e.text.startsWith("🏆 ")) { sync(e); r.shown = n + 1; continue; }  // the verdict: once, in the summary below
     const want = !r.skip || (hi ? hi.has(e.i) : n === 0 || ["crit", "special", "ult", "tactic", "surrender"].includes(e.k));  // «до фіналу»: key lines only
     if (n < seen || r.played) { if (want) put(e); sync(e); continue; }   // shown before (the page was redrawn): at once
     if (!want) { sync(e); r.shown = n + 1; continue; }
     while (pace.hold && log.isConnected) await nap(200);
     put(e); sync(e); r.shown = n + 1;
-    if (!r.skip) await nap((BEAT[e.k] || (r.duel ? 800 : 1100)) / pace.speed);
+    if (!r.skip) await nap((BEAT[e.k] || (r.duel ? 800 : 650)) / pace.speed);
   }
   if (!log.isConnected) return;
   if (r.paused) return duelAsk(r);
@@ -794,7 +795,7 @@ async function play(r) {
   const bets = (r.bets || []).length ? `<div class="notes">Ставки: ${esc(r.bets.join(" · "))}</div>` : "";
   const gave = r.owners.map((o, i) => `<div class="rew ${r.winner === o ? "win" : ""}"><b>${r.winner === o ? "🏆" : "🥊"} ${esc(fs[i].name)}</b>`
     + `<div class="notes">${((r.notes || {})[o] || []).map(esc).join(" · ")}</div>${(r.rec || {})[o] ? `<div class="meta">${esc(r.rec[o].line)} · ${esc(r.rec[o].rank)}</div>` : ""}</div>`).join("");
-  $("#bEnd").innerHTML = `<div class="result">🏆 ${esc(r.text)}${r.champion ? `\n👑 <b>Чемпіон турніру: ${esc(r.champion.name)}!</b>` : ""}${bets}</div>${gave}
+  $("#bEnd").innerHTML = `<div class="result">🏆 ${esc(r.text)}${r.champion ? `\n👑 <b>${esc(r.champion.title || "Чемпіон")} турніру: ${esc(r.champion.name)}!</b>` : ""}${bets}</div>${gave}
     <p class="seg" style="justify-content:center;margin-top:10px">${T.tour && T.tour.status === "running" ? `<button class="primary" id="nextFight">▶️ Наступний бій</button>` : ""}<button id="back">← Арена</button></p>`;
   const nf = $("#nextFight"); if (nf) nf.onclick = () => { battle = null; act("t_next", null, {duel: true}); };
   $("#back").onclick = () => { battle = null; renderArena(); };
@@ -840,16 +841,20 @@ function renderNb() {
   const can = S.pet && S.pet.state === "alive";
   el.innerHTML = `<p class="muted" style="margin:0 0 6px">Натисни на сусіда, щоб взаємодіяти.</p>
     <div class="list" style="max-height:none">${others.map(x => `<div class="row who" data-nb="${x.owner}">
-      <div class="who-head"><span>${x.emoji} <b>${esc(x.name)}</b> <small class="muted">${esc(x.owner_name)} · ${esc(x.stage)}${x.state === "dead" ? " · 🪦" : ""}</small></span>
+      <div class="who-head" role="button" tabindex="0" aria-expanded="${openNb === x.owner}"><span>${x.emoji} <b>${esc(x.name)}</b> <small class="muted">${esc(x.owner_name)} · ${esc(x.stage)}${x.state === "dead" ? " · 🪦" : ""}${x.where ? " · " + esc(x.where) : ""}</small></span>
       <small>${x.status ? st[x.status] : ""}${x.rel ? ` ${x.rel > 0 ? "+" : ""}${x.rel}` : ""}</small></div>
       ${openNb === x.owner && can && x.state === "alive" ? `<div class="who-actions"><button data-a="pat">🤗 Погладити</button><button data-a="kick">🦶 Копнути</button>
-        <button data-a="date">💌 Побачення</button><button data-a="fight">🥊 Сварка</button><button data-a="spar">⚔️ Спаринг</button></div>` : ""}</div>`).join("")}</div>
+        <button data-a="date">💌 Побачення</button><button data-a="fight">🥊 Сварка</button>${x.fit === false ? "" : `<button data-a="spar">⚔️ Спаринг</button>`}</div>` : ""}</div>`).join("")}</div>
     <p style="text-align:center"><button id="zooBtn">🦁 Груповий портрет</button></p><canvas id="zoo" class="zoo" role="img" aria-label="Груповий портрет" hidden></canvas>`;
+  el.querySelectorAll(".who-head").forEach(h => h.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); h.click(); } });
   el.querySelectorAll("[data-nb]").forEach(r => r.onclick = e => {
     const o = +r.dataset.nb, a = e.target.dataset ? e.target.dataset.a : "";
     if (!a) { openNb = openNb === o ? 0 : o; return renderNb(); }
     if (a === "pat" || a === "kick") act("care", a, {owner: o});
-    if (a === "date" || a === "fight") { lastResult = null; tab = "adv"; store.set("ks-tab", tab); act("adventure", null, {kind: a, with: o}); }
+    if (a === "date" || a === "fight") {  // to the adventure only if one began: a refusal is read here, next to the neighbour
+      lastResult = null;
+      act("adventure", null, {kind: a, with: o}).then(() => { if (S.pet && S.pet.pending) { tab = "adv"; store.set("ks-tab", tab); renderTabs(); renderDock(); if (!wide.matches) $("#tabs").scrollIntoView({block: "start"}); } });
+    }
     if (a === "spar") { tab = "arena"; store.set("ks-tab", tab); act("spar", null, {with: o}); }
   });
   $("#zooBtn").onclick = async () => { const z = $("#zoo"); z.hidden = false; await draw(z, await frames("zoo_frames"), 4); };
