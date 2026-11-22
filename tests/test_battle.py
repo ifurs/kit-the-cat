@@ -272,3 +272,26 @@ def test_surrender_in_a_duel_loses_now():
     d, rng = _duel(2)
     r = B.duel_round(d, "surrender", None, rng)
     assert r.winner == 1 and r.surrendered == 0 and r.log[-2]["k"] == "surrender"
+
+
+def _plain(name: str, owner: int, gender: str = "m") -> B.Fighter:
+    return B.Fighter(name=name, owner=owner, species="cat", role="", hp=100, max_hp=100, atk=10, dfn=5, spd=5, crit=0.1,
+                     dodge=0.1, gender=gender)
+
+
+def test_nobody_misses_turns_twice_in_a_row():
+    f = _plain("А", 1)
+    assert B._stun(f, 2) and not B._stun(f, 1), "a stunned fighter is not stunned again"
+    assert B._come_round(f) and B._come_round(f) and f.stun == 0
+    assert not B._stun(f, 1), "having just come round, the fighter keeps their feet"
+    assert not B._come_round(f) and not B._come_round(f) and not B._stun(f, 1)
+    assert not B._come_round(f) and B._stun(f, 1), "…for two turns, then a stun takes again"
+
+
+def test_judges_do_not_say_the_loser_gave_up():
+    rng = random.Random(3)
+    a, b = _plain("А", 1, "f"), _plain("Б", 2)
+    d = B.duel(a, b, rng, max_rounds=1)
+    a.hp, b.hp = a.max_hp, b.max_hp * 0.9
+    B._verdict(d, None, rng)
+    assert d.result.winner == 0 and d.result.text in [t.format(w="А", l="Б") for t in B.JUDGE_LINES]
