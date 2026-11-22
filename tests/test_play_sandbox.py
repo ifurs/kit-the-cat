@@ -371,3 +371,18 @@ async def test_state_shows_quests_achievements_ancestors_and_an_idle_line(client
     assert s["ancestors"] == [] and s["ach_total"] >= len(s["achievements"])
     assert all(q["title"] and q["ep"] >= 0 and isinstance(q["end"], str) for q in s["quests"])
     assert all(":" in g and g.isascii() is False for g in s["genes"])
+
+
+async def test_a_refusal_says_who_and_why(client):
+    """A date or a spar with a baby: the game names the reason, and the list of neighbours says who cannot fight."""
+    await do(client, "create", "cat")
+    await do(client, "hatch")
+    await do(client, "npcs", 3)
+    s = await state(client)
+    babies = [x for x in s["players"] if x["owner"] != 1]
+    assert babies and all(x["fit"] is False and x["where"] == "" for x in babies)
+    foe = babies[0]
+    r = await do(client, "adventure", kind="date", **{"with": foe["owner"]})
+    assert "для побачень" in r["message"] and "нічого не трапилось" not in r["message"], r
+    r = await do(client, "spar", **{"with": foe["owner"]})
+    assert "для арени" in r["battle"]["error"], r
