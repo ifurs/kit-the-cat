@@ -43,6 +43,33 @@ NPC_NAMES = ["Тьотя Валя", "Дядько Толік", "Кума Окс�
              "Бариста Соня", "Таксист Вітя", "Вчителька Ніна"]
 
 
+def _where(p: "E.Pet") -> str:
+    """Why a living pet is away, for the list of neighbours: «🏥 у лікарні», «⛓ за ґратами» or nothing."""
+    return "" if not p.alive else "⛓ за ґратами" if p.jailed else "🏥 у лікарні" if p.in_hospital else ""
+
+
+def _unfit(p: "E.Pet") -> str:
+    """Why this pet cannot fight now (battle.eligible said no)."""
+    if not p.alive:
+        return f"{p.name} не б'ється: {p.g('він', 'вона')} уже на тому світі"
+    if p.stage < 2:
+        return f"{p.name} ще {p.g('малий', 'мала')} для арени: б'ються від підлітка"
+    return f"{p.name} зараз {'за ґратами' if p.jailed else 'в лікарні'}: бій доведеться відкласти"
+
+
+def _no_meeting(p: "E.Pet", other: "E.Pet", kind: str) -> str:
+    """Why nothing came of a date or a quarrel with this neighbour."""
+    for x in (other, p):
+        if x.stage < (2 if kind == "date" else 1):
+            what = "побачень" if kind == "date" else "сварок"
+            return f"{x.name} ще {x.g('малий', 'мала')} для {what}"
+    for x in (other, p):
+        if x.jailed:
+            return f"{x.name} зараз за ґратами"
+    what = "побачення" if kind == "date" else "сварки"
+    return f"Для {what} з {inflect(other.name, 'ins', other.gender)} зараз немає нагоди"
+
+
 class Sandbox:
     def __init__(self, db: MemoryStore, seed: int | None = None, epoch: float | None = None):
         """`epoch` (unix time) makes the clock purely virtual: epoch + offset, no real time in it — for reproducible
@@ -102,6 +129,7 @@ class Sandbox:
             out["players"].append(dict(owner=x.owner_id, owner_name=x.owner_name, name=x.name, state=x.state,
                                        stage=E.stage_name(x.stage, x.gender), npc=x.owner_id >= NPC_BASE,
                                        emoji=E.SPECIES_EMOJI.get(x.species, "🥚"),
+                                       fit=B.eligible(x), where=_where(x),
                                        status=(p.status.get(x.pid, "") if p and x is not p else ""),
                                        rel=round(p.rel.get(x.pid, 0)) if p and x is not p else 0))
         w = st.get("world")
@@ -170,7 +198,7 @@ class Sandbox:
             if old:
                 p.gen = old.gen + 1
             await self.save(p)
-        return "🥚 Яйце знесено! Коли будеш готовий, тисни «🐣 Вилупити»."
+        return "🥚 Яйце знесено! Коли захочеш, тисни «🐣 Вилупити»."
 
     async def hatch(self, owner: int) -> str:
         async with self.lock:
@@ -274,7 +302,10 @@ class Sandbox:
                 other = next((x for x in pets if x.owner_id == with_owner and x.alive and x is not p), None)
                 if not other:
                     return "Обери живого пета-сусіда"
-                e, other = p.pick_event([other], self.rng, kind)
+                e, with_ = p.pick_event([other], self.rng, kind)
+                if not e:
+                    return _no_meeting(p, other, kind)
+                other = with_
             else:
                 e, other = p.pick_event(pets, self.rng)
             if not e:
@@ -562,7 +593,7 @@ class Sandbox:
             if not a or not b or a is b:
                 return dict(error="Обери суперника")
             if not B.eligible(a) or not B.eligible(b):
-                return dict(error="Битися можуть живі пети від підлітка, не в тюрмі й не в лікарні")
+                return dict(error=_unfit(b if B.eligible(a) else a))
             fa, fb = B.Fighter.of(a, B.DUEL), B.Fighter.of(b, B.DUEL)
             chance = B.win_chance(fa, fb)
             d = B.duel(fa, fb, self.rng)
@@ -881,14 +912,15 @@ class Sandbox:
             return None
         second = next((o for o in final if o and o != champ_id), 0)
         B.crown(champ, t["prize"], self.rng)
-        champ.note("battle", f"🏆 {champ.name} — ЧЕМПІОН ТУРНІРУ! +{t['prize']} ₴ і золота корона")
+        title = champ.g("Чемпіон", "Чемпіонка")
+        champ.note("battle", f"🏆 {champ.name} — {title.upper()} ТУРНІРУ! +{t['prize']} ₴ і золота корона")
         if by.get(second):
             s2 = by[second]
             s2.apply(dict(money=t["prize"] // 3, item="medal@11", xp=20), None, self.rng)
-            s2.note("battle", f"🥈 {s2.name} — фіналіст турніру (+{t['prize'] // 3} ₴)")
-        t["champion"] = dict(owner=champ_id, name=champ.name, emoji=E.SPECIES_EMOJI.get(champ.species, "🐾"))
+            s2.note("battle", f"🥈 {s2.name} — {s2.g('фіналіст', 'фіналістка')} турніру (+{t['prize'] // 3} ₴)")
+        t["champion"] = dict(owner=champ_id, name=champ.name, emoji=E.SPECIES_EMOJI.get(champ.species, "🐾"), title=title)
         st.setdefault("tour_hist", []).append(f"{E.kyiv():%d.%m} 🏆 {champ.name} (з {len(t['rounds'][0]) * 2} учасників)")
-        self.world_feed.append(f"{E.kyiv():%d.%m %H:%M} 🏆 Чемпіон турніру: {champ.name}")
+        self.world_feed.append(f"{E.kyiv():%d.%m %H:%M} 🏆 {title} турніру: {champ.name}")
         return t["champion"]
 
     async def fight_png(self, a: int, b: int) -> bytes | None:

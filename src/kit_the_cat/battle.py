@@ -73,6 +73,9 @@ HITS = {
 WIN_LINES = ["{w} {переміг|перемогла}! {l} лежить і рахує зірочки.", "Нокаут! {w} — справжн{ій боєць|я бійчиня}.",
              "{l} здається й просить шаурму. {w} перемагає.", "Суддя зупиняє бій: {w} забирає перемогу.",
              "{w} виграє. Глядачі кидають на ринг вареники."]
+JUDGE_LINES = ["За рішенням суддів перемагає {w}: здоров'я лишилося більше.",
+               "Судді порадилися: {w} попереду за здоров'ям. {l} вимагає перерахунку.",
+               "Нокауту не сталося, тож вирішують судді. Перемагає {w}."]
 SURRENDER_LINES = ["{l} кидає на ринг білий рушник. {w} забирає перемогу без зайвих синців.",
                    "{l} каже «досить» і просить пиріжок. {w} перемагає.",
                    "Бій зупинено: {l} {other:вирішив|вирішила} берегти здоров'я. Перемагає {w}."]
@@ -99,6 +102,7 @@ class Fighter:
     cd: dict = field(default_factory=dict)
     dot: list = field(default_factory=list)        # [(dmg, turns)]
     stun: int = 0
+    steady: int = 0              # turns left when a new stun does not take: nobody misses half a fight in a row
     weak: int = 0                                  # turns of -20% attack
     buff: float = 1.0
     revived: bool = False
@@ -303,8 +307,7 @@ def _run(st: FightState, rng: random.Random) -> None:
             if me.hp <= 0:
                 st.pos = 2
                 break
-            if me.stun:
-                me.stun -= 1
+            if _come_round(me):
                 say(i, f"😵 {me.name} пропускає хід", "skip")
                 continue
             _act(me, foe, i, rng, say)
@@ -324,13 +327,34 @@ def _run(st: FightState, rng: random.Random) -> None:
     _verdict(st, None, rng)
 
 
+def _stun(f: Fighter, turns: int) -> bool:
+    """Make `f` miss `turns` turns. Does not take on someone who is stunned or has just come round (`steady`)."""
+    if f.stun or f.steady:
+        return False
+    f.stun = turns
+    return True
+
+
+def _come_round(f: Fighter) -> bool:
+    """Start of a turn: True if `f` misses it. After the last missed turn `f` is steady for two more."""
+    if f.stun:
+        f.stun -= 1
+        if not f.stun:
+            f.steady = 3
+        return True
+    f.steady = max(0, f.steady - 1)
+    return False
+
+
 def _verdict(st: FightState, winner: int | None, rng: random.Random, gave_up: int = -1) -> None:
     a, b = st.fighters
+    lines = SURRENDER_LINES if gave_up >= 0 else WIN_LINES
     if winner is None:  # judges' decision
         winner = 0 if a.hp / a.max_hp >= b.hp / b.max_hp else 1
         _say(st, -1, "⏱ Час вийшов — рішення суддів за відсотком здоров'я")
+        lines = JUDGE_LINES
     w, l = st.fighters[winner], st.fighters[1 - winner]
-    text = pick(rng.choice(SURRENDER_LINES if gave_up >= 0 else WIN_LINES), w.gender, l.gender).format(w=w.name, l=l.name)
+    text = pick(rng.choice(lines), w.gender, l.gender).format(w=w.name, l=l.name)
     _say(st, winner, f"🏆 {text}")
     st.done = True
     st.result = BattleResult(winner, st.rnd, st.log, _info(st.fighters), text, _highlights(st.log, [a.max_hp, b.max_hp]), gave_up)
@@ -415,8 +439,7 @@ def _special(me: Fighter, foe: Fighter, i: int, trait: str, name: str, rng: rand
         foe.dot.append((max(3.0, me.atk * 0.35), 3))
         say(i, f"{name}: на {inflect(foe.name, "acc", foe.gender)} падає тінь (шкода 3 ходи)")
     elif trait == "party":
-        if rng.random() < 0.6:
-            foe.stun = 1
+        if rng.random() < 0.6 and _stun(foe, 1):
             say(i, f"{name}: {foe.name} {foe.g('не втримався', 'не втрималася')} й танцює замість бою")
         else:
             say(i, f"{name}: {foe.name} не любить техно. Не подіяло")
@@ -432,9 +455,8 @@ def _special(me: Fighter, foe: Fighter, i: int, trait: str, name: str, rng: rand
         me.hp = min(me.max_hp, me.hp + heal)
         say(i, f"{name}: {me.name} дістає бутерброд посеред бою. +{heal:.0f}")
     elif trait == "love":
-        if rng.random() > 0.7:
+        if rng.random() > 0.7 or not _stun(foe, 1):
             return say(i, f"{name}: {foe.name} {foe.g('вивернувся', 'вивернулася')} з обіймів")
-        foe.stun = 1
         me.hp = min(me.max_hp, me.hp + 5)
         foe.hp = min(foe.max_hp, foe.hp + 5)
         say(i, f"{name}: {foe.name} {foe.g('розчулився', 'розчулилася')} й {foe.g('забув', 'забула')}, що треба битися")
@@ -480,8 +502,10 @@ def _ultimate(me: Fighter, foe: Fighter, i: int, rng: random.Random, say) -> Non
         foe.hp -= d
         say(i, f"{u}: пряме влучання крізь будь-який захист. {foe.name} −{d:.0f}")
     elif r == "alien":
-        foe.stun = 2
-        say(i, f"{u}: {foe.name} на два ходи зник у тарілці")
+        if _stun(foe, 2):
+            say(i, f"{u}: {foe.name} на два ходи {foe.g('зник', 'зникла')} у тарілці")
+        else:
+            say(i, f"{u}: {foe.name} {foe.g('встиг', 'встигла')} сховатися, тарілка полетіла порожня")
 
 
 # --- duel: a fight the player plays round by round -------------------------------------------------------------
@@ -610,9 +634,7 @@ def duel_round(d: Duel, move_a: str | None, move_b: str | None, rng: random.Rand
         me.weak = max(0, me.weak - 1)
         for k in list(me.cd):
             me.cd[k] = max(0, me.cd[k] - 1)
-        if me.stun:
-            me.stun -= 1
-            stunned[i] = True
+        stunned[i] = _come_round(me)
     if not _duel_over(d, rng):
         for i in (0, 1):
             d.used[i].append(moves[i])
@@ -697,7 +719,7 @@ def _exchange(d: Duel, moves: list, stunned: list, first: int, rng: random.Rando
         if a == "strike":
             for i in (first, 1 - first):
                 if plain[i]:
-                    _land(fs[i], fs[1 - i], i, rng, say, 0.8, f"{verb(fs[i])} в обмін ударами")
+                    _land(fs[i], fs[1 - i], i, rng, say, 0.8, f"{verb(fs[i])} в обміні ударами")
         elif a == "guard":
             for i in (0, 1):
                 heal = fs[i].max_hp * 0.06

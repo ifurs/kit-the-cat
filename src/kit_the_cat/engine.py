@@ -1105,7 +1105,7 @@ class Pet:
         """Grow up by years, die of old age. False if the pet died."""
         if self.years >= self.lifespan:
             self.die(pick(rng.choice(["{помер|померла} від старості у теплому ліжку, як справжн{ій дід|я бабця}",
-                                      "{заснув|заснула} і не {прокинувся|прокинулася}. Тихо, з посмішкою",
+                                      "{заснув|заснула} і не {прокинувся|прокинулася}. Тихо, з усмішкою",
                                       "{пішов|пішла} на вічну пенсію, яку нарешті проіндексували"]), self.gender),
                      rng, natural=True)
             return self.alive
@@ -2977,7 +2977,7 @@ def life_summary(p: Pet, names: dict[str, str] | None = None) -> dict:
              f"🎲 {p.events_done} {plural(p.events_done, 'пригода', 'пригоди', 'пригод')}" + (f" · 🎯 кубик: {ok}✅ {fail}❌" if ok + fail else "")
              + (f" · 🌀 поворотів: {c['twists']}" if c.get("twists") else "")]
     career = [p.job_name() if p.job in JOBS else "", EDUCATION.get(p.edu[-1], "") if p.edu else ""]
-    money = f"💰 найбільше {p.g('мав', 'мала')} {c.get('money_max', int(p.money)):,} ₴".replace(",", " ")
+    money = f"💰 найбільше {p.g('мав', 'мала')} {c.get('money_max', int(p.money)):,}\u00a0₴".replace(",", "\u00a0")
     facts.append(" · ".join(x for x in career + [money] if x))
     dream = p.dream_text()
     if dream:

@@ -9,6 +9,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 - 10 пригод: три арки про Чорну п'ятницю (кошик, чайник і зайві ножі), орендовану квартиру пані Лариси з фікусом
   Феліксом та новорічний абонемент у спортзал (`arcs_week_20261109.py`).
 
+## [0.23.2] — 2026-11-22
+
+### Fixed
+- Browser and sandbox: after «Спадкоємець» the screen no longer keeps the last adventure of the pet that died.
+- The death line under an adventure has no verb of the wrong gender («Киця Пухнаста помер» → «Киця Пухнаста — заснула…»).
+- Arena texts follow the pet's gender: «зникла у тарілці», «Чемпіонка турніру», «фіналістка».
+- A fight that runs out of time ends with the judges' line, not with «здається й просить шаурму»; the verdict is shown
+  once, under the log.
+- A refusal says who and why: «Хвилька ще мала для арени», «…зараз у лікарні», «…ще малий для побачень» instead of
+  «Сьогодні нічого не трапилось». After a refused date the player stays on the neighbours tab.
+- Small language fixes: «в обміні ударами», «з усмішкою», «Коли захочеш» (no gender for the player), the sum in
+  «найбільше мала 14 015 ₴» no longer breaks across lines.
+
+### Changed
+- **Stuns do not chain.** A fighter who has just missed a turn cannot be stunned again for two turns (👽 Викрадення +
+  🤗 Обійми used to take three rounds of seven).
+- Neighbours: the list shows who is in hospital or behind bars; the arena offers only those who can fight; a row
+  opens from the keyboard.
+- Messages on phones appear at the top and close on a tap: they no longer cover the choices or the «Бій» button.
+- Pictures in the wardrobe, the bazaar and homes are larger (72 px); watching someone else's fight is faster.
+- Help: a life is «150–200 пригод»; the arena hint points to «Меню» → «Заселити 3 сусідів».
+
 ## [0.23.1] — 2026-11-13
 
 ### Fixed
@@ -782,7 +804,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
   procedural sprites with a chat-unique genome, 8 roles, jobs and economy, battles and tournaments, `MemoryStore`,
   sandbox (aiohttp server and Pyodide browser build on GitHub Pages).
 
-[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.23.1...HEAD
+[Unreleased]: https://github.com/ifurs/kit-the-cat/compare/v0.23.2...HEAD
+[0.23.2]: https://github.com/ifurs/kit-the-cat/compare/v0.23.1...v0.23.2
 [0.23.1]: https://github.com/ifurs/kit-the-cat/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/ifurs/kit-the-cat/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/ifurs/kit-the-cat/compare/v0.22.0...v0.22.1
