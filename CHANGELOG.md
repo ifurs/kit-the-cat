@@ -5,6 +5,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- 8 пригод: арки про поличку «Візьми книжку — залиш книжку» в під'їзді та двірську толоку з садінням дерев
+
 ## [0.23.2] — 2026-11-22
 
 ### Fixed
