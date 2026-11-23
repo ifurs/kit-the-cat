@@ -5,6 +5,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/), versions: [SemVer](http
 
 ## [Unreleased]
 
+### Added
+- 10 пригод: арки про новорічний ранок у садочку, першу гірку за гаражами та караоке на корпоративі
+
 ## [0.23.2] — 2026-11-22
 
 ### Fixed
