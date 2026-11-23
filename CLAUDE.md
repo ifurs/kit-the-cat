@@ -36,7 +36,8 @@ Kit the Cat: the pet life-sim of the Ukrainian Telegram bot «Кошеня», as
 ## Docs and skills
 - `docs/CONTENT_GUIDE.md` — how to write events (tone, Ukrainian, boundaries, difficulty/magnitude tables). Read it
   before writing content. `docs/DSL.md` is generated from code (`scripts/gen_dsl_docs.py`) — never edit by hand.
-- `docs/ARCHITECTURE.md`, `docs/INTEGRATION.md` (public API, storage contract), `CONTRIBUTING.md` (versioning).
+- `docs/ARCHITECTURE.md`, `docs/INTEGRATION.md` (public API, storage contract), `CONTRIBUTING.md` (versioning),
+  `docs/RELEASING.md` (releases come from CI on a merged version-bump PR — `.github/workflows/release.yml`; never tag by hand).
 - Skills in `.claude/skills/`: `kit-event-writer`, `kit-sprite-artist`, `kit-balance`, `kit-playtest`,
   `kit-release`. Agent `.claude/agents/content-reviewer.md` reviews language and boundaries.
 - Content pipeline: `scripts/content_gate.py` runs every content check; `scripts/ua_lint.py` is the Ukrainian lint

@@ -18,8 +18,11 @@
 ## Як модуль
 
 ```bash
-uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat@v0.23.2"
+uv add "kit-the-cat[images] @ git+https://github.com/ifurs/kit-the-cat" --tag v0.23.2
 ```
+
+Саме `--tag`: у `[tool.uv.sources]` з'явиться `tag = "v0.23.2"`, і Dependabot (екосистема `uv`) зможе сам оновлювати
+версію; `@v0.23.2` в адресі він не оновлює. Нові версії випускає CI ([docs/RELEASING.md](docs/RELEASING.md)).
 
 ```python
 import random
@@ -42,7 +45,7 @@ doc = pet.to_dict()                          # збереження — спра
 ```bash
 uv run kit-the-cat                         # http://127.0.0.1:8777, збереження в play.json (extra `sandbox`)
 uv run python scripts/build_web.py            # build/web/: гра в браузері (Pyodide), статичний сайт
-uv run python scripts/deploy_pages.py         # публікація на GitHub Pages
+uv run python scripts/deploy_pages.py --dry-run  # build/site/: те, що CI публікує на GitHub Pages під час релізу
 ```
 
 ## Розробка
