@@ -1,5 +1,9 @@
 name: ci
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  # release.yml runs the same suite on the merged commit before it tags anything
+  workflow_call:
 permissions:
   contents: read
 jobs:

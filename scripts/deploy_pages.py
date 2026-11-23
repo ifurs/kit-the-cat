@@ -1,7 +1,11 @@
-"""Publish the in-browser sandbox to GitHub Pages from this repo's `gh-pages` branch.
+"""Assemble the in-browser sandbox site for GitHub Pages (build/site/).
 
-    uv run python scripts/deploy_pages.py --dry-run  # only assemble build/site/ (no git, no network)
-    uv run python scripts/deploy_pages.py            # build → commit to gh-pages → push
+    uv run python scripts/deploy_pages.py --dry-run  # only assemble build/site/ (no git push)
+    uv run python scripts/deploy_pages.py            # LEGACY: build → commit to gh-pages → push
+
+Releases deploy from CI: .github/workflows/release.yml runs `--dry-run` on the merged release commit and publishes
+build/site/ with actions/deploy-pages (Pages source = "GitHub Actions"; docs/RELEASING.md). The push path is kept
+only for while Pages still serves the gh-pages branch; once the source is switched, pushing gh-pages has no effect.
 
 The site is the standalone page with the PWA links, the game code (py-<hash>.json), pyodide/, sw.js (stamped with the build's cache name),
 manifest.webmanifest and icons/.

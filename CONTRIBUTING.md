@@ -51,4 +51,7 @@ SemVer on the public API listed in [docs/INTEGRATION.md](docs/INTEGRATION.md):
 - **minor** — new API, new DSL keys, new stored fields (with defaults), new species/roles;
 - **major** — removed/renamed API, incompatible pet documents.
 
-Every release: update `CHANGELOG.md`, bump `pyproject.toml`, tag `vX.Y.Z`, deploy Pages, bump hosts' pins.
+Every release is one PR that bumps `version` in `pyproject.toml` (+ `uv lock`), moves the `CHANGELOG.md`
+entries from Unreleased to `## [X.Y.Z] — <date>` and updates the README pin. When it is merged, CI
+(`.github/workflows/release.yml`) runs the checks, tags `vX.Y.Z`, publishes the GitHub Release and deploys Pages;
+hosts' Dependabot bumps their pins. Nobody pushes tags by hand — [docs/RELEASING.md](docs/RELEASING.md).
